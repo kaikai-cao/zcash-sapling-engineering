@@ -1,0 +1,6 @@
+﻿threads,runs,median_prove_ms,median_verify_ms,proof_bytes,all_verified
+1,5,512.951,2.119,192,True
+2,5,270.691,2.211,192,True
+4,5,165.925,2.223,192,True
+8,5,99.003,2.295,192,True
+20,5,89.835,2.282,192,True
