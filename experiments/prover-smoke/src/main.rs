@@ -1,4 +1,3 @@
-
 use group::GroupEncoding;
 use rand::{rngs::StdRng, SeedableRng};
 use sapling_crypto::{
@@ -32,12 +31,9 @@ fn main() {
     )
     .expect("无法读取 Output 参数文件");
 
-    let params_read_validate_ms =
-        start.elapsed().as_secs_f64() * 1000.0;
+    let params_read_validate_ms = start.elapsed().as_secs_f64() * 1000.0;
 
-    println!(
-        "params_read_validate_ms={params_read_validate_ms:.3}"
-    );
+    println!("params_read_validate_ms={params_read_validate_ms:.3}");
 
     // 2. 准备验证密钥，只执行一次。
     let start = Instant::now();
@@ -49,8 +45,7 @@ fn main() {
     // 3. 准备同一份有效的测试输入。
     let start = Instant::now();
 
-    let extsk = ExtendedSpendingKey::master(&[0u8; 32])
-        .expect("无法生成测试密钥");
+    let extsk = ExtendedSpendingKey::master(&[0u8; 32]).expect("无法生成测试密钥");
 
     let (_, payment_address) = extsk.default_address();
     let value = NoteValue::from_raw(1000);
@@ -65,24 +60,15 @@ fn main() {
     let rcm = note.rcm();
     let esk = note.generate_or_derive_esk(&mut rng);
 
-    let encryptor =
-        sapling_note_encryption(None, note, [0u8; 512], &mut rng);
+    let encryptor = sapling_note_encryption(None, note, [0u8; 512], &mut rng);
 
-    let epk_bytes =
-        <SaplingDomain as Domain>::epk_bytes(encryptor.epk());
+    let epk_bytes = <SaplingDomain as Domain>::epk_bytes(encryptor.epk());
 
-    let epk = Option::<jubjub::ExtendedPoint>::from(
-        jubjub::ExtendedPoint::from_bytes(&epk_bytes.0),
-    )
-    .expect("无法解析 epk");
+    let epk =
+        Option::<jubjub::ExtendedPoint>::from(jubjub::ExtendedPoint::from_bytes(&epk_bytes.0))
+            .expect("无法解析 epk");
 
-    let circuit = OutputParameters::prepare_circuit(
-        &esk,
-        payment_address,
-        rcm,
-        value,
-        rcv,
-    );
+    let circuit = OutputParameters::prepare_circuit(&esk, payment_address, rcm, value, rcv);
 
     let input_prep_ms = start.elapsed().as_secs_f64() * 1000.0;
 
@@ -92,8 +78,7 @@ fn main() {
     let csv_dir = "experiments/raw/csv";
     create_dir_all(csv_dir).expect("无法创建 CSV 目录");
 
-    let csv_path =
-        "experiments/raw/csv/sapling_output_prover_runs.csv";
+    let csv_path = "experiments/raw/csv/sapling_output_prover_runs_release.csv";
 
     let mut csv = OpenOptions::new()
         .create(true)
@@ -101,17 +86,12 @@ fn main() {
         .open(csv_path)
         .expect("无法打开 CSV 文件");
 
-    if csv
-        .metadata()
-        .expect("无法读取 CSV 文件信息")
-        .len()
-        == 0
-    {
+    if csv.metadata().expect("无法读取 CSV 文件信息").len() == 0 {
         writeln!(
             csv,
             "batch_id,run,params_read_validate_ms,\
 prepare_vk_ms,input_prep_ms,prove_ms,verify_ms,\
-proof_bytes,verified,rayon_threads"
+proof_bytes,verified,rayon_threads,build_profile"
         )
         .expect("无法写入 CSV 表头");
     }
@@ -121,9 +101,14 @@ proof_bytes,verified,rayon_threads"
         .expect("系统时间异常")
         .as_millis();
 
-    let rayon_threads = std::env::var("RAYON_NUM_THREADS")
-        .unwrap_or_else(|_| "default".to_string());
+    let rayon_threads =
+        std::env::var("RAYON_NUM_THREADS").unwrap_or_else(|_| "default".to_string());
 
+    let build_profile = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
     // 5. 重复生成证明，并逐份验证。
     for run in 1..=REPEATS {
         // 电路复制放在计时区间之外。
@@ -141,18 +126,12 @@ proof_bytes,verified,rayon_threads"
         let mut context = SaplingVerificationContext::new();
 
         let start = Instant::now();
-        let verified = context.check_output(
-            &cv,
-            cmu.clone(),
-            epk.clone(),
-            proof,
-            &prepared_vk,
-        );
+        let verified = context.check_output(&cv, cmu.clone(), epk.clone(), proof, &prepared_vk);
         let verify_ms = start.elapsed().as_secs_f64() * 1000.0;
 
         writeln!(
             csv,
-            "{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{}",
+            "{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{},{}",
             batch_id,
             run,
             params_read_validate_ms,
@@ -163,6 +142,7 @@ proof_bytes,verified,rayon_threads"
             proof_bytes,
             verified,
             rayon_threads,
+            build_profile,
         )
         .expect("无法写入实验数据");
 
