@@ -59,8 +59,7 @@ The vendored Bellman and Groth16 sources are used for local reproducibility.
 ### 3.1 Output Proof Generation and Verification
 
 The Output smoke experiment successfully generated and verified five proofs
-after restoring the experimental profiling modifications in the vendored
-proving code.
+after restoring the vendored Bellman and Groth16 source files to their corresponding upstream revisions
 
 | Metric | Result |
 |---|---:|
