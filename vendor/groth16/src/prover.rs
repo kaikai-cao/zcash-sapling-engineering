@@ -1,7 +1,6 @@
 use rand_core::Rng;
 use std::ops::{AddAssign, MulAssign};
 use std::sync::Arc;
-use std::time::Instant;
 
 use ff::{Field, PrimeField, PrimeFieldBits};
 use group::{Curve, CurveAffine};
@@ -13,7 +12,7 @@ use bellman::{Circuit, ConstraintSystem, Index, LinearCombination, SynthesisErro
 
 use bellman::domain::{EvaluationDomain, Scalar};
 
-use bellman::multiexp::{multiexp, DensityTracker, FullDensity};
+use bellman::multiexp::{DensityTracker, FullDensity, multiexp};
 
 use bellman::multicore::Worker;
 
@@ -204,14 +203,7 @@ where
 
     prover.alloc_input(|| "", || Ok(E::Fr::ONE))?;
 
-    let synthesis_start = Instant::now();
-
     circuit.synthesize(&mut prover)?;
-
-    eprintln!(
-        "G16_PROFILE stage=circuit_synthesis elapsed_ms={:.3}",
-        synthesis_start.elapsed().as_secs_f64() * 1000.0
-    );
 
     for i in 0..prover.input_assignment.len() {
         prover.enforce(
@@ -225,8 +217,6 @@ where
     let worker = Worker::new();
 
     let vk = params.get_vk(prover.input_assignment.len())?;
-
-    let qap_start = Instant::now();
 
     let h = {
         let mut a = EvaluationDomain::from_coeffs(prover.a)?;
@@ -251,23 +241,9 @@ where
         // TODO: parallelize if it's even helpful
         let a = Arc::new(a.into_iter().map(|s| s.0.into()).collect::<Vec<_>>());
 
-        eprintln!(
-            "G16_PROFILE stage=qap_fft_quotient elapsed_ms={:.3}",
-            qap_start.elapsed().as_secs_f64() * 1000.0
-        );
-
-        let h_submit_start = Instant::now();
-        let h = multiexp(&worker, params.get_h(a.len())?, FullDensity, a);
-
-        eprintln!(
-            "G16_PROFILE stage=h_msm_submit elapsed_ms={:.3}",
-            h_submit_start.elapsed().as_secs_f64() * 1000.0
-        );
-
-        h
+        multiexp(&worker, params.get_h(a.len())?, FullDensity, a)
     };
 
-    let assignment_start = Instant::now();
     // TODO: parallelize if it's even helpful
     let input_assignment = Arc::new(
         prover
@@ -282,11 +258,6 @@ where
             .into_iter()
             .map(|s| s.into())
             .collect::<Vec<_>>(),
-    );
-
-    eprintln!(
-        "G16_PROFILE stage=assignment_conversion elapsed_ms={:.3}",
-        assignment_start.elapsed().as_secs_f64() * 1000.0
     );
 
     let l = multiexp(
@@ -346,13 +317,6 @@ where
     );
     let b_g2_aux = multiexp(&worker, b_g2_aux_source, b_aux_density, aux_assignment);
 
-    let final_wait_start = Instant::now();
-
-    eprintln!(
-        "G16_PROFILE stage=msm_setup_submit elapsed_ms={:.3}",
-        assignment_start.elapsed().as_secs_f64() * 1000.0
-    );
-
     if bool::from(vk.delta_g1.is_identity() | vk.delta_g2.is_identity()) {
         // If this element is zero, someone is trying to perform a
         // subversion-CRS attack.
@@ -389,16 +353,9 @@ where
     AddAssign::<&E::G1>::add_assign(&mut g_c, &h.wait()?);
     AddAssign::<&E::G1>::add_assign(&mut g_c, &l.wait()?);
 
-    let proof = Proof {
+    Ok(Proof {
         a: g_a.to_affine(),
         b: g_b.to_affine(),
         c: g_c.to_affine(),
-    };
-
-    eprintln!(
-        "G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms={:.3}",
-        final_wait_start.elapsed().as_secs_f64() * 1000.0
-    );
-
-    Ok(proof)
+    })
 }

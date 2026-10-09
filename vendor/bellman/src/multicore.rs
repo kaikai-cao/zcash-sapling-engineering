@@ -54,12 +54,6 @@ mod implementation {
             // the growing work queue and minimize the chances of memory
             // exhaustion.
             if previous_count > *WORKER_SPAWN_MAX_COUNT {
-                eprintln!(
-                            "BELLMAN_WORKER_SYNC_FALLBACK previous_count={} max_count={} current_num_threads={}",
-                             previous_count,
-                            *WORKER_SPAWN_MAX_COUNT,
-                            current_num_threads()
-                        );
                 let thread_index = rayon::current_thread_index().unwrap_or(0);
                 rayon::scope(move |_| {
                     trace!(

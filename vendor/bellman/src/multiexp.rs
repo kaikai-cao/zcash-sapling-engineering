@@ -5,11 +5,7 @@ use group::prime::{PrimeCurve, PrimeCurveAffine};
 use std::io;
 use std::iter;
 use std::ops::AddAssign;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::Instant;
-
-static MSM_PROFILE_CALL_ID: AtomicUsize = AtomicUsize::new(0);
 
 #[cfg(feature = "multicore")]
 use rayon::prelude::*;
@@ -44,7 +40,6 @@ pub trait AddAssignFromSource: PrimeCurve {
         Ok(())
     }
 }
-
 impl<G> AddAssignFromSource for G where G: PrimeCurve {}
 
 impl<G: PrimeCurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
@@ -85,6 +80,7 @@ impl<G: PrimeCurveAffine> Source<G> for (Arc<Vec<G>>, usize) {
         }
 
         self.1 += amt;
+
         Ok(())
     }
 }
@@ -166,7 +162,7 @@ enum ChunkedExponent {
     Chunks(Vec<u64>),
 }
 
-/// An exponent.
+/// An exponent
 pub enum Exponent<F: PrimeFieldBits> {
     Zero,
     One,
@@ -211,20 +207,11 @@ impl<F: PrimeFieldBits> Exponent<F> {
     }
 }
 
-struct MsmChunkProfile {
-    bucket_alloc_ns: u128,
-    bucket_fill_ns: u128,
-    bucket_sum_ns: u128,
-    point_add_calls: usize,
-    base_skip_calls: usize,
-}
-
 fn multiexp_inner<Q, D, G, S>(
     bases: S,
     density_map: D,
     exponents: Arc<Vec<Exponent<G::Scalar>>>,
     c: u32,
-    profile_call_id: usize,
 ) -> Result<G, SynthesisError>
 where
     for<'a> &'a Q: QueryDensity,
@@ -233,64 +220,42 @@ where
     G::Scalar: PrimeFieldBits,
     S: SourceBuilder<G::Affine>,
 {
-    let inner_start = Instant::now();
-
-    // Convert each scalar into the chunks corresponding to the current window width.
-    let exponent_chunking_start = Instant::now();
-    let exponents = Arc::new(
-        exponents
-            .iter()
-            .map(|exp| exp.chunks(c as usize))
-            .collect::<Vec<_>>(),
-    );
-    let exponent_chunking_ns = exponent_chunking_start.elapsed().as_nanos();
-
-    // Each task computes one scalar window.
-    let this = move |
-        bases: S,
-        density_map: D,
-        exponents: Arc<Vec<ChunkedExponent>>,
-        chunk: usize,
-    | -> Result<(G, MsmChunkProfile), SynthesisError> {
+    // Perform this region of the multiexp
+    let this = move |bases: S,
+                     density_map: D,
+                     exponents: Arc<Vec<ChunkedExponent>>,
+                     chunk: usize|
+          -> Result<_, SynthesisError> {
+        // Accumulate the result
         let mut acc = G::identity();
+
+        // Build a source for the bases
         let mut bases = bases.build();
 
-        // Stage A: allocate the buckets.
-        let bucket_alloc_start = Instant::now();
+        // Create space for the buckets
         let mut buckets = vec![G::identity(); (1 << c) - 1];
-        let bucket_alloc_ns = bucket_alloc_start.elapsed().as_nanos();
 
+        // only the first round uses this
         let handle_trivial = chunk == 0;
 
-        // Stage B: insert bases into buckets according to the scalar chunk.
-        let bucket_fill_start = Instant::now();
-        let mut point_add_calls = 0usize;
-        let mut base_skip_calls = 0usize;
-
+        // Sort the bases into buckets
         for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
             if density {
                 match exp {
-                    ChunkedExponent::Zero => {
-                        base_skip_calls += 1;
-                        bases.skip(1)?;
-                    }
+                    ChunkedExponent::Zero => bases.skip(1)?,
                     ChunkedExponent::One => {
                         if handle_trivial {
-                            point_add_calls += 1;
                             acc.add_assign_from_source(&mut bases)?;
                         } else {
-                            base_skip_calls += 1;
                             bases.skip(1)?;
                         }
                     }
                     ChunkedExponent::Chunks(chunks) => {
                         let exp = chunks[chunk];
+
                         if exp != 0 {
-                            point_add_calls += 1;
-                            buckets[(exp - 1) as usize]
-                                .add_assign_from_source(&mut bases)?;
+                            buckets[(exp - 1) as usize].add_assign_from_source(&mut bases)?;
                         } else {
-                            base_skip_calls += 1;
                             bases.skip(1)?;
                         }
                     }
@@ -298,142 +263,40 @@ where
             }
         }
 
-        let bucket_fill_ns = bucket_fill_start.elapsed().as_nanos();
-
-        // Stage C: summation by parts from the highest bucket to the lowest.
-        let bucket_sum_start = Instant::now();
+        // Summation by parts
+        // e.g. 3a + 2b + 1c = a +
+        //                    (a) + b +
+        //                    ((a) + b) + c
         let mut running_sum = G::identity();
         for exp in buckets.into_iter().rev() {
             running_sum.add_assign(&exp);
             acc.add_assign(&running_sum);
         }
-        let bucket_sum_ns = bucket_sum_start.elapsed().as_nanos();
 
-        Ok((
-            acc,
-            MsmChunkProfile {
-                bucket_alloc_ns,
-                bucket_fill_ns,
-                bucket_sum_ns,
-                point_add_calls,
-                base_skip_calls,
-            },
-        ))
+        Ok(acc)
     };
 
-    // Experimental policy: use sequential window processing for very small MSMs.
-    // Larger MSMs keep the original Rayon parallel path.
-    let chunk_compute_start = Instant::now();
-    let (parts, chunk_mode) = if exponents.len() <= 8 {
-        let parts = (0..G::Scalar::NUM_BITS)
-            .step_by(c as usize)
-            .enumerate()
-            .map(|(chunk, _)| {
-                this(
-                    bases.clone(),
-                    density_map.clone(),
-                    exponents.clone(),
-                    chunk,
-                )
-            })
-            .collect::<Vec<Result<(G, MsmChunkProfile), SynthesisError>>>();
-        (parts, "sequential")
-    } else {
-        let parts = (0..G::Scalar::NUM_BITS)
-            .into_par_iter()
-            .step_by(c as usize)
-            .enumerate()
-            .map(|(chunk, _)| {
-                this(
-                    bases.clone(),
-                    density_map.clone(),
-                    exponents.clone(),
-                    chunk,
-                )
-            })
-            .collect::<Vec<Result<(G, MsmChunkProfile), SynthesisError>>>();
-        (parts, "parallel")
-    };
-    let chunk_compute_wall_ms = chunk_compute_start.elapsed().as_secs_f64() * 1000.0;
-
-    // Keep the old metric for compatibility, but report sequential time separately.
-    let parallel_chunks_wall_ms = if chunk_mode == "parallel" {
-        chunk_compute_wall_ms
-    } else {
-        0.0
-    };
-    let sequential_chunks_wall_ms = if chunk_mode == "sequential" {
-        chunk_compute_wall_ms
-    } else {
-        0.0
-    };
-
-    let part_fold_start = Instant::now();
-
-    // Collect per-chunk profiles while combining the mathematical MSM result.
-    let mut profiles = Vec::with_capacity(parts.len());
-    let result = parts.into_iter().rev().try_fold(
-        G::identity(),
-        |acc, part| {
-            part.map(|(part, profile)| {
-                profiles.push(profile);
-                (0..c).fold(acc, |acc, _| acc.double()) + part
-            })
-        },
-    )?;
-    let part_fold_ms = part_fold_start.elapsed().as_secs_f64() * 1000.0;
-
-    let chunks = profiles.len();
-    let alloc_sum: u128 = profiles.iter().map(|p| p.bucket_alloc_ns).sum();
-    let fill_sum: u128 = profiles.iter().map(|p| p.bucket_fill_ns).sum();
-    let sum_sum: u128 = profiles.iter().map(|p| p.bucket_sum_ns).sum();
-    let point_add_calls: usize = profiles.iter().map(|p| p.point_add_calls).sum();
-    let base_skip_calls: usize = profiles.iter().map(|p| p.base_skip_calls).sum();
-
-    let alloc_max = profiles
-        .iter()
-        .map(|p| p.bucket_alloc_ns)
-        .max()
-        .unwrap_or(0);
-    let fill_max = profiles
-        .iter()
-        .map(|p| p.bucket_fill_ns)
-        .max()
-        .unwrap_or(0);
-    let sum_max = profiles
-        .iter()
-        .map(|p| p.bucket_sum_ns)
-        .max()
-        .unwrap_or(0);
-
-    let to_ms = |ns: u128| ns as f64 / 1_000_000.0;
-
-    eprintln!(
-        "BELLMAN_MSM_STAGE_PROFILE call_id={} chunks={} chunk_mode={} exponent_chunking_ms={:.3} bucket_alloc_sum_ms={:.3} bucket_alloc_max_chunk_ms={:.3} bucket_fill_sum_ms={:.3} bucket_fill_max_chunk_ms={:.3} bucket_sum_sum_ms={:.3} bucket_sum_max_chunk_ms={:.3} parallel_chunks_wall_ms={:.3} sequential_chunks_wall_ms={:.3} part_fold_ms={:.3} inner_elapsed_ms={:.3}",
-        profile_call_id,
-        chunks,
-        chunk_mode,
-        to_ms(exponent_chunking_ns),
-        to_ms(alloc_sum),
-        to_ms(alloc_max),
-        to_ms(fill_sum),
-        to_ms(fill_max),
-        to_ms(sum_sum),
-        to_ms(sum_max),
-        parallel_chunks_wall_ms,
-        sequential_chunks_wall_ms,
-        part_fold_ms,
-        inner_start.elapsed().as_secs_f64() * 1000.0,
+    // Split the exponents into chunks.
+    let exponents = Arc::new(
+        exponents
+            .iter()
+            .map(|exp| exp.chunks(c as usize))
+            .collect::<Vec<_>>(),
     );
 
-    eprintln!(
-        "BELLMAN_MSM_OP_COUNTS call_id={} point_add_calls={} base_skip_calls={}",
-        profile_call_id,
-        point_add_calls,
-        base_skip_calls
-    );
+    let parts = (0..G::Scalar::NUM_BITS)
+        .into_par_iter()
+        .step_by(c as usize)
+        .enumerate()
+        .map(|(chunk, _)| this(bases.clone(), density_map.clone(), exponents.clone(), chunk))
+        .collect::<Vec<Result<_, _>>>();
 
-    Ok(result)
+    parts
+        .into_iter()
+        .rev()
+        .try_fold(G::identity(), |acc, part| {
+            part.map(|part| (0..c).fold(acc, |acc, _| acc.double()) + part)
+        })
 }
 
 /// Perform multi-exponentiation. The caller is responsible for ensuring the
@@ -457,52 +320,14 @@ where
         (f64::from(exponents.len() as u32)).ln().ceil() as u32
     };
 
-    let exponent_count = exponents.len();
-    let density_map_size = density_map.as_ref().get_query_size();
+    if let Some(query_size) = density_map.as_ref().get_query_size() {
+        // If the density map has a known query size, it should not be
+        // inconsistent with the number of exponents.
 
-    if let Some(query_size) = density_map_size {
-        assert!(query_size == exponent_count);
+        assert!(query_size == exponents.len());
     }
 
-    let profile_call_id = MSM_PROFILE_CALL_ID.fetch_add(1, Ordering::Relaxed) + 1;
-    let submit_start = Instant::now();
-    let task_start_timer = Instant::now();
-
-    eprintln!(
-        "BELLMAN_MSM_SUBMIT_BEGIN call_id={} exponent_count={}",
-        profile_call_id,
-        exponent_count
-    );
-
-    let waiter = pool.compute(move || {
-        eprintln!(
-            "BELLMAN_MSM_TASK_START call_id={} delay_ms={:.3}",
-            profile_call_id,
-            task_start_timer.elapsed().as_secs_f64() * 1000.0,
-        );
-
-        let start = Instant::now();
-        let result = multiexp_inner(bases, density_map, exponents, c, profile_call_id);
-
-        eprintln!(
-            "BELLMAN_MSM_PROFILE call_id={} exponent_count={} density_map_size={:?} window={} elapsed_ms={:.3}",
-            profile_call_id,
-            exponent_count,
-            density_map_size,
-            c,
-            start.elapsed().as_secs_f64() * 1000.0,
-        );
-
-        result
-    });
-
-    eprintln!(
-        "BELLMAN_MSM_SUBMIT_RETURN call_id={} submit_elapsed_ms={:.3}",
-        profile_call_id,
-        submit_start.elapsed().as_secs_f64() * 1000.0
-    );
-
-    waiter
+    pool.compute(move || multiexp_inner(bases, density_map, exponents, c))
 }
 
 #[cfg(feature = "pairing")]
@@ -515,8 +340,9 @@ fn test_with_bls12() {
         assert_eq!(bases.len(), exponents.len());
 
         let mut acc = G::identity();
+
         for (base, exp) in bases.iter().zip(exponents.iter()) {
-            AddAssign::<&G::Affine>::add_assign(&mut acc, &(*base * *exp));
+            AddAssign::<&G>::add_assign(&mut acc, &(*base * *exp));
         }
 
         acc
@@ -543,6 +369,7 @@ fn test_with_bls12() {
     );
 
     let naive: <Bls12 as Engine>::G1 = naive_multiexp(g.clone(), v);
+
     let pool = Worker::new();
     let fast = multiexp(&pool, (g, 0), FullDensity, v_bits).wait().unwrap();
 

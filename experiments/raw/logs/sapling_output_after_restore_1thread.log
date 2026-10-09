@@ -1,0 +1,16 @@
+   Compiling bellman v0.15.0 (D:\Research\zcash-sapling-engineering\vendor\bellman)
+   Compiling groth16 v0.2.0 (D:\Research\zcash-sapling-engineering\vendor\groth16)
+   Compiling sapling-crypto v0.9.0 (D:\Research\zcash-sapling-crypto)
+   Compiling sapling-output-smoke v0.1.0 (D:\Research\zcash-sapling-engineering\experiments\prover-smoke)
+    Finished `release` profile [optimized] target(s) in 4.52s
+     Running `experiments\prover-smoke\target\release\sapling-output-smoke.exe`
+params_read_validate_ms=1807.789
+prepare_vk_ms=1.009
+input_prep_ms=12.091
+run=1, prove_ms=560.162, verify_ms=2.150, proof_bytes=192, verified=true
+run=2, prove_ms=519.158, verify_ms=2.195, proof_bytes=192, verified=true
+run=3, prove_ms=511.584, verify_ms=2.111, proof_bytes=192, verified=true
+run=4, prove_ms=507.096, verify_ms=2.168, proof_bytes=192, verified=true
+run=5, prove_ms=514.853, verify_ms=2.102, proof_bytes=192, verified=true
+CSV_PATH=experiments/raw/csv/sapling_output_prover_runs_release.csv
+OUTPUT_PROOF_EXPERIMENT=PASS

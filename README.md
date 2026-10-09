@@ -1,273 +1,218 @@
 # Zcash Sapling Engineering Study
 
-A reproducible engineering study on the Groth16 zkSNARK proving pipeline used in Zcash Sapling.
+A reproducible engineering study of the historical Sapling Groth16 proving
+workflow in Zcash.
 
-This repository focuses on understanding the implementation details, performance characteristics, and engineering structure of a real-world SNARK system.
+This repository is a learning and measurement project. Its purpose is to
+understand how a real zero-knowledge proving system is integrated into an
+engineering codebase, how its parameters and proofs are handled, and how
+its costs can be measured reproducibly.
 
-The goal is not to optimize the system directly at this stage, but to establish a reliable experimental baseline for future research on zkSNARK proving cost reduction.
+**The goal is not to optimize Sapling or claim a new proving-system improvement.**
 
----
+Sapling uses Groth16. Orchard uses the Halo 2 proving system with
+PLONKish arithmetization. Results from this Sapling experiment should not
+be treated as benchmarks for Orchard or other proving systems.
 
-## 1. Research Motivation
+## 1. Objectives
 
-zkSNARK systems provide short and efficient zero-knowledge proofs, but the prover side usually introduces significant computational overhead.
+This project studies the following aspects of the Sapling engineering workflow:
 
-Modern SNARK systems mainly face challenges including:
+1. Compile and run a real Sapling proof-generation example.
+2. Understand the Spend and Output circuits and their parameter files.
+3. Measure circuit scale, parameter size, proving time, verification time,
+   and proof size.
+4. Distinguish parameter loading and input preparation from proof generation.
+5. Trace how Sapling proof generation and verification fit into the
+   surrounding Zcash transaction workflow.
+6. Compare a real engineering workload with a frozen synthetic Groth16
+   baseline, while keeping their differences explicit.
 
-- Large proving time
-- High memory consumption
-- Expensive elliptic curve operations
-- Scalability problems for large circuits
-
-This project studies a practical Groth16 implementation through the Zcash Sapling engineering ecosystem.
-
-The main objectives are:
-
-1. Understand the complete proving pipeline.
-2. Reproduce proof generation experiments.
-3. Measure important performance metrics.
-4. Identify expensive components inside the prover.
-5. Provide a baseline for future optimization research.
-
----
+The project prioritizes reproducibility and source-code understanding over
+optimization.
 
 ## 2. Experimental Environment
 
-Hardware:
+| Item | Configuration |
+|---|---|
+| Operating system | Windows 11 |
+| CPU | Intel Core i7-14700 |
+| Logical processors | 28 |
+| Memory | 32 GB |
+| Rust | 1.98.1 |
+| Build profile | Release |
+| Curve | BLS12-381 |
+| Proving system | Groth16 |
+| Sapling library | `sapling-crypto` 0.9.0 |
+| Bellman | 0.15.0 |
+| Groth16 crate | 0.2.0 |
 
-```
-CPU:
-Intel Core i7-14700
+The Sapling source is maintained separately at:
 
-Logical processors:
-28
+https://github.com/zcash/sapling-crypto
 
-Memory:
-32 GB
-```
+The experiment uses the source revision recorded in the experiment notes.
+The vendored Bellman and Groth16 sources are used for local reproducibility.
 
-Software:
+## 3. Current Results
 
-```
-OS:
-Windows 11
+### 3.1 Output Proof Generation and Verification
 
-Rust:
-1.98.1
+The Output smoke experiment successfully generated and verified five proofs
+after restoring the experimental profiling modifications in the vendored
+proving code.
 
-Build mode:
-release
+| Metric | Result |
+|---|---:|
+| Parameter read and validation | 1807.789 ms |
+| Prepared verifying-key setup | 1.009 ms |
+| Input preparation | 12.091 ms |
+| Median proving time | 514.853 ms |
+| Median verification time | 2.150 ms |
+| Serialized proof size | 192 bytes |
+| Successful verifications | 5 / 5 |
 
-Curve:
-BLS12-381
+The five proving times were:
 
-SNARK:
-Groth16
+`560.162, 519.158, 511.584, 507.096, 514.853 ms`
 
-Library:
-bellman
-```
+The proving-time median is 514.853 ms.
 
----
+These measurements were collected in one batch with one Rayon thread.
+The parameter file was read and validated once before the five proof runs.
+This experiment is not yet a complete cold-versus-warm benchmark.
 
-## 3. Project Structure
+**Verification scope:** each generated Output proof was checked through the
+Sapling Output verification context. This is not a full Zcash transaction
+validation test.
 
-```
+The raw runs are recorded in:
+
+- `experiments/raw/csv/sapling_output_prover_runs_release.csv`
+- `experiments/raw/logs/sapling_output_after_restore_1thread.log`
+
+### 3.2 Parameter Files
+
+The local parameter files were checked against their expected file sizes
+and BLAKE2b-512 hashes.
+
+| Parameter file | Size in bytes | Approximate size |
+|---|---:|---:|
+| `sapling-spend.params` | 47,958,396 | 45.74 MiB |
+| `sapling-output.params` | 3,592,860 | 3.43 MiB |
+
+The validation results are recorded in:
+
+`experiments/metadata/parameter_validation.csv`
+
+The parameter files are stored outside this repository and must not be
+committed to Git.
+
+File size should not automatically be described as the size of a CRS,
+proving key, or verifying key. These are distinct objects, and any reported
+size must identify the object being measured.
+
+## 4. Repository Structure
+
+```text
 zcash-sapling-engineering/
-
+├── docs/
+│   └── smoke-check.md
 ├── experiments/
+│   ├── metadata/
+│   │   └── parameter_validation.csv
+│   ├── prover-smoke/
+│   │   ├── Cargo.toml
+│   │   └── src/
 │   └── raw/
-│       ├── logs/
-│       │   └── raw experimental logs
-│       │
-│       └── csv/
-│           └── extracted experimental data
-│
-
+│       ├── csv/
+│       └── logs/
 ├── results/
-│   ├── tables/
-│   │   └── summarized experiment results
-│   │
-│   └── figures/
-│       └── generated figures
-│
-
+│   ├── figures/
+│   └── tables/
 ├── scripts/
-│   └── data processing scripts
-│
-
-└── README.md
+└── vendor/
+    ├── bellman/
+    └── groth16/
 ```
 
----
+- `experiments/raw/` contains experimental runs and extracted raw data.
+- `experiments/metadata/` contains parameter validation records.
+- `results/tables/` contains summarized results.
+- `results/figures/` contains generated plots.
+- `scripts/` contains data-processing scripts.
+- `vendor/` contains local copies of the proving libraries.
 
-## 4. Current Achievements
+## 5. Reproducing the Output Experiment
 
-### 4.1 Groth16 Proof Generation
+The parameter files are expected at:
 
-Successfully reproduced the Sapling Groth16 proving workflow.
+`D:\Research\zcash-params\`
 
-The experiment verifies:
+From the repository root, run the following commands in PowerShell:
 
-- Circuit synthesis
-- Witness generation
-- Proof generation
-- Proof verification
+```powershell
+$env:RAYON_NUM_THREADS = "1"
 
-Example result:
-
-```
-verified=true
-proof_bytes=192
-```
-
----
-
-## 5. Multi-thread Proving Experiment
-
-The proving time was measured under different worker thread configurations.
-
-Median proving time:
-
-| Threads | Prove Time |
-|---------|------------|
-| 1       | 512.951 ms |
-| 2       | 270.691 ms |
-| 4       | 165.925 ms |
-| 8       | 99.003 ms |
-| 20      | 89.835 ms |
-
-Observation:
-
-Increasing parallelism significantly reduces proving time.
-
-However, the speedup becomes limited after increasing the number of threads, indicating that some components are not fully parallel scalable.
-
----
-
-## 6. MSM Profiling
-
-The prover internally relies heavily on Multi Scalar Multiplication (MSM).
-
-The project adds instrumentation to observe:
-
-- MSM task submission
-- Worker task start delay
-- MSM execution time
-- Internal stages
-
-Collected information includes:
-
-```
-BELLMAN_MSM_SUBMIT_RETURN
-
-BELLMAN_MSM_TASK_START
-
-BELLMAN_MSM_PROFILE
-
-BELLMAN_MSM_STAGE_PROFILE
+cargo run --release `
+  --manifest-path experiments/prover-smoke/Cargo.toml 2>&1 |
+  Tee-Object -FilePath experiments/raw/logs/sapling_output_after_restore_1thread.log
 ```
 
-Example:
+The experiment appends five rows to the raw CSV file. Check the CSV before
+rerunning it if you need to preserve a clean record of each batch.
 
-```
-BELLMAN_MSM_STAGE_PROFILE
+For reproducibility, record the repository commit, the Sapling source
+revision, the Rust version, the thread configuration, and the parameter
+file hashes alongside each formal experiment.
 
-chunks=85
+## 6. Exploratory MSM Profiling
 
-parallel_chunks_wall_ms
+Earlier experiments instrumented MSM calls, worker-task scheduling, and
+internal execution stages in Bellman and Groth16.
 
-sequential_chunks_ms
+Those artifacts are retained for educational traceability in the raw logs,
+tables, figures, and analysis scripts.
 
-bucket_sum_sum_ms
+However, some profiling experiments also changed the execution path for
+very small MSMs. Their timings therefore must not be mixed with measurements
+from the restored proving code or presented as evidence of an effective
+optimization.
 
-inner_elapsed_ms
-```
+No general optimization conclusion is claimed by this repository.
 
----
+## 7. Remaining Work
 
-## 7. Current Observations
+The engineering study is not yet complete.
 
-### 7.1 Parallel Scaling
+The remaining tasks are:
 
-The proving pipeline benefits from multi-thread execution.
+- Record the actual Spend and Output circuit constraint counts, variable
+  counts, and domain information where the APIs expose them.
+- Add SHA-256 checksums for the parameter files and preserve the existing
+  validation records.
+- Measure parameter loading, proving, verification, proof size, and peak
+  memory with clearly documented measurement boundaries.
+- Investigate the Spend proof workflow, subject to available inputs and
+  the official API.
+- Document the source call paths from Sapling proving interfaces to
+  Groth16 proof generation and verification.
+- Compare engineering scale and cost structure with the frozen synthetic
+  Groth16 baseline without treating absolute timings from different
+  workloads or configurations as directly interchangeable.
+- Prepare a concise final report summarizing measured facts, limitations,
+  and lessons learned.
 
-However:
+## 8. Scope and Limitations
 
-- 1 → 8 threads provides significant improvement.
-- 8 → 20 threads improvement becomes smaller.
+This repository is a learning-stage engineering study of Sapling's
+Groth16 implementation. It is not an implementation of Orchard or Halo 2.
 
-This suggests that:
+The current results establish that an Output proof can be generated and
+verified in the tested local environment. They do not establish that every
+planned performance metric has been measured, that the full Zcash
+transaction workflow has been reproduced, or that a proving optimization
+has been demonstrated.
 
-- Some parts are parallelizable.
-- Some parts remain sequential or have synchronization overhead.
-
----
-
-### 7.2 MSM Behavior
-
-Initial profiling shows:
-
-- MSM execution dominates important parts of proving.
-- Different query types have different costs.
-- G2 MSM operations are generally more expensive than G1 MSM operations.
-
-However, these observations are only baseline measurements.
-
-No optimization is proposed at this stage.
-
----
-
-## 8. Research Direction
-
-Future work will focus on:
-
-1. Understanding the complete Groth16 proving pipeline.
-
-2. Studying:
-
-- MSM
-- FFT
-- Polynomial operations
-- CRS structure
-
-3. Comparing different SNARK systems:
-
-- Groth16
-- PLONK
-- Halo2
-
-4. Investigating possible directions for reducing:
-
-- Prover computation cost
-- Memory usage
-- Proof generation overhead
-
----
-
-## 9. Current Status
-
-Completed:
-
-- [x] Build environment setup
-- [x] Sapling engineering reproduction
-- [x] Groth16 proof generation
-- [x] Verification testing
-- [x] Thread scaling experiment
-- [x] MSM instrumentation
-- [x] Raw experiment collection
-
-Next steps:
-
-- Study Zcash Sapling architecture.
-- Analyze circuit size and CRS size.
-- Understand practical deployment scenarios.
-- Build a complete SNARK performance evaluation framework.
-
----
-
-## 10. Notes
-
-This repository is an experimental baseline for academic research.
-
-The current goal is understanding and measurement rather than direct optimization.
+The next stage is to complete the planned measurements and source-code
+analysis rather than extend the experimental optimization work.
