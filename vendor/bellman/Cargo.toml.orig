@@ -1,0 +1,93 @@
+[workspace]
+members = [
+    ".",
+    "groth16",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+homepage = "https://github.com/zkcrypto/bellman"
+repository = "https://github.com/zkcrypto/bellman"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+bellman = { version = "0.15", path = ".", default-features = false }
+groth16 = { version = "0.1", path = "groth16" }
+
+bitvec = "1"
+blake2s_simd = "1"
+byteorder = "1"
+ff = "0.14"
+group = "0.14"
+pairing = "0.24.0"
+rand_core = "0.10"
+subtle = "2.3"
+
+# Multicore dependencies
+crossbeam-channel = "0.5.1"
+log = "0.4"
+num_cpus = "1"
+rand = { version = "0.10", default-features = false }
+rayon = "1.5.1"
+
+# Dev dependencies
+bls12_381 = "0.9"
+criterion = "0.7"
+hex-literal = "1"
+rand_xorshift = "0.5"
+sha2 = "0.11"
+
+[package]
+authors = [
+    "Sean Bowe <ewillbefull@gmail.com>",
+    "Jack Grigg <thestr4d@gmail.com>",
+]
+description = "zk-SNARK library"
+readme = "README.md"
+homepage.workspace = true
+license.workspace = true
+name = "bellman"
+repository.workspace = true
+version = "0.15.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+bitvec.workspace = true
+blake2s_simd.workspace = true
+ff.workspace = true
+group.workspace = true
+pairing = { workspace = true, optional = true }
+rand_core.workspace = true
+byteorder.workspace = true
+subtle.workspace = true
+
+# Multicore dependencies
+crossbeam-channel = { workspace = true, optional = true }
+log = { workspace = true, optional = true }
+num_cpus = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
+
+[dev-dependencies]
+bls12_381.workspace = true
+criterion.workspace = true
+hex-literal.workspace = true
+pairing.workspace = true
+rand = { workspace = true, features = ["thread_rng"] }
+rand_xorshift.workspace = true
+sha2.workspace = true
+
+# Only for doctests.
+groth16.workspace = true
+
+[features]
+multicore = ["crossbeam-channel", "log", "num_cpus", "rayon"]
+default = ["multicore"]
+
+[[bench]]
+name = "slow"
+harness = false
+
+[badges]
+maintenance = { status = "actively-developed" }

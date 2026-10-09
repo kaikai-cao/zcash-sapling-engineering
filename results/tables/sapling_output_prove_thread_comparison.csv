@@ -1,0 +1,3 @@
+threads,samples,prove_median_ms,prove_mean_ms,prove_stddev_ms,verify_median_ms,proof_bytes,all_verified
+1,5,522.686,529.564,16.377,2.125,192,True
+20,5,89.620,100.244,26.385,2.486,192,True

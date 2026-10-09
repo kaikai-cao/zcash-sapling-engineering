@@ -1,0 +1,86 @@
+   Compiling bellman v0.15.0 (D:\Research\zcash-sapling-engineering\vendor\bellman)
+   Compiling groth16 v0.2.0 (D:\Research\zcash-sapling-engineering\vendor\groth16)
+   Compiling sapling-crypto v0.9.0 (D:\Research\zcash-sapling-crypto)
+   Compiling sapling-output-smoke v0.1.0 (D:\Research\zcash-sapling-engineering\experiments\prover-smoke)
+    Finished `release` profile [optimized] target(s) in 4.70s
+     Running `experiments\prover-smoke\target\release\sapling-output-smoke.exe`
+params_read_validate_ms=1869.985
+prepare_vk_ms=1.351
+input_prep_ms=16.041
+G16_PROFILE stage=circuit_synthesis elapsed_ms=70.220
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=11.828
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.026
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.311
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.345
+BELLMAN_MSM_PROFILE call_id=3 exponent_count=6 density_map_size=None window=3 elapsed_ms=1.488
+BELLMAN_MSM_PROFILE call_id=5 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=1.710
+BELLMAN_MSM_PROFILE call_id=7 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=2.190
+BELLMAN_MSM_PROFILE call_id=2 exponent_count=7821 density_map_size=None window=9 elapsed_ms=61.123
+BELLMAN_MSM_PROFILE call_id=4 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=61.493
+BELLMAN_MSM_PROFILE call_id=6 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=61.925
+BELLMAN_MSM_PROFILE call_id=1 exponent_count=8191 density_map_size=None window=10 elapsed_ms=64.120
+BELLMAN_MSM_PROFILE call_id=8 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=64.263
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=64.724
+run=1, prove_ms=147.261, verify_ms=2.405, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=15.104
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.652
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.013
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.355
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.419
+BELLMAN_MSM_PROFILE call_id=15 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=1.682
+BELLMAN_MSM_PROFILE call_id=16 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=60.760
+BELLMAN_MSM_PROFILE call_id=10 exponent_count=7821 density_map_size=None window=9 elapsed_ms=61.288
+BELLMAN_MSM_PROFILE call_id=12 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=61.486
+BELLMAN_MSM_PROFILE call_id=14 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=61.373
+BELLMAN_MSM_PROFILE call_id=9 exponent_count=8191 density_map_size=None window=10 elapsed_ms=62.310
+BELLMAN_MSM_PROFILE call_id=11 exponent_count=6 density_map_size=None window=3 elapsed_ms=62.081
+BELLMAN_MSM_PROFILE call_id=13 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=62.084
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=62.971
+run=2, prove_ms=89.282, verify_ms=2.930, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=16.902
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.562
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.010
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.369
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.420
+BELLMAN_MSM_PROFILE call_id=21 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=1.511
+BELLMAN_MSM_PROFILE call_id=19 exponent_count=6 density_map_size=None window=3 elapsed_ms=1.649
+BELLMAN_MSM_PROFILE call_id=23 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=1.953
+BELLMAN_MSM_PROFILE call_id=20 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=59.017
+BELLMAN_MSM_PROFILE call_id=18 exponent_count=7821 density_map_size=None window=9 elapsed_ms=61.036
+BELLMAN_MSM_PROFILE call_id=22 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=61.678
+BELLMAN_MSM_PROFILE call_id=17 exponent_count=8191 density_map_size=None window=10 elapsed_ms=62.322
+BELLMAN_MSM_PROFILE call_id=24 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=62.041
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=62.482
+run=3, prove_ms=90.509, verify_ms=2.443, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=14.939
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=11.106
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.011
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.361
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.463
+BELLMAN_MSM_PROFILE call_id=27 exponent_count=6 density_map_size=None window=3 elapsed_ms=0.917
+BELLMAN_MSM_PROFILE call_id=29 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=1.023
+BELLMAN_MSM_PROFILE call_id=31 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=1.387
+BELLMAN_MSM_PROFILE call_id=30 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=54.982
+BELLMAN_MSM_PROFILE call_id=26 exponent_count=7821 density_map_size=None window=9 elapsed_ms=56.105
+BELLMAN_MSM_PROFILE call_id=25 exponent_count=8191 density_map_size=None window=10 elapsed_ms=57.451
+BELLMAN_MSM_PROFILE call_id=32 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=57.119
+BELLMAN_MSM_PROFILE call_id=28 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=57.147
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=57.917
+run=4, prove_ms=84.550, verify_ms=2.486, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=14.625
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.971
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.006
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.395
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.430
+BELLMAN_MSM_PROFILE call_id=37 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=0.990
+BELLMAN_MSM_PROFILE call_id=35 exponent_count=6 density_map_size=None window=3 elapsed_ms=1.190
+BELLMAN_MSM_PROFILE call_id=39 exponent_count=6 density_map_size=Some(6) window=3 elapsed_ms=1.725
+BELLMAN_MSM_PROFILE call_id=34 exponent_count=7821 density_map_size=None window=9 elapsed_ms=61.211
+BELLMAN_MSM_PROFILE call_id=38 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=62.258
+BELLMAN_MSM_PROFILE call_id=36 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=62.656
+BELLMAN_MSM_PROFILE call_id=33 exponent_count=8191 density_map_size=None window=10 elapsed_ms=63.441
+BELLMAN_MSM_PROFILE call_id=40 exponent_count=7821 density_map_size=Some(7821) window=9 elapsed_ms=62.999
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=63.468
+run=5, prove_ms=89.620, verify_ms=2.909, proof_bytes=192, verified=true
+CSV_PATH=experiments/raw/csv/sapling_output_prover_runs_release.csv
+OUTPUT_PROOF_EXPERIMENT=PASS

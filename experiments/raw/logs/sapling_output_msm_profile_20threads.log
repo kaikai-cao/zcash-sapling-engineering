@@ -1,0 +1,86 @@
+   Compiling bellman v0.15.0 (D:\Research\zcash-sapling-engineering\vendor\bellman)
+   Compiling groth16 v0.2.0 (D:\Research\zcash-sapling-engineering\vendor\groth16)
+   Compiling sapling-crypto v0.9.0 (D:\Research\zcash-sapling-crypto)
+   Compiling sapling-output-smoke v0.1.0 (D:\Research\zcash-sapling-engineering\experiments\prover-smoke)
+    Finished `release` profile [optimized] target(s) in 4.64s
+     Running `experiments\prover-smoke\target\release\sapling-output-smoke.exe`
+params_read_validate_ms=1797.047
+prepare_vk_ms=1.022
+input_prep_ms=11.978
+G16_PROFILE stage=circuit_synthesis elapsed_ms=54.657
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.965
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.016
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.297
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.344
+BELLMAN_MSM_PROFILE call_id=5 elapsed_ms=1.234
+BELLMAN_MSM_PROFILE call_id=3 elapsed_ms=1.484
+BELLMAN_MSM_PROFILE call_id=7 elapsed_ms=1.870
+BELLMAN_MSM_PROFILE call_id=4 elapsed_ms=60.902
+BELLMAN_MSM_PROFILE call_id=2 elapsed_ms=63.152
+BELLMAN_MSM_PROFILE call_id=6 elapsed_ms=63.736
+BELLMAN_MSM_PROFILE call_id=1 elapsed_ms=64.198
+BELLMAN_MSM_PROFILE call_id=8 elapsed_ms=64.036
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=64.550
+run=1, prove_ms=130.646, verify_ms=2.264, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=13.473
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=11.962
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.006
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.396
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.446
+BELLMAN_MSM_PROFILE call_id=11 elapsed_ms=0.869
+BELLMAN_MSM_PROFILE call_id=13 elapsed_ms=0.965
+BELLMAN_MSM_PROFILE call_id=15 elapsed_ms=1.577
+BELLMAN_MSM_PROFILE call_id=9 elapsed_ms=66.574
+BELLMAN_MSM_PROFILE call_id=14 elapsed_ms=66.920
+BELLMAN_MSM_PROFILE call_id=12 elapsed_ms=67.217
+BELLMAN_MSM_PROFILE call_id=16 elapsed_ms=67.240
+BELLMAN_MSM_PROFILE call_id=10 elapsed_ms=67.362
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=67.893
+run=2, prove_ms=93.882, verify_ms=2.435, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=15.009
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.408
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.004
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.336
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.369
+BELLMAN_MSM_PROFILE call_id=21 elapsed_ms=1.072
+BELLMAN_MSM_PROFILE call_id=19 elapsed_ms=1.076
+BELLMAN_MSM_PROFILE call_id=23 elapsed_ms=1.744
+BELLMAN_MSM_PROFILE call_id=18 elapsed_ms=62.819
+BELLMAN_MSM_PROFILE call_id=20 elapsed_ms=63.033
+BELLMAN_MSM_PROFILE call_id=17 elapsed_ms=63.532
+BELLMAN_MSM_PROFILE call_id=22 elapsed_ms=63.160
+BELLMAN_MSM_PROFILE call_id=24 elapsed_ms=63.177
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=63.833
+run=3, prove_ms=89.734, verify_ms=2.474, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=13.992
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.960
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.005
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.393
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.451
+BELLMAN_MSM_PROFILE call_id=27 elapsed_ms=0.846
+BELLMAN_MSM_PROFILE call_id=29 elapsed_ms=1.064
+BELLMAN_MSM_PROFILE call_id=31 elapsed_ms=1.315
+BELLMAN_MSM_PROFILE call_id=26 elapsed_ms=56.991
+BELLMAN_MSM_PROFILE call_id=25 elapsed_ms=58.019
+BELLMAN_MSM_PROFILE call_id=30 elapsed_ms=57.570
+BELLMAN_MSM_PROFILE call_id=28 elapsed_ms=57.776
+BELLMAN_MSM_PROFILE call_id=32 elapsed_ms=57.803
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=58.466
+run=4, prove_ms=83.970, verify_ms=2.328, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=13.695
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.375
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.009
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.403
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.454
+BELLMAN_MSM_PROFILE call_id=34 elapsed_ms=58.596
+BELLMAN_MSM_PROFILE call_id=36 elapsed_ms=58.637
+BELLMAN_MSM_PROFILE call_id=33 elapsed_ms=60.907
+BELLMAN_MSM_PROFILE call_id=40 elapsed_ms=60.211
+BELLMAN_MSM_PROFILE call_id=38 elapsed_ms=60.653
+BELLMAN_MSM_PROFILE call_id=37 elapsed_ms=61.093
+BELLMAN_MSM_PROFILE call_id=35 elapsed_ms=61.208
+BELLMAN_MSM_PROFILE call_id=39 elapsed_ms=61.690
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=62.159
+run=5, prove_ms=86.808, verify_ms=2.469, proof_bytes=192, verified=true
+CSV_PATH=experiments/raw/csv/sapling_output_prover_runs_release.csv
+OUTPUT_PROOF_EXPERIMENT=PASS

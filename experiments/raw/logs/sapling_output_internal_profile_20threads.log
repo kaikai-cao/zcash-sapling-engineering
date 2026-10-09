@@ -1,0 +1,45 @@
+   Compiling groth16 v0.2.0 (D:\Research\zcash-sapling-engineering\vendor\groth16)
+   Compiling sapling-crypto v0.9.0 (D:\Research\zcash-sapling-crypto)
+   Compiling sapling-output-smoke v0.1.0 (D:\Research\zcash-sapling-engineering\experiments\prover-smoke)
+    Finished `release` profile [optimized] target(s) in 5.00s
+     Running `experiments\prover-smoke\target\release\sapling-output-smoke.exe`
+params_read_validate_ms=1788.402
+prepare_vk_ms=1.074
+input_prep_ms=11.440
+G16_PROFILE stage=circuit_synthesis elapsed_ms=54.937
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=11.608
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.013
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.294
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.350
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=63.423
+run=1, prove_ms=130.410, verify_ms=2.177, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=13.271
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=11.092
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.007
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.389
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.461
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=58.485
+run=2, prove_ms=83.434, verify_ms=2.375, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=14.280
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=11.335
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.009
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.391
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.460
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=59.377
+run=3, prove_ms=85.604, verify_ms=2.197, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=13.532
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=11.315
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.008
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.389
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.487
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=56.909
+run=4, prove_ms=82.361, verify_ms=2.254, proof_bytes=192, verified=true
+G16_PROFILE stage=circuit_synthesis elapsed_ms=13.837
+G16_PROFILE stage=qap_fft_quotient elapsed_ms=10.478
+G16_PROFILE stage=h_msm_submit elapsed_ms=0.011
+G16_PROFILE stage=assignment_conversion elapsed_ms=0.405
+G16_PROFILE stage=msm_setup_submit elapsed_ms=0.488
+G16_PROFILE stage=post_dispatch_wait_assembly elapsed_ms=63.631
+run=5, prove_ms=88.574, verify_ms=2.270, proof_bytes=192, verified=true
+CSV_PATH=experiments/raw/csv/sapling_output_prover_runs_release.csv
+OUTPUT_PROOF_EXPERIMENT=PASS
