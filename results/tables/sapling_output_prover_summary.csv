@@ -1,0 +1,2 @@
+batch_id,sample_count,params_read_validate_ms,prepare_vk_ms,input_prep_ms,prove_mean_ms,prove_median_ms,prove_stddev_ms,prove_min_ms,prove_max_ms,verify_mean_ms,verify_median_ms,verify_stddev_ms,verify_min_ms,verify_max_ms,proof_bytes,all_verified,rayon_threads
+1791526595792,5,15348.258,9.419,67.515,681.793,644.286,81.664,639.558,827.378,20.843,19.254,3.670,19.124,27.407,192,True,default

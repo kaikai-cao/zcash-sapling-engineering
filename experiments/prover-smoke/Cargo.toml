@@ -1,0 +1,14 @@
+
+[package]
+name = "sapling-output-smoke"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sapling-crypto = { path = "../../../zcash-sapling-crypto", features = ["circuit"] }
+bls12_381 = "0.9"
+group = "0.14"
+jubjub = "0.11"
+rand = { version = "0.10", features = ["std_rng"] }
+
+zcash_note_encryption = "0.5.1"
