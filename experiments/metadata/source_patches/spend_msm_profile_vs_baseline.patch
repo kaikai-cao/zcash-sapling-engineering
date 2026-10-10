@@ -1,0 +1,65 @@
+diff --git a/vendor/bellman/src/multiexp.rs b/vendor/bellman/src/multiexp.rs
+index 43db0f7..eff7a29 100644
+--- a/vendor/bellman/src/multiexp.rs
++++ b/vendor/bellman/src/multiexp.rs
+@@ -6,6 +6,8 @@ use std::io;
+ use std::iter;
+ use std::ops::AddAssign;
+ use std::sync::Arc;
++use std::sync::atomic::{AtomicUsize, Ordering};
++use std::time::Instant;
+ 
+ #[cfg(feature = "multicore")]
+ use rayon::prelude::*;
+@@ -15,6 +17,9 @@ use crate::multicore::FakeParallelIterator;
+ 
+ use super::SynthesisError;
+ 
++// Process-wide sequence number for instrumented multiexp calls.
++static MSM_PROFILE_CALL_ID: AtomicUsize = AtomicUsize::new(1);
++
+ /// An object that builds a source of bases.
+ pub trait SourceBuilder<G: PrimeCurveAffine>: Send + Sync + 'static + Clone {
+     type Source: Source<G>;
+@@ -327,7 +332,40 @@ where
+         assert!(query_size == exponents.len());
+     }
+ 
+-    pool.compute(move || multiexp_inner(bases, density_map, exponents, c))
++    let call_id = MSM_PROFILE_CALL_ID.fetch_add(1, Ordering::Relaxed);
++    let exponent_count = exponents.len();
++    let density_map_size = density_map.as_ref().get_query_size();
++    let window = c;
++    let submitted_at = Instant::now();
++    let submit_start = Instant::now();
++
++    let waiter = pool.compute(move || {
++        let task_start_delay_ms = submitted_at.elapsed().as_secs_f64() * 1000.0;
++        let start = Instant::now();
++        let result = multiexp_inner(bases, density_map, exponents, c);
++        let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
++
++        eprintln!(
++            "BELLMAN_MSM_PROFILE call_id={} exponent_count={} density_map_size={:?} window={} task_start_delay_ms={:.3} elapsed_ms={:.3}",
++            call_id,
++            exponent_count,
++            density_map_size,
++            window,
++            task_start_delay_ms,
++            elapsed_ms,
++        );
++
++        result
++    });
++
++    let submit_elapsed_ms = submit_start.elapsed().as_secs_f64() * 1000.0;
++    eprintln!(
++        "BELLMAN_MSM_SUBMIT_PROFILE call_id={} submit_elapsed_ms={:.3}",
++        call_id,
++        submit_elapsed_ms,
++    );
++
++    waiter
+ }
+ 
+ #[cfg(feature = "pairing")]

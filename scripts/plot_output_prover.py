@@ -16,7 +16,7 @@ RAW_FILE = ROOT / "experiments/raw/csv/sapling_output_prover_runs.csv"
 SUMMARY_DIR = ROOT / "results/tables"
 FIGURE_DIR = ROOT / "results/figures"
 
-SUMMARY_FILE = SUMMARY_DIR / "sapling_output_prover_summary.csv"
+SUMMARY_FILE = SUMMARY_DIR / "sapling_output_prover_summary_exploratory.csv"
 
 
 def load_csv(path):

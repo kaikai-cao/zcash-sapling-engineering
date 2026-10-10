@@ -79,6 +79,22 @@ Prove 计时围绕单次证明生成调用，不包含参数加载、验证密�
 
 原始 Output CSV 中还保留了后续内存测量进程产生的新证明批次。正式汇总脚本只选择上面列出的正式基线批次，避免将不同目的的实验合并统计。
 
+
+### Historical exploratory Output summary
+
+The file `results/tables/sapling_output_prover_summary_exploratory.csv` preserves an earlier exploratory Output measurement batch.
+
+* Batch ID: `1791526595792`
+* Number of samples: 5
+* Median Prove time: 644.286 ms
+* Median Verify time: 19.254 ms
+* Recorded thread setting: `default`
+
+This historical summary is retained for traceability and is not the designated formal baseline. The formal Output baseline is batch `1791549582046`, measured in Release mode with one Rayon thread, with median Prove and Verify times of 514.853 ms and 2.150 ms, respectively.
+
+Do not combine these batches into a single performance summary. Use `results/tables/engineering_performance.csv` for the designated formal baseline.
+
+
 ## 6. 峰值工作集内存
 
 | 指标 | Spend | Output |
