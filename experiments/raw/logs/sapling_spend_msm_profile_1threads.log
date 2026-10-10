@@ -1,0 +1,13 @@
+    Finished `release` profile [optimized] target(s) in 2.80s
+     Running `experiments\prover-smoke\target\release\spend_prover_smoke.exe`
+params_read_validate_ms=37068.570
+prepare_vk_ms=1.737
+input_prep_ms=26.552
+run=1, prove_ms=5707.660, verify_ms=2.795, proof_bytes=192, verified=true
+run=2, prove_ms=3447.166, verify_ms=3.015, proof_bytes=192, verified=true
+run=3, prove_ms=3455.299, verify_ms=2.788, proof_bytes=192, verified=true
+run=4, prove_ms=3417.547, verify_ms=2.864, proof_bytes=192, verified=true
+run=5, prove_ms=3441.379, verify_ms=2.765, proof_bytes=192, verified=true
+batch_id=1791621656573
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\prover-smoke\../../experiments/raw/csv\sapling_spend_prover_runs_release.csv
+SPEND_PROOF_EXPERIMENT=PASS
