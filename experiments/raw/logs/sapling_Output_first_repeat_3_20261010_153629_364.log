@@ -1,0 +1,10 @@
+params_read_validate_ms=1812.279
+prepare_vk_ms=1.059
+input_prep_ms=12.223
+run=1, prove_ms=585.627, verify_ms=2.896, proof_bytes=192, verified=true
+run=2, prove_ms=982.657, verify_ms=4.793, proof_bytes=192, verified=true
+run=3, prove_ms=1126.027, verify_ms=4.019, proof_bytes=192, verified=true
+run=4, prove_ms=1017.853, verify_ms=4.042, proof_bytes=192, verified=true
+run=5, prove_ms=971.411, verify_ms=3.976, proof_bytes=192, verified=true
+CSV_PATH=experiments/raw/csv/sapling_output_prover_runs_release.csv
+OUTPUT_PROOF_EXPERIMENT=PASS

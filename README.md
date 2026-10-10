@@ -173,3 +173,40 @@ A comparison against the synthetic Groth16 baseline is still pending. The synthe
 A claim that MSM, G2, WNAF, or bucket accumulation is the dominant cost in real Sapling proving is not yet supported by the measurements recorded here. If real-prover instrumentation is infeasible through the available APIs, that limitation should be recorded rather than replaced with an assumption.
 
 The current results establish a first engineering baseline: real Spend and Output proof generation and proof checks succeed, the main scale and parameter metadata are recorded, and a source call-path note exists. The study remains in progress until cold/warm conditions, memory repeatability, frozen-baseline comparison, and the advisor-facing summary have been addressed.
+
+## 10. Exploratory First-vs-Repeat Measurements
+
+Additional independent-process runs were collected on 2026-10-10 to
+compare the first proving call with the following four calls in the same
+process. These are exploratory observations, not a controlled
+cold-versus-warm cache benchmark: parameters and inputs are prepared
+before the first proof, and the operating-system file cache is not
+forcibly cleared.
+
+Several Output processes had stable later proving times near 0.51–0.52 s,
+while other processes showed later proving times near 0.96–1.15 s and
+simultaneously higher verification times. Subsequent Spend runs also
+showed substantially higher parameter-loading, proving, and verification
+times than the designated baseline. All recorded proof checks passed,
+but the runtime variation remains unexplained.
+
+System CPU was sampled approximately every 500 ms. Those whole-system
+samples do not establish the CPU time available to a particular proving
+call. The available measurements do not establish that WeChat, power
+management, or any other single factor caused the variation.
+
+Raw records:
+
+- `experiments/raw/csv/sapling_process_first_repeat_raw.csv`
+- `experiments/raw/csv/sapling_system_load_samples.csv`
+- `experiments/raw/logs/`
+
+Reproduction scripts:
+
+- `scripts/run_process_first_repeat.ps1`
+- `scripts/measure_process_peak_working_set.ps1`
+
+The formal summary remains restricted to Spend batch `1791613854129`
+and Output batch `1791549582046`. Exploratory batches are retained but
+are not mixed into those formal statistics. A controlled cold/warm
+benchmark and a stable memory distribution remain open tasks.
