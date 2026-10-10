@@ -45,11 +45,14 @@ Prove 计时不包含参数加载、VK 准备与见证构造；Verify 只表示�
 
 已跑通 Spend / Output 真实证明生成与检查，记录电路规模、参数哈希和大小，生成汇总 CSV 与图表，并梳理 Zcash 交易构造到 Sapling Prover / Groth16 的关键源码调用链。当前实验直接调用证明 API，不是完整钱包交易构造与共识验证测试。
 
+已完成 Frozen synthetic Groth16 baseline 与真实 Sapling 的第一轮规模／成本结构对照，记录在 `docs/baseline_comparison.md` 和 `results/tables/baseline_cost_structure_comparison.csv`。合成基线的一次带剖析记录中，MSM 累计耗时占 Prove 约 91.60%；该比例不能直接推广到 Sapling。
+
+Sapling Output 的单线程剖析已找到具体瓶颈证据：两份较轻量日志的后续运行中，8 次 MSM 调用耗时合计约占 Prove 的 93.2%–93.4%。按源码调用顺序映射后，单次耗时最高的是 B-G2 auxiliary query（中位约 152.7 ms），其次是 H query（约 129.1 ms）；更细粒度日志表明 bucket fill 约占 MSM 内部阶段计时的 73%–74%，但该细粒度插桩会明显增加总运行时间，因此只用于内部成本定位。
+
 尚未完成：
 - 严格定义且受控的冷／热运行基准；
 - 可报告波动范围的重复内存测量；
-- 与 Frozen synthetic Groth16 baseline 的规模及成本结构对照；
-- 真实 Sapling 的 MSM 占比确认（若工程接口不便测量，应记录限制，而非沿用合成基线的假设）。
+- 对 Sapling Spend 完成同口径阶段剖析，确认相同调用排序是否成立；多线程下不能直接累加重叠的调用 elapsed 来算占比。
 
 ## 5. 面向导师的三句话
 
@@ -57,4 +60,4 @@ Prove 计时不包含参数加载、VK 准备与见证构造；Verify 只表示�
 
 **性能事实：** 在固定 Sapling 源码版本、release、单线程设置下，正式批次的 Prove 中位数分别为 3385.716 ms 和 514.853 ms，Verify 中位数分别为 2.790 ms 和 2.150 ms；两者证明大小均为 192 bytes。
 
-**研究结论：** 真实工程基线已经建立，但当前还不能断言真实 Sapling 的主要瓶颈是 MSM，也不能从现有探索性数据得出严格冷／热性能结论。下一步应完成测量口径可控的对照实验、重复内存测量和 Frozen Baseline 成本结构比较，再形成最终研究结论。
+**研究结论：** 已有证据支持 MSM 主导当前测得的 Sapling Output 单线程证明路径，且 bucket fill 是优先调查的内部成本段；这一结论尚不能直接推广到 Spend 或多线程模式。下一步应完成 Spend 同口径剖析和 G1/G2 调用映射，再依据实际成本决定优化方向；冷／热测量与重复内存统计仍作为基线完善项。

@@ -1,0 +1,9 @@
+﻿call_order,query_name,curve_group,exponent_count,window,profile_sizes_median_ms,profile_sizes_min_ms,profile_sizes_max_ms,op_counts_median_ms,op_counts_min_ms,op_counts_max_ms,basis
+1,H query,G1,8191,10,129.125,127.26,130.08,127.084,125.854,130.208,Source order in vendor/groth16/src/prover.rs; profile runs 2-5; first call each run
+2,L query,G1,7821,9,82.987,81.449,83.59,82.089,81.43,84.457,Source order in vendor/groth16/src/prover.rs; profile runs 2-5
+3,A input query,G1,6,3,0.938,0.916,0.963,1.033,1.024,1.042,Source order in vendor/groth16/src/prover.rs; profile runs 2-5
+4,A auxiliary query,G1,7821,9,65.012,64.755,65.893,64.723,64.183,65.541,Source order in vendor/groth16/src/prover.rs; profile runs 2-5
+5,B G1 input query,G1,6,3,0.772,0.763,0.799,0.89,0.838,0.948,Source order in vendor/groth16/src/prover.rs; profile runs 2-5
+6,B G1 auxiliary query,G1,7821,9,53.18,52.606,54.286,53.738,52.616,55.35,Source order in vendor/groth16/src/prover.rs; profile runs 2-5
+7,B G2 input query,G2,6,3,2.237,2.16,2.622,2.273,2.218,2.708,Source order in vendor/groth16/src/prover.rs; profile runs 2-5
+8,B G2 auxiliary query,G2,7821,9,152.731,151.701,156.769,151.694,151.292,152.521,Source order in vendor/groth16/src/prover.rs; profile runs 2-5

@@ -17,8 +17,9 @@ This repository is a learning and measurement project. It examines real Spend an
 - [x] Draft a concise advisor-facing stage summary (`weekly_summary.md`).
 - [ ] Complete a controlled cold-versus-warm measurement protocol.
 - [ ] Repeat memory measurements to report variability.
-- [ ] Compare scale and cost structure with the frozen synthetic Groth16 baseline.
-- [ ] Investigate real Sapling MSM profiling if feasible; do not assume the synthetic baseline's hotspot must carry over.
+- [x] Compare scale and cost structure with the frozen synthetic Groth16 baseline (descriptive comparison; not a same-workload speed contest).
+- [x] Profile Sapling Output MSM in instrumented single-thread runs.
+- [ ] Complete an equivalent Spend profile and label MSM calls as G1/G2 using the source call order.
 
 ## 2. Experimental environment and source revision
 
@@ -117,6 +118,7 @@ The current experiment calls proof-generation and verification APIs directly. It
 ```text
 zcash-sapling-engineering/
 ├── docs/
+│   ├── baseline_comparison.md
 │   ├── engineering_experiment_notes.md
 │   └── zcash_sapling_flow.md
 ├── experiments/
@@ -129,6 +131,9 @@ zcash-sapling-engineering/
 ├── results/
 │   ├── figures/
 │   └── tables/
+│       ├── baseline_cost_structure_comparison.csv
+│       ├── sapling_output_msm_profile_summary.csv
+│       └── sapling_output_msm_query_profile.csv
 ├── scripts/
 │   ├── measure_process_peak_working_set.ps1
 │   ├── run_process_first_repeat.ps1
@@ -140,6 +145,9 @@ zcash-sapling-engineering/
 - `results/tables/` stores generated summary tables.
 - `results/figures/` stores generated plots.
 - `docs/engineering_experiment_notes.md` describes methods, data, and limitations.
+- `docs/baseline_comparison.md` compares the frozen synthetic baseline and real Sapling results without conflating non-equivalent workloads.
+- `results/tables/sapling_output_msm_profile_summary.csv` summarizes per-run Output MSM profiling records while preserving the parallel-timing caveat.
+- `results/tables/sapling_output_msm_query_profile.csv` maps the eight Output MSM calls to prover queries and G1/G2 using the vendored source call order.
 - `docs/zcash_sapling_flow.md` describes the source call path.
 - `scripts/summarize_engineering.py` creates the scale, parameter, and performance tables and seven charts. It intentionally selects the designated formal batches.
 - `scripts/run_process_first_repeat.ps1` runs independent processes and records first-vs-repeat observations plus system-load samples.
@@ -180,11 +188,11 @@ The measurement programs can append rows to raw CSV files. Check the current con
 
 ## 10. Frozen baseline comparison and limitations
 
-A comparison against the synthetic Groth16 baseline is still pending. The synthetic baseline uses a different circuit and curve setup, while Sapling uses BLS12-381 and real Spend/Output circuits. Compare scale and cost structure, not absolute runtimes as if they were a same-workload contest.
+The descriptive comparison is recorded in `docs/baseline_comparison.md` and `results/tables/baseline_cost_structure_comparison.csv`. The synthetic baseline uses BN254 and a synthetic workload; Sapling uses BLS12-381 and real Spend/Output circuits. This is a scale/cost-structure comparison, not a same-workload speed contest.
 
-A claim that MSM, G2, WNAF, or bucket accumulation is the dominant cost in real Sapling proving is not yet supported by the measurements recorded here. If real-prover instrumentation is infeasible through the available APIs, that limitation should be recorded rather than replaced with an assumption.
+The synthetic baseline's instrumented run attributed about 91.60% of Prove to MSM. Separately, two lower-overhead Sapling Output single-thread profiling logs show approximately 93.2%–93.4% MSM call-time share in later runs. This supports MSM dominance for the measured Output/single-thread path. It does not yet establish the Spend ratio; summed per-call elapsed times are also invalid as a share metric when calls overlap in multithreaded runs.
 
-The current results establish a first engineering baseline: real Spend and Output proof generation and proof checks succeed, the main scale and parameter metadata are recorded, and a source call-path note exists. The study remains in progress until cold/warm conditions, memory repeatability, and frozen-baseline comparison have been addressed. A concise advisor-facing draft is available in `weekly_summary.md`.
+The first scale/cost-structure comparison and Output's initial MSM profiling are complete. Remaining work includes controlled cold/warm conditions, repeatable memory measurement, and equivalent Spend/G1/G2 stage profiling. A concise advisor-facing summary is available in `weekly_summary.md`.
 
 ## 11. Exploratory First-vs-Repeat Measurements
 
@@ -206,3 +214,14 @@ Reproduction scripts:
 - `scripts/measure_process_peak_working_set.ps1`
 
 The formal summary remains restricted to Spend batch `1791613854129` and Output batch `1791549582046`. Exploratory batches are retained but are not mixed into those formal statistics. A controlled cold/warm benchmark and a stable memory distribution remain open tasks.
+
+
+## 12. Sapling Output MSM profiling
+
+The committed logs `sapling_output_msm_profile_sizes_1threads.log` and `sapling_output_msm_op_counts_1threads_smoke.log` independently show that, in later single-thread Output runs, the sum of eight MSM call elapsed times is about 93.2%–93.4% of the full proving call. For the first log, runs 2–5 have 487.116–488.044 ms summed MSM time and 521.122–523.243 ms Prove time (median per-run share 93.41%). The formal baseline batch is separate from these profile runs.
+
+The detailed `sapling_output_msm_stages_1threads.log` indicates bucket fill accounts for about 73%–74% of internal MSM-stage timings in runs 2–5. This fine-grained instrumentation substantially raises total Prove time, so use it to identify relative internal costs, not to report the official Prove latency.
+
+For the 20-thread profile, the per-call MSM timers overlap and their sum can exceed whole-Prove time. Do not calculate an MSM percentage from that sum. The recorded `post_dispatch_wait_assembly` phase is a useful parallel-path observation but includes waiting/assembly and is not a pure MSM timer.
+
+Raw profiling logs remain under `experiments/raw/logs/`; normalized run-level records are in `results/tables/sapling_output_msm_profile_summary.csv`. The eight Output MSM calls have been mapped to query roles and G1/G2 in `results/tables/sapling_output_msm_query_profile.csv`. Equivalent Spend profiling remains open.
