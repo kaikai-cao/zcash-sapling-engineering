@@ -118,3 +118,79 @@ python scripts/summarize_engineering.py
 ```
 
 该脚本只处理已有数据，不会重新运行证明实验。运行任何 proving 程序前，应先检查它是否会向 raw CSV 追加新记录。参数元数据、原始测量和探索性批次均应保留，不要为得到更整齐的数字而删除异常记录。
+
+## 9. 补充：Output 线程扩展与 Worker 调度观察（非正式基线）
+
+本节记录后续 Output profiling 的补充分析。它们不替换前文指定的正式批次，也不与不同插桩强度的数据混算。
+
+### 9.1 线程扩展的两组独立测量
+
+| 数据集 | 线程数 | Prove 中位数 | 样本 | 验证 |
+|---|---:|---:|---:|---|
+| `sapling_output_thread_comparison.csv` | 1 | 514.784 ms | 5 | 5/5 |
+| 同上 | 20 | 78.851 ms | 5 | 5/5 |
+| `sapling_output_worker_proof_summary.csv` | 1 | 512.951 ms | 5 | 5/5 |
+| 同上 | 2 | 270.691 ms | 5 | 5/5 |
+| 同上 | 4 | 165.925 ms | 5 | 5/5 |
+| 同上 | 8 | 99.003 ms | 5 | 5/5 |
+| 同上 | 20 | 89.835 ms | 5 | 5/5 |
+
+两组数据各自都显示 1→20 线程的 Prove 中位数降低，分别约为 6.53x 和 5.71x。它们是不同批次/分析流程，数值接近但不应拼成一个统一 benchmark；各组证明大小均为 192 bytes。线程对照不是算法优化结果，也不表示所有负载都能获得相同加速。
+
+### 9.2 Worker 调度线索
+
+`results/tables/sapling_output_worker_task_start_summary.csv` 汇总了 1、2、4、8、20 线程的任务启动延迟与 MSM 时长。该组单线程测量中，B-G1 auxiliary 的 synchronous fallback 在 5/5 样本出现，submit 阶段耗时中位数约 326.755 ms，而对应 MSM elapsed 中位数约 52.5 ms。这个字段不能与 MSM elapsed 混为同一种计时；它提示后续应同时观察任务派发、fallback 与整次 Prove 的墙钟关键路径。
+
+多线程下任务与 MSM 调用重叠，不能把各调用 elapsed 相加后计算 MSM / Prove 比例。该补充分析也没有证明 fallback 的根因，或证明优化调度一定能带来端到端收益。
+
+相关图表与原始日志分别保存在 `results/figures/` 和 `experiments/raw/logs/`；解析脚本为 `scripts/parse_worker_task_start.py`、`scripts/parse_msm_stage_comparison.py` 与 `scripts/compare_msm_thread_profiles.py`。
+
+
+## 10. 补充：Spend 调用级 MSM 与 Worker 提交计时（独立探索工作区，非正式基线）
+
+2026-10-10 在独立工作区 `D:\Research\zcash-sapling-engineering-msm-profile` 中使用插桩版 `vendor/bellman/src/multiexp.rs` 收集了 Spend 的调用级 MSM 与调度观测。该工作区与冻结主仓库分离；数据尚未纳入冻结快照，也未绑定到一份可提交复现的完整修订清单。
+
+### 10.1 单线程调用级 profile
+
+批次 `1791634015130`，日志 `experiments/raw/logs/sapling_spend_msm_queue_profile_20261010_200606.log`：
+
+- 5 次证明全部验证成功，证明大小均为 192 bytes。
+- 40/40 条 MSM 调用记录、40/40 条 `task_start_delay_ms` 和 40/40 条 `submit_elapsed_ms` 记录完整。
+- 五轮 Prove 时间分别为 8,020.464、7,996.506、8,176.483、8,320.273、7,896.238 ms，中位数为 **8,020.464 ms**。
+- 八次 MSM 调用的 elapsed 合计 / Prove 比例分别为 87.04%、87.62%、88.52%、86.01%、87.82%，中位数为 **87.62%**。此占比仅描述该插桩批次；不用于替代正式未插桩 Spend 基线（3,385.716 ms）。
+
+| 调用 | MSM 查询映射（按 prover 源码顺序） | 标量数量 | elapsed 中位数 |
+|---:|---|---:|---:|
+| 1 | H query, G1 | 131,071 | 3,530.905 ms |
+| 2 | L query, G1 | 98,638 | 975.897 ms |
+| 3 | A input query, G1 | 8 | 1.842 ms |
+| 4 | A auxiliary query, G1 | 98,638 | 680.353 ms |
+| 5 | B-G1 input query | 8 | 1.498 ms |
+| 6 | B-G1 auxiliary query | 98,638 | 507.662 ms |
+| 7 | B-G2 input query | 8 | 4.118 ms |
+| 8 | B-G2 auxiliary query | 98,638 | 1,317.713 ms |
+
+H query 是这组 Spend profile 中最耗时的调用；B-G2 auxiliary 是第二大的主要调用之一。这里的调用名称依照 Groth16 prover 的 MSM 调用顺序映射；该 profile 并未测量 MSM 内部的 bucket fill 等更深层阶段。
+
+### 10.2 Worker 提交与任务开始延迟
+
+在 1 线程批次中，调用编号 6、14、22、30、38 对应 B-G1 auxiliary。在这些调用上，`submit_elapsed_ms` 分别约为 5,607.894、5,681.407、5,862.091、5,872.212 和 5,652.460 ms；每次提交耗时都大致等于此前排队延迟与当前 MSM 执行时间之和。该现象与 Worker 队列回压／同步回退机制一致，但不能单凭这些计时确认所有根因。
+
+随后使用同一插桩程序对每个线程配置各运行一批、每批 5 次证明，得到以下探索性结果：
+
+| 线程数 | Prove 中位数 | 最大任务开始延迟 | 最大 submit 耗时 |
+|---:|---:|---:|---:|
+| 1 | 8,020.464 ms | 约 5,385 ms | 约 5,872 ms |
+| 2 | 3,651.495 ms | 约 2,511 ms | 1.777 ms |
+| 4 | 1,029.796 ms | 约 642 ms | 0.013 ms |
+| 8 | 687.381 ms | 约 0.44 ms | 0.163 ms |
+| 20 | 943.024 ms | 约 0.50 ms | 0.404 ms |
+
+每个线程配置目前只有一个独立进程批次，因此该表用于揭示调度路径线索，不足以宣称 8 线程是普遍最优配置，也不能将结果视为经重复进程验证的线程扩展曲线。当前阶段不继续以“找最佳线程数”为目标开展优化实验。
+
+### 10.3 解释边界与状态
+
+1. 本节数据来自修改过的 Bellman MSM 计时代码和独立工作区，插桩及运行环境可能改变绝对耗时；正式基线数值仍是指定的未插桩批次。
+2. 单线程中 MSM 调用顺序执行，因此本批调用时间合计可用于描述该批次内部时间结构；多线程时调用计时会重叠，禁止相加计算 MSM/Prove 占比。
+3. 新 profile 是审计后补充的探索性证据，不是冻结主仓库内已完成版本化、可一键复现的正式结果。下一步只需把源码修订、日志、调用映射和元数据整理并明确绑定，不需要为了本阶段继续增加线程数实验。
+4. 本项目未实施算法优化；本节识别的是已观测的成本／调度特征，而不是优化收益。
