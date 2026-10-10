@@ -1,0 +1,53 @@
+    Finished `release` profile [optimized] target(s) in 0.09s
+     Running `D:\Research\zcash-sapling-engineering-msm-profile\experiments\prover-smoke\target\release\spend_prover_smoke.exe`
+params_read_validate_ms=43468.980
+prepare_vk_ms=3.383
+input_prep_ms=26.482
+BELLMAN_MSM_PROFILE call_id=1 exponent_count=131071 density_map_size=None window=12 elapsed_ms=3323.505
+BELLMAN_MSM_PROFILE call_id=2 exponent_count=98638 density_map_size=None window=12 elapsed_ms=865.851
+BELLMAN_MSM_PROFILE call_id=3 exponent_count=8 density_map_size=None window=3 elapsed_ms=1.025
+BELLMAN_MSM_PROFILE call_id=4 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=306.350
+BELLMAN_MSM_PROFILE call_id=5 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=0.803
+BELLMAN_MSM_PROFILE call_id=6 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=222.893
+BELLMAN_MSM_PROFILE call_id=7 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=2.760
+BELLMAN_MSM_PROFILE call_id=8 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=605.216
+run=1, prove_ms=6360.319, verify_ms=2.981, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=9 exponent_count=131071 density_map_size=None window=12 elapsed_ms=1467.958
+BELLMAN_MSM_PROFILE call_id=10 exponent_count=98638 density_map_size=None window=12 elapsed_ms=405.455
+BELLMAN_MSM_PROFILE call_id=11 exponent_count=8 density_map_size=None window=3 elapsed_ms=0.996
+BELLMAN_MSM_PROFILE call_id=12 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=285.072
+BELLMAN_MSM_PROFILE call_id=13 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=0.809
+BELLMAN_MSM_PROFILE call_id=14 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=214.912
+BELLMAN_MSM_PROFILE call_id=15 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=2.186
+BELLMAN_MSM_PROFILE call_id=16 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=596.578
+run=2, prove_ms=3465.101, verify_ms=2.995, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=17 exponent_count=131071 density_map_size=None window=12 elapsed_ms=1458.950
+BELLMAN_MSM_PROFILE call_id=18 exponent_count=98638 density_map_size=None window=12 elapsed_ms=401.941
+BELLMAN_MSM_PROFILE call_id=19 exponent_count=8 density_map_size=None window=3 elapsed_ms=0.971
+BELLMAN_MSM_PROFILE call_id=20 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=283.504
+BELLMAN_MSM_PROFILE call_id=21 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=0.823
+BELLMAN_MSM_PROFILE call_id=22 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=224.308
+BELLMAN_MSM_PROFILE call_id=23 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=2.178
+BELLMAN_MSM_PROFILE call_id=24 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=604.386
+run=3, prove_ms=3460.746, verify_ms=2.786, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=25 exponent_count=131071 density_map_size=None window=12 elapsed_ms=1455.768
+BELLMAN_MSM_PROFILE call_id=26 exponent_count=98638 density_map_size=None window=12 elapsed_ms=414.397
+BELLMAN_MSM_PROFILE call_id=27 exponent_count=8 density_map_size=None window=3 elapsed_ms=0.963
+BELLMAN_MSM_PROFILE call_id=28 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=283.771
+BELLMAN_MSM_PROFILE call_id=29 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=0.774
+BELLMAN_MSM_PROFILE call_id=30 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=214.104
+BELLMAN_MSM_PROFILE call_id=31 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=2.319
+BELLMAN_MSM_PROFILE call_id=32 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=594.307
+run=4, prove_ms=3449.093, verify_ms=2.858, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=33 exponent_count=131071 density_map_size=None window=12 elapsed_ms=1469.684
+BELLMAN_MSM_PROFILE call_id=34 exponent_count=98638 density_map_size=None window=12 elapsed_ms=411.926
+BELLMAN_MSM_PROFILE call_id=35 exponent_count=8 density_map_size=None window=3 elapsed_ms=0.969
+BELLMAN_MSM_PROFILE call_id=36 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=391.355
+BELLMAN_MSM_PROFILE call_id=37 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=1.450
+BELLMAN_MSM_PROFILE call_id=38 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=503.887
+BELLMAN_MSM_PROFILE call_id=39 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=5.796
+BELLMAN_MSM_PROFILE call_id=40 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=1235.567
+run=5, prove_ms=4506.356, verify_ms=7.022, proof_bytes=192, verified=true
+batch_id=1791633287430
+CSV_PATH=D:\Research\zcash-sapling-engineering-msm-profile\experiments\prover-smoke\../../experiments/raw/csv\sapling_spend_prover_runs_release.csv
+SPEND_PROOF_EXPERIMENT=PASS

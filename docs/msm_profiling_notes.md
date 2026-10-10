@@ -112,14 +112,23 @@ H query 是该批次最耗时的 MSM 调用之一，B-G2 auxiliary 也占据较�
 
 ## 5. 原始证据、版本绑定与解释边界
 
-Spend profile 的原始日志预期归档为：
+Spend profile 的主要实验日志、线程配置日志、原始 CSV 和线程对照表均已归档。主结果批次的实际源码 SHA-256、日志 SHA-256、源码差异 SHA-256、参数文件哈希、工具链和基础 commit 见：
 
-`experiments/raw/logs/sapling_spend_msm_queue_profile_20261010_200606.log`
+`experiments/metadata/spend_msm_profile_1791634015130.md`
 
-为实现可复现性，应一并归档源码差异、生成日志的工作区 commit、冻结基线 commit、源码 SHA-256、日志 SHA-256、参数文件哈希、Rust 工具链、Release 配置和线程设置。若日志尚未提交或这些哈希尚未写入元数据，不能宣称该批次已经完全可追溯复现。
-
-建议的源码差异路径：
+主要源码差异：
 
 `experiments/metadata/source_patches/spend_msm_profile_vs_baseline.patch`
+
+关键原始日志：
+
+- `experiments/raw/logs/sapling_spend_msm_queue_profile_20261010_200606.log`：主分析批次，87.62% MSM-call elapsed share 的来源。
+- `experiments/raw/logs/sapling_spend_msm_queue_2threads_20261010_201521.log`
+- `experiments/raw/logs/sapling_spend_msm_queue_4threads_20261010_201624.log`
+- `experiments/raw/logs/sapling_spend_msm_queue_8threads_20261010_201717.log`
+- `experiments/raw/logs/sapling_spend_msm_queue_20threads_20261010_201805.log`
+- `results/tables/sapling_spend_thread_queue_comparison.csv`：线程配置的派生对照表。
+
+另外两份较早的单线程日志也已保留作探索过程记录，但不用于计算文中主分析批次的 87.62% 比例。各线程配置目前只有一个独立进程批次，不足以识别普遍最佳线程数。
 
 这些实验没有实施或验证算法优化。它们的价值是进一步刻画已测工作负载中的 MSM 调用和 Worker 调度特征，为后续提出可检验的优化假设提供依据。

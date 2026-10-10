@@ -257,7 +257,7 @@ python scripts/summarize_engineering.py
 
 - Complete a controlled cold-versus-warm measurement protocol; current first-versus-repeat observations are not a strict cache benchmark.
 - Repeat peak-working-set measurements to characterize variability; current figures are one whole-process observation per circuit.
-- Preserve and revision-bind the exploratory Spend call-level MSM profile, including the exact instrumented source difference and raw log.
+- If extending the exploratory Spend profile, use a committed clean experiment revision and record the source revision, parameter hashes, build profile, thread count, batch ID, and timing boundaries.
 - For future measurements, record the engineering commit/worktree revision, Sapling source commit, parameter hashes, build profile, thread count, batch ID, and timing boundaries.
 - If an optimization is eventually implemented, report both the local stage change and end-to-end Prove change, along with any costs or regressions elsewhere.
 
