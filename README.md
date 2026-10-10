@@ -14,10 +14,10 @@ This repository is a learning and measurement project. It examines real Spend an
 - [x] Collect five formal proof/verification measurements per circuit and summarize them separately from exploratory runs.
 - [x] Collect one whole-process peak-working-set observation for each circuit.
 - [x] Document the key Sapling source call path.
+- [x] Draft a concise advisor-facing stage summary (`weekly_summary.md`).
 - [ ] Complete a controlled cold-versus-warm measurement protocol.
 - [ ] Repeat memory measurements to report variability.
 - [ ] Compare scale and cost structure with the frozen synthetic Groth16 baseline.
-- [ ] Produce a concise advisor-facing weekly summary.
 - [ ] Investigate real Sapling MSM profiling if feasible; do not assume the synthetic baseline's hotspot must carry over.
 
 ## 2. Experimental environment and source revision
@@ -129,8 +129,11 @@ zcash-sapling-engineering/
 ├── results/
 │   ├── figures/
 │   └── tables/
-└── scripts/
-    └── summarize_engineering.py
+├── scripts/
+│   ├── measure_process_peak_working_set.ps1
+│   ├── run_process_first_repeat.ps1
+│   └── summarize_engineering.py
+└── weekly_summary.md
 ```
 
 - `experiments/raw/` stores original measurements. Keep newly collected batches clearly identified.
@@ -139,6 +142,9 @@ zcash-sapling-engineering/
 - `docs/engineering_experiment_notes.md` describes methods, data, and limitations.
 - `docs/zcash_sapling_flow.md` describes the source call path.
 - `scripts/summarize_engineering.py` creates the scale, parameter, and performance tables and seven charts. It intentionally selects the designated formal batches.
+- `scripts/run_process_first_repeat.ps1` runs independent processes and records first-vs-repeat observations plus system-load samples.
+- `scripts/measure_process_peak_working_set.ps1` records process peak working set.
+- `weekly_summary.md` provides a concise advisor-facing stage summary.
 - Parameter files are external and must not be committed.
 
 ## 9. Reproducing measurements
@@ -162,9 +168,15 @@ cargo run --release --manifest-path experiments/prover-smoke/Cargo.toml --bin sa
 
 # Regenerate summary tables and figures; does not run new proof experiments
 python scripts/summarize_engineering.py
+
+# Exploratory first-vs-repeat timing with system-load samples (starts new proof processes)
+.\scripts\run_process_first_repeat.ps1 -Circuit Output -Processes 3
+
+# Peak working-set measurement (starts a new proof process)
+.\scripts\measure_process_peak_working_set.ps1 -Circuit Output
 ```
 
-The measurement programs can append rows to raw CSV files. Check the current contents and record the batch ID before rerunning them. Do not rerun proof experiments just to regenerate tables.
+The measurement programs can append rows to raw CSV files. Check the current contents and record the batch ID before rerunning them. Do not rerun proof experiments just to regenerate tables. The first-vs-repeat runs are exploratory and are not strict cold/warm cache tests.
 
 ## 10. Frozen baseline comparison and limitations
 
@@ -172,28 +184,15 @@ A comparison against the synthetic Groth16 baseline is still pending. The synthe
 
 A claim that MSM, G2, WNAF, or bucket accumulation is the dominant cost in real Sapling proving is not yet supported by the measurements recorded here. If real-prover instrumentation is infeasible through the available APIs, that limitation should be recorded rather than replaced with an assumption.
 
-The current results establish a first engineering baseline: real Spend and Output proof generation and proof checks succeed, the main scale and parameter metadata are recorded, and a source call-path note exists. The study remains in progress until cold/warm conditions, memory repeatability, frozen-baseline comparison, and the advisor-facing summary have been addressed.
+The current results establish a first engineering baseline: real Spend and Output proof generation and proof checks succeed, the main scale and parameter metadata are recorded, and a source call-path note exists. The study remains in progress until cold/warm conditions, memory repeatability, and frozen-baseline comparison have been addressed. A concise advisor-facing draft is available in `weekly_summary.md`.
 
-## 10. Exploratory First-vs-Repeat Measurements
+## 11. Exploratory First-vs-Repeat Measurements
 
-Additional independent-process runs were collected on 2026-10-10 to
-compare the first proving call with the following four calls in the same
-process. These are exploratory observations, not a controlled
-cold-versus-warm cache benchmark: parameters and inputs are prepared
-before the first proof, and the operating-system file cache is not
-forcibly cleared.
+Additional independent-process runs were collected on 2026-10-10 to compare the first proving call with the following four calls in the same process. These are exploratory observations, not a controlled cold-versus-warm cache benchmark: parameters and inputs are prepared before the first proof, and the operating-system file cache is not forcibly cleared.
 
-Several Output processes had stable later proving times near 0.51–0.52 s,
-while other processes showed later proving times near 0.96–1.15 s and
-simultaneously higher verification times. Subsequent Spend runs also
-showed substantially higher parameter-loading, proving, and verification
-times than the designated baseline. All recorded proof checks passed,
-but the runtime variation remains unexplained.
+Several Output processes had stable later proving times near 0.51–0.52 s, while other processes showed later proving times near 0.96–1.15 s and simultaneously higher verification times. Subsequent Spend runs also showed substantially higher parameter-loading, proving, and verification times than the designated baseline. All recorded proof checks passed, but the runtime variation remains unexplained.
 
-System CPU was sampled approximately every 500 ms. Those whole-system
-samples do not establish the CPU time available to a particular proving
-call. The available measurements do not establish that WeChat, power
-management, or any other single factor caused the variation.
+The sampling script waits 500 ms between system-load polling attempts. In the captured runs, actual samples were roughly 0.8 seconds apart because CIM/WMI query and processing time added overhead. The samples are whole-system CPU utilization, not CPU time attributable to a particular proving call. The available measurements do not establish that WeChat, power management, or any other single factor caused the variation.
 
 Raw records:
 
@@ -206,7 +205,4 @@ Reproduction scripts:
 - `scripts/run_process_first_repeat.ps1`
 - `scripts/measure_process_peak_working_set.ps1`
 
-The formal summary remains restricted to Spend batch `1791613854129`
-and Output batch `1791549582046`. Exploratory batches are retained but
-are not mixed into those formal statistics. A controlled cold/warm
-benchmark and a stable memory distribution remain open tasks.
+The formal summary remains restricted to Spend batch `1791613854129` and Output batch `1791549582046`. Exploratory batches are retained but are not mixed into those formal statistics. A controlled cold/warm benchmark and a stable memory distribution remain open tasks.
