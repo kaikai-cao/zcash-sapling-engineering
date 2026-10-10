@@ -1,0 +1,3 @@
+circuit,measurement_method,peak_working_set_mib,rayon_threads,build_profile,batch_id,process_exit_code,proof_experiment_pass,scope_note
+Spend,Windows Process.PeakWorkingSet64 sampled every 250ms,101.31,1,release,1791615270097,0,true,"Whole process lifetime; includes parameter loading, validation, proving and verification"
+Output,Windows Process.PeakWorkingSet64 sampled every 250ms,22.22,1,release,1791615366610,0,true,"Whole process lifetime; includes parameter loading, validation, proving and verification"

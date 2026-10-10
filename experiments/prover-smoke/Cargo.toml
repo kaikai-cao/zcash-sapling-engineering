@@ -11,6 +11,9 @@ group = "0.14"
 jubjub = "0.11"
 rand = { version = "0.10", features = ["std_rng"] }
 zcash_note_encryption = "0.5.1"
+bellman = { path = "../../vendor/bellman" }
+blake2b_simd = "1"
+sha2 = "0.10.9"
 
 [patch.crates-io]
 groth16 = { path = "../../vendor/groth16" }

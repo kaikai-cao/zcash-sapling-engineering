@@ -1,0 +1,3 @@
+﻿circuit,source_version,source_commit,constraints,auxiliary_variables,public_inputs_excluding_one,input_variables_including_one,domain_size_estimate,domain_size_method,measurement_method
+Spend,0.9.0,88a7946b4a3066787776e11f0a502654167e022d,98777,98638,7,8,131072,next_power_of_two(constraints),"Counting ConstraintSystem; domain size is estimated, not directly measured"
+Output,0.9.0,88a7946b4a3066787776e11f0a502654167e022d,7827,7821,5,6,8192,next_power_of_two(constraints),"Counting ConstraintSystem; domain size is estimated, not directly measured"
