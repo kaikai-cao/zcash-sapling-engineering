@@ -27,20 +27,25 @@ Output parameter SHA-256: 2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db8857
 
 These are serialized byte counts, not process memory consumption. The embedded VK size is not evidence of a separate standalone VK file, and the five query vectors are not reported as a separately serialized PK artifact.
 
-## Cold/warm process comparison (exploratory; three pairs)
+## Cold/warm process comparison (exploratory; three pairs per circuit)
 
-The comparison used independent processes, an attempted standby-list clear for the approximate cold condition, and a pre-read of the parameter file for the approximate warm condition. These are operational approximations, not perfect isolation of every operating-system cache.
+- Supplemental Output cache-condition campaign recorded: 2026-10-11T14:57:37+08:00
+- Output process batches were run from engineering commit 2124efc090d7fd7c353d5bf3ad5e463f9af09c1c, with a clean worktree at experiment start. Each process generated five proofs, all verified; each batch recorded 40 MSM profile records.
+- The cold condition attempted a Windows standby-list clear; the warm condition pre-read the parameter file. These are operational approximations, not perfect isolation of every operating-system cache.
 
-| Pair | Cold Prove median (ms) | Warm Prove median (ms) | Warm minus cold (ms) | Relative difference |
-|---|---:|---:|---:|---:|
-| 1 | 3440.69 | 3472.57 | +31.88 | +0.93% |
-| 2 | 3444.30 | 3460.21 | +15.91 | +0.46% |
-| 3 | 3429.33 | 3455.48 | +26.15 | +0.76% |
+| Circuit | Pair | Cold batch | Warm batch | Cold Prove median (ms) | Warm Prove median (ms) | Warm − cold (ms) | Relative difference | Cold load/validate (ms) | Warm load/validate (ms) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|| Spend | 1 | 1791688828413 | 1791688872855 | 3440.69 | 3472.58 | +31.88 | 0.93% | 24042.95 | 23960.44 |
+| Spend | 2 | 1791688962305 | 1791688917416 | 3444.30 | 3460.21 | +15.91 | 0.46% | 24018.81 | 24043.25 |
+| Spend | 3 | 1791689006965 | 1791689051396 | 3429.33 | 3455.48 | +26.15 | 0.76% | 24086.97 | 24068.97 |
+| Output | 1 | 1791701501974 | 1791701509616 | 515.79 | 513.90 | -1.89 | -0.37% | 1821.81 | 1804.32 |
+| Output | 2 | 1791701524775 | 1791701517163 | 516.46 | 513.82 | -2.64 | -0.51% | 1810.56 | 1795.92 |
+| Output | 3 | 1791701532382 | 1791701539994 | 517.52 | 518.46 | +0.95 | 0.18% | 1815.11 | 1810.35 |
 
-Within this small sample, warm runs were slightly slower, not faster. This does not establish that caching has no effect; it shows no large consistent improvement under these specific conditions. The measured load/validation phase remained approximately 24 seconds in these process runs, so it should not be confused with a simple file-read-only timing.
+Across the three Spend pairs, warm-minus-cold Prove median differences were approximately +0.93%, +0.46%, and +0.76%. Across the three Output pairs, the differences were approximately -0.37%, -0.51%, and +0.18%. The direction is not consistent across the two circuits, and each comparison has only three pairs. These results do not show a large, stable proving-time benefit from pre-reading the parameter files under the tested conditions; they do not prove cache state has no effect.
+
+The parameter read/validation stage was approximately 24 seconds for Spend and approximately 1.8 seconds for Output in these process-level runs. This stage includes the experiment harness's parameter load and validation, not merely raw disk throughput. The measured Prove phase is separate from that stage.
 
 Raw cache comparison: experiments/raw/csv/sapling_cache_condition_raw.csv.
-
 ## Repeated process peak working set (six independent processes)
 
 | Circuit | Samples (MiB) | Median (MiB) | Range (MiB) | Proof verification |
