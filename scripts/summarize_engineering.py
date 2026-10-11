@@ -1,4 +1,5 @@
 import csv
+import math
 from collections import defaultdict
 from pathlib import Path
 from statistics import median
@@ -28,8 +29,10 @@ PERFORMANCE_RAW = {
     "Output": RAW_DIR / "sapling_output_prover_runs_release.csv",
 }
 
-# 只纳入我们选定的、恢复官方实现后的正式基准批次。
-# 原始 CSV 不删除、不修改；其他历史批次仍然完整保留。
+MEMORY_RAW = RAW_DIR / "sapling_process_memory_raw.csv"
+
+# 只纳入预先指定的正式性能基线批次。
+# 其他历史批次保留在原始 CSV 中，不混入正式汇总。
 BASELINE_BATCH_IDS = {
     "Spend": {"1791613854129"},
     "Output": {"1791549582046"},
@@ -38,6 +41,7 @@ BASELINE_BATCH_IDS = {
 SCALE_OUT = TABLE_DIR / "engineering_scale.csv"
 PARAMS_OUT = TABLE_DIR / "engineering_parameters.csv"
 PERFORMANCE_OUT = TABLE_DIR / "engineering_performance.csv"
+MEMORY_OUT = TABLE_DIR / "engineering_memory.csv"
 
 
 # ============================================================
@@ -95,6 +99,18 @@ def parse_bool(value, context):
     raise ValueError(f"{context} 中出现非法布尔值：{value!r}")
 
 
+def summarize(values):
+    if not values:
+        raise ValueError("无法对空数据计算统计量。")
+
+    return {
+        "median": median(values),
+        "mean": sum(values) / len(values),
+        "min": min(values),
+        "max": max(values),
+    }
+
+
 # ============================================================
 # 2. 电路规模汇总
 # ============================================================
@@ -138,7 +154,8 @@ def summarize_scale():
         if constraints <= 0:
             raise ValueError(f"{row['circuit']} 的约束数必须大于 0")
 
-        # 域大小是根据约束数计算的估计值，而非实测值。
+        # 域大小是根据约束数向上取二次幂的估算值，
+        # 并非直接读取运行时 domain 对象。
         expected_domain = 1 << (constraints - 1).bit_length()
 
         if domain_size != expected_domain:
@@ -239,7 +256,7 @@ def summarize_parameters():
             values = {row[field] for row in group_rows}
 
             if len(values) != 1:
-                raise ValueError(f"{parameter} 的 {field} " "在不同批次中不一致")
+                raise ValueError(f"{parameter} 的 {field} 在不同批次中不一致")
 
         if not parse_bool(
             group_rows[0]["point_encodings_verified"],
@@ -250,12 +267,12 @@ def summarize_parameters():
         batch_ids = [row["batch_id"] for row in group_rows]
 
         if len(batch_ids) != len(set(batch_ids)):
-            raise ValueError(f"{parameter} 存在重复 batch_id，" "请检查原始参数 CSV")
+            raise ValueError(f"{parameter} 存在重复 batch_id，请检查原始参数 CSV")
 
         times = [float(row["load_validate_ms"]) for row in group_rows]
 
-        if any(t < 0 for t in times):
-            raise ValueError(f"{parameter} 出现负耗时")
+        if any(not math.isfinite(t) or t < 0 for t in times):
+            raise ValueError(f"{parameter} 出现非法加载耗时")
 
         file_bytes = int(group_rows[0]["file_bytes"])
 
@@ -307,9 +324,9 @@ def summarize_performance():
         "build_profile",
     ]
 
-    # 先读取并筛选指定的正式基准批次。
     selected_records = []
 
+    # 先筛选明确指定的正式基准批次。
     for circuit, path in PERFORMANCE_RAW.items():
         raw_rows = read_csv(path)
         require_columns(raw_rows, required_fields, path)
@@ -337,10 +354,9 @@ def summarize_performance():
                 row["verified"],
                 f"{path.name}, batch_id={row['batch_id']}, " f"run={row['run']}",
             )
-
             selected_records.append(record)
 
-    # 防止重复记录被计入统计量。
+    # 防止重复实验记录被计入统计量。
     seen_runs = set()
 
     for row in selected_records:
@@ -355,7 +371,7 @@ def summarize_performance():
 
         seen_runs.add(identity)
 
-    # 按电路、线程数和构建模式分组，禁止混合配置。
+    # 按电路、线程数和构建模式分组。
     groups = defaultdict(list)
 
     for row in selected_records:
@@ -364,7 +380,6 @@ def summarize_performance():
             row["rayon_threads"].strip(),
             row["build_profile"].strip(),
         )
-
         groups[key].append(row)
 
     fields = [
@@ -397,7 +412,7 @@ def summarize_performance():
         proof_sizes = {int(row["proof_bytes"]) for row in group_rows}
 
         if len(proof_sizes) != 1:
-            raise ValueError(f"{circuit} 的证明大小不一致：" f"{sorted(proof_sizes)}")
+            raise ValueError(f"{circuit} 的证明大小不一致：{sorted(proof_sizes)}")
 
         verified_count = sum(1 for row in group_rows if row["verified_bool"])
         failed_count = len(group_rows) - verified_count
@@ -405,8 +420,8 @@ def summarize_performance():
         def times(field):
             result = [float(row[field]) for row in group_rows]
 
-            if any(value < 0 for value in result):
-                raise ValueError(f"{circuit}.{field} 出现负耗时")
+            if any(not math.isfinite(value) or value < 0 for value in result):
+                raise ValueError(f"{circuit}.{field} 出现非法耗时")
 
             return result
 
@@ -441,6 +456,7 @@ def summarize_performance():
         )
 
     circuit_order = {"Spend": 0, "Output": 1}
+
     output_rows.sort(
         key=lambda row: (
             circuit_order.get(row["circuit"], 99),
@@ -469,7 +485,152 @@ def summarize_performance():
 
 
 # ============================================================
-# 5. 通用柱状图
+# 5. 峰值工作集内存汇总
+# ============================================================
+
+
+def summarize_memory():
+    rows = read_csv(MEMORY_RAW)
+
+    required_fields = [
+        "circuit",
+        "measurement_method",
+        "peak_working_set_mib",
+        "rayon_threads",
+        "build_profile",
+        "batch_id",
+        "process_exit_code",
+        "proof_experiment_pass",
+        "scope_note",
+    ]
+
+    require_columns(rows, required_fields, MEMORY_RAW)
+
+    groups = defaultdict(list)
+    seen_batches = set()
+
+    for row in rows:
+        circuit = row["circuit"].strip()
+        batch_id = row["batch_id"].strip()
+
+        if not circuit or not batch_id:
+            raise ValueError("内存记录缺少 circuit 或 batch_id。")
+
+        # 同一电路的同一独立进程批次只能记录一次。
+        identity = (circuit, batch_id)
+
+        if identity in seen_batches:
+            raise ValueError(f"发现重复的内存测量记录：{identity}")
+
+        seen_batches.add(identity)
+
+        try:
+            peak_mib = float(row["peak_working_set_mib"])
+            exit_code = int(row["process_exit_code"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"内存数据格式异常：{identity}") from exc
+
+        if not math.isfinite(peak_mib) or peak_mib <= 0:
+            raise ValueError(f"峰值工作集必须是有限正数：{identity}")
+
+        proof_pass = parse_bool(
+            row["proof_experiment_pass"],
+            f"{MEMORY_RAW.name}, batch_id={batch_id}",
+        )
+
+        record = dict(row)
+        record["_peak_mib"] = peak_mib
+        record["_successful"] = exit_code == 0 and proof_pass
+
+        # 不混合测量方法、线程数或构建模式。
+        key = (
+            circuit,
+            row["measurement_method"].strip(),
+            row["rayon_threads"].strip(),
+            row["build_profile"].strip(),
+        )
+
+        groups[key].append(record)
+
+    fields = [
+        "circuit",
+        "measurement_method",
+        "rayon_threads",
+        "build_profile",
+        "measurement_count",
+        "successful_process_count",
+        "failed_process_count",
+        "batch_ids",
+        "peak_working_set_median_mib",
+        "peak_working_set_min_mib",
+        "peak_working_set_max_mib",
+        "scope_note",
+    ]
+
+    output_rows = []
+
+    for key, group_rows in groups.items():
+        circuit, method, threads, profile = key
+
+        values = [row["_peak_mib"] for row in group_rows]
+
+        successful_count = sum(1 for row in group_rows if row["_successful"])
+
+        batch_ids = sorted(row["batch_id"].strip() for row in group_rows)
+
+        scope_notes = list(
+            dict.fromkeys(
+                row["scope_note"].strip()
+                for row in group_rows
+                if row["scope_note"].strip()
+            )
+        )
+
+        output_rows.append(
+            {
+                "circuit": circuit,
+                "measurement_method": method,
+                "rayon_threads": threads,
+                "build_profile": profile,
+                "measurement_count": len(group_rows),
+                "successful_process_count": successful_count,
+                "failed_process_count": (len(group_rows) - successful_count),
+                "batch_ids": ";".join(batch_ids),
+                "peak_working_set_median_mib": (f"{median(values):.2f}"),
+                "peak_working_set_min_mib": f"{min(values):.2f}",
+                "peak_working_set_max_mib": f"{max(values):.2f}",
+                "scope_note": " | ".join(scope_notes),
+            }
+        )
+
+    circuit_order = {"Spend": 0, "Output": 1}
+
+    output_rows.sort(
+        key=lambda row: (
+            circuit_order.get(row["circuit"], 99),
+            int(row["rayon_threads"]),
+            row["build_profile"],
+        )
+    )
+
+    write_csv(MEMORY_OUT, fields, output_rows)
+    print(f"[OK] 内存汇总表：{MEMORY_OUT}")
+
+    for row in output_rows:
+        print(
+            f"  {row['circuit']}: "
+            f"samples={row['measurement_count']}, "
+            f"peak median={row['peak_working_set_median_mib']} MiB, "
+            f"successful="
+            f"{row['successful_process_count']}/"
+            f"{row['measurement_count']}"
+        )
+
+    return output_rows
+
+
+# ============================================================
+# 6. 通用柱状图
 # ============================================================
 
 
@@ -511,7 +672,7 @@ def save_bar_chart(
 
 
 # ============================================================
-# 6. 原有四张图：规模和参数
+# 7. 原有四张图：规模和参数
 # ============================================================
 
 
@@ -564,7 +725,7 @@ def generate_scale_and_parameter_figures(
 
 
 # ============================================================
-# 7. 证明性能图：只画全部验证通过的正式配置
+# 8. 证明性能图：只画全部验证通过的正式配置
 # ============================================================
 
 
@@ -592,7 +753,7 @@ def generate_performance_figures(performance_rows):
     ]
 
     # 图 5：证明生成耗时。
-    # 误差线仅表示本批次最小值和最大值，不是置信区间。
+    # 误差线表示本批次最小值和最大值，不是置信区间。
     prove_medians = [float(row["prove_median_ms"]) / 1000 for row in valid_rows]
 
     prove_lower = [
@@ -648,7 +809,7 @@ def generate_performance_figures(performance_rows):
     )
     plt.close(fig)
 
-    print("[OK] 图表：" f"{FIGURE_DIR / 'sapling_prove_time.png'}")
+    print(f"[OK] 图表：{FIGURE_DIR / 'sapling_prove_time.png'}")
 
     # 图 6：验证耗时。
     verify_medians = [float(row["verify_median_ms"]) for row in valid_rows]
@@ -656,7 +817,7 @@ def generate_performance_figures(performance_rows):
     verify_lower = [
         max(
             0.0,
-            float(row["verify_median_ms"]) - float(row["verify_min_ms"]),
+            (float(row["verify_median_ms"]) - float(row["verify_min_ms"])),
         )
         for row in valid_rows
     ]
@@ -664,7 +825,7 @@ def generate_performance_figures(performance_rows):
     verify_upper = [
         max(
             0.0,
-            float(row["verify_max_ms"]) - float(row["verify_median_ms"]),
+            (float(row["verify_max_ms"]) - float(row["verify_median_ms"])),
         )
         for row in valid_rows
     ]
@@ -706,7 +867,7 @@ def generate_performance_figures(performance_rows):
     )
     plt.close(fig)
 
-    print("[OK] 图表：" f"{FIGURE_DIR / 'sapling_verify_time.png'}")
+    print(f"[OK] 图表：{FIGURE_DIR / 'sapling_verify_time.png'}")
 
     # 图 7：证明大小。
     save_bar_chart(
@@ -720,7 +881,7 @@ def generate_performance_figures(performance_rows):
 
 
 # ============================================================
-# 8. 主程序
+# 9. 主程序
 # ============================================================
 
 
@@ -732,6 +893,7 @@ def main():
     scale_rows = summarize_scale()
     parameter_rows = summarize_parameters()
     performance_rows = summarize_performance()
+    memory_rows = summarize_memory()
 
     generate_scale_and_parameter_figures(
         scale_rows,
@@ -741,7 +903,8 @@ def main():
     generate_performance_figures(performance_rows)
 
     print()
-    print("[DONE] 三张汇总表、七张图均已生成。")
+    print("[DONE] 四张核心汇总表、七张核心图均已生成。")
+    print("内存数据已汇总；本脚本没有生成内存分布图。")
     print("原始数据未被修改。")
 
 
