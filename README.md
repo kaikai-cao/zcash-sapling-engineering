@@ -1,266 +1,424 @@
-# Zcash Sapling Engineering Study
+# zcash-sapling-engineering
 
-A reproducible engineering study of the Sapling Groth16 proving workflow used in Zcash. This repository records real Spend and Output circuit scale, parameter-file metadata, proof-generation and verification measurements, the source call path, and exploratory MSM profiling.
+A reproducible engineering study of Zcash Sapling zk-SNARK proving performance.
 
-> **Status:** The first real-engineering baseline is frozen. The project has not implemented or validated an algorithmic optimization. Some measurement and archival tasks remain open.
+本项目用于分析 Zcash Sapling 证明系统在实际工程实现中的性能开销，重点关注 Groth16 prover 端的计算瓶颈，包括：
 
-- **Frozen snapshot:** [`sapling-engineering-baseline-v1`](https://github.com/kaikai-cao/zcash-sapling-engineering/tree/sapling-engineering-baseline-v1)
-- **Frozen commit:** [`281f1882bd1b8347f44f485f0f5dca296edafe08`](https://github.com/kaikai-cao/zcash-sapling-engineering/commit/281f1882bd1b8347f44f485f0f5dca296edafe08)
-- **Advisor-facing summary:** [`weekly_summary.md`](weekly_summary.md)
-- **Detailed MSM analysis:** [`docs/msm_profiling_notes.md`](docs/msm_profiling_notes.md)
+* Prover pipeline 分阶段耗时
+* MSM（Multi-Scalar Multiplication）调用分布
+* Bellman Groth16 内部 MSM 开销
+* Spend / Output 两类证明流程对比
+* 后续潜在优化方向分析
 
-## Baseline snapshot vs. profiling build
+当前阶段目标：
 
-The tag [`sapling-engineering-baseline-v1`](https://github.com/kaikai-cao/zcash-sapling-engineering/tree/sapling-engineering-baseline-v1) preserves the frozen source snapshot associated with the formal engineering baseline. Its vendored Bellman MSM implementation does not contain the additional profiling markers now present on `main`.
+> 在不修改密码协议正确性的前提下，通过工程剖析定位 Sapling zk-SNARK proving 过程中的主要成本来源，为后续压缩证明成本、降低计算开销的研究提供实验基础。
 
-The designated formal batches are:
+---
 
-| Circuit | Batch ID | Prove median | Verify median | Samples verified | Rayon threads |
-|---|---:|---:|---:|---:|---:|
-| Spend | `1791613854129` | 3,385.716 ms | 2.790 ms | 5/5 | 1 |
-| Output | `1791549582046` | 514.853 ms | 2.150 ms | 5/5 | 1 |
+## 1. Environment
 
-The current `main` branch includes additional Bellman MSM and worker-scheduling instrumentation in `vendor/bellman/src/multiexp.rs`. It records MSM elapsed time, task-start delay, and submit-stage timing. Instrumentation and build state can affect absolute runtime, so timings collected from the profiling-oriented branch must not be treated as direct reproductions of the frozen formal baseline.
+实验环境：
 
-To inspect the frozen source snapshot locally, first preserve or commit any local changes, then run from the repository root:
+| 项目         | 配置                        |
+| ---------- | ------------------------- |
+| OS         | Windows 11                |
+| Rust       | 1.88.0                    |
+| Build      | Release                   |
+| Curve      | Jubjub / Sapling Groth16  |
+| Thread     | Rayon controlled          |
+| Repository | zcash-sapling-engineering |
 
-```powershell
-git fetch --tags
-git switch --detach sapling-engineering-baseline-v1
+主要依赖：
+
+```toml
+sapling-crypto = 0.9.0
+bellman = 0.15.0
+groth16 = 0.2.0
 ```
 
-Return to the development branch after inspection with:
+---
 
-```powershell
-git switch main
-```
-
-Do not switch revisions while you have uncommitted changes that need to be preserved. The frozen tag must not be moved to a newer commit.
-
-## Key figures
-
-The following figures are generated from recorded experiment data. They supplement, but do not replace, the CSV summaries.
-
-### Circuit constraints
-
-![Sapling Spend and Output circuit constraints](results/figures/sapling_circuit_constraints.png)
-
-Spend has 98,777 constraints, compared with 7,827 for Output. These are different circuits and not equivalent workloads.
-
-### Parameter-file sizes
-
-![Sapling Spend and Output parameter-file sizes](results/figures/sapling_parameter_sizes.png)
-
-The Spend parameter file is 45.737 MiB; the Output parameter file is 3.426 MiB. A parameter file contains the encoded proving and verifying parameters for its circuit; its file size must not be described as an independently measured CRS, PK, or VK size. See the [Zcash Sapling protocol specification, §5.8](https://zips.z.cash/protocol/sapling.pdf).
-
-### Formal proof-generation time
-
-![Sapling Spend and Output formal proof-generation time](results/figures/sapling_prove_time.png)
-
-Bars show the median Prove time from five measurements per circuit. Error bars show the observed minimum and maximum, not confidence intervals. Because Spend and Output are different circuits, this chart does not establish a general complexity relationship.
-
-## Circuit scale and parameter files
-
-| Metric | Sapling Spend | Sapling Output |
-|---|---:|---:|
-| Constraints | 98,777 | 7,827 |
-| Auxiliary variables | 98,638 | 7,821 |
-| Public inputs, excluding constant one | 7 | 5 |
-| Input variables, including constant one | 8 | 6 |
-| Estimated domain size | 131,072 | 8,192 |
-| Parameter-file size | 47,958,396 bytes / 45.737 MiB | 3,592,860 bytes / 3.426 MiB |
-| SHA-256 | `8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13` | `2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db88570e3f3fb0e4` |
-
-Constraint and variable counts were obtained with a counting ConstraintSystem. Domain size is estimated as `next_power_of_two(constraints)` rather than queried directly from the runtime domain object. Full SHA-256 and BLAKE2b-512 digests are recorded in [`results/tables/engineering_parameters.csv`](results/tables/engineering_parameters.csv); the parameter file size and validation evidence are also recorded in [`experiments/metadata/parameter_validation.csv`](experiments/metadata/parameter_validation.csv).
-
-### Obtaining and validating Sapling parameters
-
-The two parameter files are external inputs and are intentionally not committed to this repository. The Zcash protocol specification (§5.8) publishes the expected BLAKE2b-512 digests for these files.
-
-Official download endpoints:
-
-- [`sapling-spend.params`](https://download.z.cash/downloads/sapling-spend.params)
-- [`sapling-output.params`](https://download.z.cash/downloads/sapling-output.params)
-
-For the original Windows experiment layout, save the files to `D:\Research\zcash-params\`:
-
-```powershell
-$paramsDir = "D:\Research\zcash-params"
-New-Item -ItemType Directory -Path $paramsDir -Force | Out-Null
-
-Invoke-WebRequest `
-    -Uri "https://download.z.cash/downloads/sapling-spend.params" `
-    -OutFile "$paramsDir\sapling-spend.params"
-
-Invoke-WebRequest `
-    -Uri "https://download.z.cash/downloads/sapling-output.params" `
-    -OutFile "$paramsDir\sapling-output.params"
-```
-
-Expected file sizes:
-
-| File | Expected bytes | Approximate size |
-|---|---:|---:|
-| `sapling-spend.params` | 47,958,396 | 45.737 MiB |
-| `sapling-output.params` | 3,592,860 | 3.426 MiB |
-
-After download, validate the files before running experiments:
-
-```powershell
-python scripts/verify_params.py
-```
-
-The script checks expected sizes and the published BLAKE2b-512 digests, then writes the result to `experiments/metadata/parameter_validation.csv`. The harness also has its own parameter-loading and point-encoding validation path; those timings are distinct from the formal Prove measurements.
-
-## Formal proof and verification baseline
-
-The formal summary selects only the designated release-mode batches above. Each batch contains five measurements; `RAYON_NUM_THREADS=1` was used for the formal baseline.
-
-| Metric | Spend | Output |
-|---|---:|---:|
-| Prove median | 3,385.716 ms | 514.853 ms |
-| Prove minimum / maximum | 3,377.138 / 3,484.750 ms | 507.096 / 560.162 ms |
-| Verify median | 2.790 ms | 2.150 ms |
-| Verify minimum / maximum | 2.775 / 2.797 ms | 2.102 / 2.195 ms |
-| Encoded proof size | 192 bytes | 192 bytes |
-| Successful proof checks | 5/5 | 5/5 |
-
-The Prove timer excludes parameter loading, verifying-key preparation, and witness/input construction. Verify measures the experiment's Sapling proof-check API call, not end-to-end transaction or consensus validation. In particular, the Spend check includes related input and authorization-signature checks; it is not an isolated pairing-only microbenchmark.
-
-The designated summary is [`results/tables/engineering_performance.csv`](results/tables/engineering_performance.csv). Raw runs are preserved under `experiments/raw/csv/`; the summary script selects only the specified formal batch IDs so exploratory runs are not silently mixed into the baseline.
-
-## Memory measurement and limitations
-
-| Metric | Spend | Output |
-|---|---:|---:|
-| Peak working set median | 101.30 MiB | 21.54 MiB |
-| Independent process samples | 4 | 4 |
-
-These values are based on four successful independent process measurements per circuit. They represent whole-process peak working set across parameter loading, validation, proving, and verification; they are not Prove-only memory measurements.
-
-Spend ranged from 101.29 to 101.45 MiB, while Output ranged from 20.79 to 22.36 MiB. These observations characterize variability in the current host and experiment session, not a universal memory bound. See [`results/tables/engineering_memory.csv`](results/tables/engineering_memory.csv).
-
-Exploratory process-level cold-versus-warm comparisons have been conducted for both Spend and Output. The cold condition attempted to clear the Windows standby list, while the warm condition pre-read the parameter file. These are approximate controls, not strict isolation of all operating-system cache layers. Some historical RAMMap control logs are missing, and the initial Spend runs started with a dirty worktree. The observed Prove-time differences were small and inconsistent in direction, so the current data do not establish a stable cache-related proving-time benefit. See `experiments/metadata/sapling_measurement_campaign_closure_20261011.md` and `experiments/raw/csv/sapling_cache_condition_raw.csv`.
-
-## What the profiling supports
-
-- **Output, single thread:** Two lower-overhead profiles found that the sum of the eight MSM-call elapsed times accounted for about 93.2%–93.4% of Prove in subsequent runs. This supports MSM being a dominant cost in the measured Output path; it does not establish the same share for all circuits or for Spend.
-- **Output, B-G2 auxiliary:** This was the slowest individual call among the eight mapped MSM calls, with a lower-overhead profile-size median of about 152.731 ms. A deeper-instrumentation run attributed about 70.11% of that call's summed internal elapsed timing to bucket fill. These internal timings are affected by instrumentation and do not imply an equivalent end-to-end speedup opportunity.
-- **Spend, exploratory:** Batch `1791634015130` produced a five-run Prove median of 8,020.464 ms, with a median ratio of summed MSM-call elapsed times to Prove of 87.62%. All five proofs verified. This was collected using heavily instrumented code in a separate worktree and does not replace the formal uninstrumented Spend result of 3,385.716 ms. The profile and its raw log should be interpreted with its exact source-difference record and batch metadata.
-- **Thread experiments:** Two separate Output datasets measured median Prove changes from 1 to 20 threads of 514.784 to 78.851 ms (6.53×) and 512.951 to 89.835 ms (5.71×). These are separate measurement batches and must not be combined into a universal speedup claim. One exploratory Spend batch per thread configuration is not enough to identify a generally optimal thread count.
-- **Worker scheduling:** Single-thread logs show a large submit-stage delay associated with the Spend B-G1 auxiliary call and a synchronous-fallback pattern in Output experiments. These are scheduling-path clues, not a proven root cause. MSM timers overlap in multithreaded runs and must not be summed to estimate MSM's share of whole-Prove time.
-
-Detailed analysis, tables, and caveats are in [`docs/baseline_comparison.md`](docs/baseline_comparison.md) and [`docs/msm_profiling_notes.md`](docs/msm_profiling_notes.md). The latter separates Output and Spend exploratory profiling from the formal baseline.
-
-## Zcash Sapling call path and scope
-
-[`docs/zcash_sapling_flow.md`](docs/zcash_sapling_flow.md) documents the principal source path from wallet transaction construction through the transaction Builder and Sapling bundle, to `SpendProver` / `OutputProver` and Groth16 proof generation. It also outlines the Spend/Output proof-check APIs.
-
-The benchmark harness calls proving and proof-check APIs directly. It does **not** time the full wallet `Builder::build(...)` flow, transaction serialization, authorization/signing, network propagation, or all consensus checks. The reported times are therefore measurements of selected Sapling proving and verification operations, not end-to-end Zcash transaction latency.
-
-## Repository map
-
-This is a high-level map of the committed project layout; data and profiling records are organized by purpose rather than listed exhaustively.
+## 2. Repository Structure
 
 ```text
-zcash-sapling-engineering/
-├── README.md
-├── weekly_summary.md
-├── docs/
-│   ├── baseline_comparison.md
-│   ├── engineering_experiment_notes.md
-│   ├── msm_profiling_notes.md
-│   ├── smoke-check.md
-│   └── zcash_sapling_flow.md
-├── experiments/
-│   ├── prover-smoke/
-│   │   ├── Cargo.toml
-│   │   ├── Cargo.lock
-│   │   └── src/bin/
-│   ├── metadata/                    # parameter checks and profiling metadata
-│   └── raw/
-│       ├── csv/                     # raw measurements and per-run records
-│       └── logs/                    # preserved experiment logs
-├── results/
-│   ├── figures/                     # generated charts
-│   └── tables/                      # derived summaries and profile mappings
-├── scripts/                         # validation, aggregation, plotting, profiling
-├── vendor/
-│   ├── bellman/                     # vendored source; main contains profiling instrumentation
-│   └── groth16/                     # vendored Groth16 source
-└── .gitignore
+zcash-sapling-engineering
+│
+├── experiments
+│   ├── metadata
+│   │   └── 实验说明、分析记录
+│   │
+│   ├── raw
+│   │   ├── csv
+│   │   │   └── 原始实验数据
+│   │   │
+│   │   └── logs
+│   │       └── profiling 日志
+│   │
+│   └── figures
+│       └── 实验结果图
+│
+├── prover-smoke
+│   └── Sapling Spend / Output 测试程序
+│
+├── vendor
+│   ├── bellman
+│   └── groth16
+│
+└── README.md
 ```
 
-- `experiments/raw/` preserves original logs and structured measurements; do not delete outliers simply to make results appear cleaner.
-- `results/tables/` contains derived summaries. The formal performance table is `engineering_performance.csv`; profile-specific tables remain separate.
-- `results/figures/` contains charts generated from recorded data.
-- `scripts/summarize_engineering.py` regenerates the principal engineering tables and seven summary figures from existing data; it does not run proving experiments.
-- `scripts/verify_params.py` checks external parameter files by expected file size and BLAKE2b-512 digest.
-- Profile logs and outputs should be paired with the source revision, instrumentation state, batch ID, curve/circuit, build profile, and thread configuration.
+---
 
-## Reproducing measurements
+# 3. Completed Experiments
 
-### Prerequisites and source checkout
+## 3.1 Sapling Output Prover Baseline
 
-The original measurement environment was Windows 11, Intel Core i7-14700, 32 GB RAM, Rust 1.98.1 for the local harness, Release build, BLS12-381, and Groth16. The external Sapling source checkout used `sapling-crypto` 0.9.0 at commit `88a7946b4a3066787776e11f0a502654167e022d`.
+完成 Sapling Output proof generation 基准测试。
 
-For the original Windows layout, the engineering repository, Sapling source checkout, and parameter files are expected at:
+测试内容：
 
-- `D:\Research\zcash-sapling-engineering`
-- `D:\Research\zcash-sapling-crypto`
-- `D:\Research\zcash-params\sapling-spend.params`
-- `D:\Research\zcash-params\sapling-output.params`
+* 参数读取
+* VK preparation
+* proof generation
+* proof verification
+* proof size
 
-From `D:\Research`, the source checkout can be prepared as follows. If the directories already exist, check their state first rather than overwriting local work.
+实验结果：
+
+```text
+Output proof:
+
+prove:
+    millisecond level profiling completed
+
+verify:
+    ~2 ms range
+
+proof size:
+    192 bytes
+```
+
+验证结果：
+
+```text
+verified = true
+```
+
+---
+
+# 4. Groth16 Prover Pipeline Analysis
+
+通过源码插桩分析 Groth16 prover 内部阶段。
+
+主要观察：
+
+```text
+Circuit synthesis
+        |
+        v
+QAP construction
+        |
+        v
+FFT / polynomial operations
+        |
+        v
+MSM
+        |
+        v
+Proof assembly
+```
+
+其中 MSM 是主要计算热点。
+
+---
+
+# 5. MSM Profiling
+
+## Instrumentation
+
+修改位置：
+
+```text
+vendor/bellman/src/multiexp.rs
+```
+
+增加：
+
+```text
+BELLMAN_MSM_PROFILE
+BELLMAN_MSM_SUBMIT_PROFILE
+```
+
+记录：
+
+* exponent_count
+* density_map_size
+* window size
+* task scheduling delay
+* MSM execution time
+
+示例：
+
+```text
+BELLMAN_MSM_PROFILE
+
+exponent_count=98638
+window=12
+elapsed_ms=xxx
+```
+
+---
+
+# 6. Spend / Output Same Source MSM Comparison
+
+实验目的：
+
+在相同源码、相同 Release 构建、单线程环境下，对比 Sapling Spend 与 Output 的 MSM 开销。
+
+实验条件：
+
+```text
+Build:
+    Release
+
+Rayon:
+    1 thread
+
+Repeat:
+    5 runs
+
+Algorithm modification:
+    none
+```
+
+---
+
+## Spend Result
+
+```text
+Median prove time:
+
+6858.210 ms
+
+
+Median MSM accumulated time:
+
+5932.749 ms
+
+
+MSM / Prove:
+
+87.06%
+```
+
+---
+
+## Output Result
+
+```text
+Median prove time:
+
+885.491 ms
+
+
+Median MSM accumulated time:
+
+850.428 ms
+
+
+MSM / Prove:
+
+93.32%
+```
+
+---
+
+## Observation
+
+当前实验支持：
+
+```text
+MSM occupies the majority of Sapling proving time.
+```
+
+因此：
+
+* MSM 是当前最值得深入分析的性能对象；
+* 优化 MSM 可能影响主要 prover 成本；
+* 但当前实验不能直接推出优化收益。
+
+注意：
+
+```text
+MSM profiling time
+!=
+complete optimization potential
+```
+
+---
+
+# 7. Current Research Findings
+
+目前得到的阶段性认识：
+
+## 1. 性能瓶颈定位
+
+Sapling Groth16 prover 中：
+
+```text
+MSM
+|
++-- large scalar multiplication workload
+|
++-- dominates proving cost
+```
+
+因此后续研究重点：
+
+* MSM 算法优化
+* MSM 并行策略
+* 内存访问优化
+* 大规模证明场景优化
+
+---
+
+## 2. Spend vs Output
+
+实验发现：
+
+```text
+Spend:
+
+Prove ≈ seconds level
+
+Output:
+
+Prove ≈ sub-second level
+```
+
+二者差异主要来自：
+
+* witness规模
+* circuit复杂度
+* MSM规模
+
+---
+
+# 8. Reproducibility
+
+运行示例：
 
 ```powershell
-if (-not (Test-Path .\zcash-sapling-engineering)) {
-    git clone https://github.com/kaikai-cao/zcash-sapling-engineering.git zcash-sapling-engineering
-}
-if (-not (Test-Path .\zcash-sapling-crypto)) {
-    git clone https://github.com/zcash/sapling-crypto.git zcash-sapling-crypto
-}
-Set-Location .\zcash-sapling-crypto
-git checkout 88a7946b4a3066787776e11f0a502654167e022d
-Set-Location ..\zcash-sapling-engineering
+cargo run --release --bin spend_prover_smoke
 ```
 
-The recorded upstream `sapling-crypto` smoke-test environment used Rust/Cargo 1.88.0; the local engineering harness was recorded with Rust 1.98.1. The harness uses path dependencies to the external Sapling checkout and vendored `bellman` / `groth16` source. The `main` branch has profiling instrumentation, so it must not be mistaken for the frozen uninstrumented baseline.
+Output：
 
-### Commands
+```text
+SPEND_PROOF_EXPERIMENT=PASS
+```
 
-Run from the engineering repository root in PowerShell. These commands can run experiments or append raw records; inspect the batch IDs and source revision before running them. Validate parameter files first.
+检查实验数据：
 
 ```powershell
-$env:RAYON_NUM_THREADS = "1"
-
-# Validate external parameter files and hashes
-python scripts/verify_params.py
-
-# Circuit constraints and variable counts
-cargo run --release --manifest-path experiments/prover-smoke/Cargo.toml --bin circuit_scale
-
-# Parameter metadata and point-encoding checks
-cargo run --release --manifest-path experiments/prover-smoke/Cargo.toml --bin parameter_metadata
-
-# Spend proof generation and verification
-cargo run --release --manifest-path experiments/prover-smoke/Cargo.toml --bin spend_prover_smoke
-
-# Output proof generation and verification
-cargo run --release --manifest-path experiments/prover-smoke/Cargo.toml --bin sapling-output-smoke
-
-# Rebuild principal tables and figures from recorded data only
-python scripts/summarize_engineering.py
+Get-ChildItem experiments/raw
 ```
 
-`python scripts/summarize_engineering.py` regenerates derived summaries and charts but does not run new proof experiments. Proving commands may append new rows to raw CSV files. Do not rerun proving merely to regenerate an existing summary, and do not mix new exploratory batches into the designated formal baseline.
+---
 
-## Current limitations and next steps
+# 9. Current Limitations
 
-- Cold-versus-warm cache comparisons have been conducted as exploratory process-level experiments. The conditions are approximate rather than strict cache isolation; some historical RAMMap logs are missing, and initial Spend runs used a dirty worktree. Repeat this experiment only if cache behavior becomes a central research question, using a clean worktree and complete provenance records.
-- Peak working set has been measured across four independent processes per circuit. Report the median and observed range for the current environment; these are whole-process measurements, not Prove-only memory usage or a universal memory bound.
-- If extending the exploratory Spend profile, use a committed clean experiment revision and record the source revision, parameter hashes, build profile, thread count, batch ID, and timing boundaries.
-- For future measurements, record the engineering commit/worktree revision, Sapling source commit, parameter hashes, build profile, thread count, batch ID, and timing boundaries.
-- If an optimization is eventually implemented, report both the local stage change and end-to-end Prove change, along with any costs or regressions elsewhere.
+当前实验仍未完成：
 
-No algorithmic optimization has been implemented or validated. Current profiling identifies candidate cost and scheduling paths; it does not demonstrate optimization gains.
+* MSM 内部 bucket 分布分析
+* 不同 window 参数影响
+* MSM memory footprint 分析
+* FFT 与 MSM 的精细比例分析
+* 优化方案验证
+
+因此目前结论：
+
+```text
+已完成性能瓶颈定位，
+尚未进入优化阶段。
+```
+
+---
+
+# 10. Next Research Direction
+
+下一阶段计划：
+
+1. 继续分析 bellman MSM 实现细节
+
+重点：
+
+```text
+multiexp
+    |
+    +-- bucket accumulation
+    |
+    +-- window selection
+    |
+    +-- parallel scheduling
+```
+
+2. 建立优化基线：
+
+比较：
+
+```text
+baseline
+    |
+    v
+modified MSM implementation
+    |
+    v
+performance evaluation
+```
+
+3. 最终目标：
+
+探索：
+
+```text
+How to reduce SNARK proving cost
+```
+
+---
+
+# 11. Experimental Philosophy
+
+本项目遵循：
+
+```text
+Measure first,
+Optimize second.
+```
+
+所有优化必须回答：
+
+1. 优化对象是什么？
+2. 当前占总代价多少？
+3. 优化后收益是多少？
+4. 是否引入额外成本？
+
+---
+
+## Status
+
+Current status:
+
+```text
+Sapling Spend / Output
+        |
+        v
+Groth16 prover profiling completed
+        |
+        v
+MSM identified as primary target
+        |
+        v
+Optimization research preparation stage
+```
