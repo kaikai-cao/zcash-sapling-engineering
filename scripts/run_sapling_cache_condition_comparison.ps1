@@ -133,11 +133,57 @@ for ($pair = 1; $pair -le $Pairs; $pair++) {
 
         if ($condition -eq "Cold") {
             $cacheLabel = "standby_list_cleared_approximate"
-            # No parameter-file reads after this command and before launching the prover.
-            & $rammap "-accepteula" "-Et" 2>&1 | Tee-Object -FilePath $clearPath
-            $rammapExit = $LASTEXITCODE
+            $rammapStartedAt = (Get-Date).ToString("o")
+            $rammapSha256 = (Get-FileHash -LiteralPath $rammap -Algorithm SHA256).Hash
+            $rammapArgs = @("-accepteula", "-Et")
+            $rammapOutput = @()
+            try {
+                $rammapOutput = @(& $rammap @rammapArgs 2>&1 | ForEach-Object { [string]$_ })
+                $rammapExit = $LASTEXITCODE
+            }
+            catch {
+                $rammapOutput += "PowerShellException=$($_.Exception.Message)"
+                if ($null -ne $LASTEXITCODE) { $rammapExit = $LASTEXITCODE } else { $rammapExit = -1 }
+            }
+            $rammapEndedAt = (Get-Date).ToString("o")
+
+            # Always create a control transcript, even if RAMMap emits no text.
+            $rammapTranscript = @(
+                "record_type=RAMMap control transcript"
+                "circuit=$Circuit"
+                "condition=$cacheLabel"
+                "start_time=$rammapStartedAt"
+                "end_time=$rammapEndedAt"
+                "executable=$rammap"
+                "executable_sha256=$rammapSha256"
+                "arguments=$($rammapArgs -join ' ')"
+                "working_directory=$repoRoot"
+                "engineering_commit_at_run=$engineeringCommit"
+                "engineering_worktree_dirty_at_start=$engineeringDirty"
+                "parameter_file_path=$paramPath"
+                "parameter_file_bytes=$paramsBytes"
+                "parameter_file_sha256=$paramsHash"
+                "runner_script_sha256=$runnerScriptHash"
+                "exit_code=$rammapExit"
+                "captured_output_line_count=$($rammapOutput.Count)"
+                "----- captured stdout/stderr -----"
+            )
+            if ($rammapOutput.Count -gt 0) {
+                $rammapTranscript += $rammapOutput
+            }
+            else {
+                $rammapTranscript += "[RAMMap emitted no stdout/stderr text; command, timestamps, and exit code are recorded above.]"
+            }
+            $rammapTranscript += "----- end captured stdout/stderr -----"
+            [System.IO.File]::WriteAllLines(
+                $clearPath,
+                [string[]]$rammapTranscript,
+                [System.Text.UTF8Encoding]::new($false)
+            )
+
             Write-Host "RAMMAP_EXIT_CODE=$rammapExit"
-            if ($rammapExit -ne 0) { throw "RAMMap clear failed. Preserve logs; stopping." }
+            Write-Host "RAMMAP_LOG=$clearPath"
+            if ($rammapExit -ne 0) { throw "RAMMap clear failed. See control transcript: $clearPath" }
         }
         else {
             $cacheLabel = "parameter_file_preread_approximate"

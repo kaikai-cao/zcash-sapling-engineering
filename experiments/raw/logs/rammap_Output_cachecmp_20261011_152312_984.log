@@ -1,0 +1,20 @@
+record_type=RAMMap control transcript
+circuit=Output
+condition=standby_list_cleared_approximate
+start_time=2026-10-11T15:23:12.9867829+08:00
+end_time=2026-10-11T15:23:13.5166587+08:00
+executable=D:\Tools\RAMMap\RAMMap64.exe
+executable_sha256=E970913798481432CD590991577089E68510B861DC669DCAB24FEB06AAE0DF52
+arguments=-accepteula -Et
+working_directory=D:\Research\zcash-sapling-engineering
+engineering_commit_at_run=c85ae7ccdff6c19f6dc6b1959cdc3e18606c85d3
+engineering_worktree_dirty_at_start=True
+parameter_file_path=D:\Research\zcash-params\sapling-output.params
+parameter_file_bytes=3592860
+parameter_file_sha256=2F0EBBCBB9BB0BCFFE95A397E7EBA89C29EB4DDE6191C339DB88570E3F3FB0E4
+runner_script_sha256=35E2F949FAB787D14166C68258193D41E19EF22119C7123C65835AAB13374A05
+exit_code=0
+captured_output_line_count=0
+----- captured stdout/stderr -----
+[RAMMap emitted no stdout/stderr text; command, timestamps, and exit code are recorded above.]
+----- end captured stdout/stderr -----
