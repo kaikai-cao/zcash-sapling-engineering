@@ -39,7 +39,7 @@ The comparison used independent processes, an attempted standby-list clear for t
 
 Within this small sample, warm runs were slightly slower, not faster. This does not establish that caching has no effect; it shows no large consistent improvement under these specific conditions. The measured load/validation phase remained approximately 24 seconds in these process runs, so it should not be confused with a simple file-read-only timing.
 
-Raw cache comparison: xperiments/raw/csv/sapling_cache_condition_raw.csv.
+Raw cache comparison: experiments/raw/csv/sapling_cache_condition_raw.csv.
 
 ## Repeated process peak working set (six independent processes)
 
@@ -48,7 +48,7 @@ Raw cache comparison: xperiments/raw/csv/sapling_cache_condition_raw.csv.
 | Spend | 101.45, 101.29, 101.29 | 101.29 | 101.29–101.45 | All runs passed |
 | Output | 22.36, 20.86, 20.79 | 20.86 | 20.79–22.36 | All runs passed |
 
-Raw memory measurements: xperiments/raw/csv/sapling_process_memory_raw.csv.
+Raw memory measurements: experiments/raw/csv/sapling_process_memory_raw.csv.
 
 ## CPU diagnostic and measurement limits
 
@@ -56,9 +56,9 @@ The instrumented Spend CPU diagnostic batch had a Prove median of 3524.678 ms ac
 
 A separate first-repeat run showed substantially slower proving (around 6.7 seconds median according to its campaign summary). The available samples do not establish a unique cause for the variation. Treat CPU scheduling/frequency as a possible source of noise, not a proven causal explanation.
 
-Raw CPU diagnostic CSV: xperiments/raw/csv/sapling_spend_cpu_diagnostic_20261011_111424_930.csv.
+Raw CPU diagnostic CSV: experiments/raw/csv/sapling_spend_cpu_diagnostic_20261011_111424_930.csv.
 
-Raw system-wide CPU samples: xperiments/raw/csv/sapling_system_load_samples.csv.
+Raw system-wide CPU samples: experiments/raw/csv/sapling_system_load_samples.csv.
 
 ## Same-source Spend / Output MSM profile (exploratory; instrumented build)
 
@@ -69,7 +69,7 @@ Raw system-wide CPU samples: xperiments/raw/csv/sapling_system_load_samples.csv
 
 These figures come from instrumented profile runs and must not be combined with the frozen formal baseline as if they were the same measurement configuration. Output showed notable run-to-run variance; the median profile indicates MSM is a major measured cost in these batches, but the variation remains worth investigating before making a causal performance claim.
 
-Comparison metadata: xperiments/metadata/sapling_same_source_msm_comparison_20261011.md.
+Comparison metadata: experiments/metadata/sapling_same_source_msm_comparison_20261011.md.
 
 ## Frozen formal baseline is separate
 
@@ -86,7 +86,7 @@ The initial parameter-sizing run correctly recorded the script SHA-256, but its 
 
 ## Artifact manifest
 
-xperiments/metadata/sapling_measurement_artifact_manifest_20261011.csv records repository-local paths, byte sizes, SHA-256 hashes, and Git status for the working-tree artifacts seen when this closure script ran. The manifest excludes itself to avoid a recursive self-hash.
+experiments/metadata/sapling_measurement_artifact_manifest_20261011.csv records repository-local paths, byte sizes, SHA-256 hashes, and Git status for the working-tree artifacts seen when this closure script ran. The manifest excludes itself to avoid a recursive self-hash.
 
 ## Remaining caveats
 
