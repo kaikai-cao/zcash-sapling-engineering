@@ -245,6 +245,35 @@ MSM占比定义：
 - 多线程调度；
 - cache与内存访问行为。
 
+
+## Profiling Impact Analysis
+
+A profiling-disabled validation run was performed
+to verify the correctness of the measured performance.
+
+The profiling-disabled implementation achieved:
+
+- median proving time: ~7030 ms
+- verification time: ~5.3 ms
+- successful verification: 5/5
+
+Compared with the profiling-enabled build,
+the absolute proving time differs significantly.
+
+This indicates that the current profiling instrumentation
+changes internal execution behavior, especially around the
+Bellman worker/MSM scheduling path.
+
+Therefore:
+
+- profiling-enabled results are used for internal stage
+  attribution and bottleneck localization;
+- profiling-disabled results are used as the performance
+  reference baseline.
+
+No algorithmic optimization has been introduced.
+The current objective is only identifying dominant costs.
+
 ---
 
 # 11. 后续研究方向

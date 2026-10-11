@@ -16,6 +16,16 @@ use bellman::multiexp::{DensityTracker, FullDensity, multiexp};
 
 use bellman::multicore::Worker;
 
+fn g16_profile_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_PROFILE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
 fn eval<S: PrimeField>(
     lc: &LinearCombination<S>,
     mut input_density: Option<&mut DensityTracker>,
@@ -172,10 +182,22 @@ where
     C: Circuit<E::Fr>,
     R: Rng,
 {
+    let profile = g16_profile_enabled();
+    let random_start = profile.then(std::time::Instant::now);
+
     let r = E::Fr::random(&mut rng);
     let s = E::Fr::random(&mut rng);
 
-    create_proof::<E, C, P>(circuit, params, r, s)
+    let random_scalars_ms = random_start
+        .map(|start| start.elapsed().as_secs_f64() * 1000.0);
+
+    let proof = create_proof::<E, C, P>(circuit, params, r, s);
+
+    if let Some(elapsed_ms) = random_scalars_ms {
+        eprintln!("G16_RANDOMNESS_PROFILE random_scalars_ms={elapsed_ms:.3}");
+    }
+
+    proof
 }
 
 #[allow(clippy::many_single_char_names)]
@@ -190,6 +212,14 @@ where
     E::Fr: PrimeFieldBits,
     C: Circuit<E::Fr>,
 {
+    let profile = g16_profile_enabled();
+    // Marks delimit sequential wall-clock phases. Each boundary is captured once
+    // and reused by adjacent phases, avoiding double-counting between phases.
+    let mut profile_marks: [Option<std::time::Instant>; 8] = [None; 8];
+    if profile {
+        profile_marks[0] = Some(std::time::Instant::now());
+    }
+
     let mut prover = ProvingAssignment {
         a_aux_density: DensityTracker::new(),
         b_input_density: DensityTracker::new(),
@@ -214,11 +244,20 @@ where
         );
     }
 
+    if profile {
+        profile_marks[1] = Some(std::time::Instant::now());
+    }
+
     let worker = Worker::new();
 
     let vk = params.get_vk(prover.input_assignment.len())?;
 
-    let h = {
+    if profile {
+        profile_marks[2] = Some(std::time::Instant::now());
+    }
+
+    // QAP polynomial transforms and H-query exponent preparation.
+    let h_exponents = {
         let mut a = EvaluationDomain::from_coeffs(prover.a)?;
         let mut b = EvaluationDomain::from_coeffs(prover.b)?;
         let mut c = EvaluationDomain::from_coeffs(prover.c)?;
@@ -238,12 +277,22 @@ where
         let mut a = a.into_coeffs();
         let a_len = a.len() - 1;
         a.truncate(a_len);
-        // TODO: parallelize if it's even helpful
-        let a = Arc::new(a.into_iter().map(|s| s.0.into()).collect::<Vec<_>>());
-
-        multiexp(&worker, params.get_h(a.len())?, FullDensity, a)
+        Arc::new(a.into_iter().map(|s| s.0.into()).collect::<Vec<_>>())
     };
 
+    if profile {
+        profile_marks[3] = Some(std::time::Instant::now());
+    }
+
+    // This call can include synchronous fallback work inside Worker::compute.
+    let h = multiexp(&worker, params.get_h(h_exponents.len())?, FullDensity, h_exponents);
+
+    if profile {
+        profile_marks[4] = Some(std::time::Instant::now());
+    }
+
+    // Assignment conversion, query preparation, and the remaining MSM dispatches.
+    // In single-thread mode, a multiexp call may block while doing fallback work.
     // TODO: parallelize if it's even helpful
     let input_assignment = Arc::new(
         prover
@@ -317,6 +366,10 @@ where
     );
     let b_g2_aux = multiexp(&worker, b_g2_aux_source, b_aux_density, aux_assignment);
 
+    if profile {
+        profile_marks[5] = Some(std::time::Instant::now());
+    }
+
     if bool::from(vk.delta_g1.is_identity() | vk.delta_g2.is_identity()) {
         // If this element is zero, someone is trying to perform a
         // subversion-CRS attack.
@@ -336,6 +389,11 @@ where
         AddAssign::<&E::G1>::add_assign(&mut g_c, &(vk.alpha_g1 * s));
         AddAssign::<&E::G1>::add_assign(&mut g_c, &(vk.beta_g1 * r));
     }
+
+    if profile {
+        profile_marks[6] = Some(std::time::Instant::now());
+    }
+
     let mut a_answer = a_inputs.wait()?;
     AddAssign::<&E::G1>::add_assign(&mut a_answer, &a_aux.wait()?);
     AddAssign::<&E::G1>::add_assign(&mut g_a, &a_answer);
@@ -353,9 +411,41 @@ where
     AddAssign::<&E::G1>::add_assign(&mut g_c, &h.wait()?);
     AddAssign::<&E::G1>::add_assign(&mut g_c, &l.wait()?);
 
-    Ok(Proof {
+    let proof = Proof {
         a: g_a.to_affine(),
         b: g_b.to_affine(),
         c: g_c.to_affine(),
-    })
+    };
+
+    if profile {
+        profile_marks[7] = Some(std::time::Instant::now());
+
+        let marks = profile_marks.map(|mark| mark.expect("all G16 profile marks must be set"));
+        let duration_ms = |start: std::time::Instant, end: std::time::Instant| {
+            end.duration_since(start).as_secs_f64() * 1000.0
+        };
+
+        let circuit_synthesis_ms = duration_ms(marks[0], marks[1]);
+        let worker_vk_setup_ms = duration_ms(marks[1], marks[2]);
+        let qap_fft_h_exponent_prep_ms = duration_ms(marks[2], marks[3]);
+        let h_query_access_dispatch_ms = duration_ms(marks[3], marks[4]);
+        let assignment_query_prep_dispatch_ms = duration_ms(marks[4], marks[5]);
+        let proof_scalar_terms_ms = duration_ms(marks[5], marks[6]);
+        let wait_and_assembly_ms = duration_ms(marks[6], marks[7]);
+        let create_proof_body_ms = duration_ms(marks[0], marks[7]);
+
+        eprintln!(
+            "G16_STAGE_PROFILE circuit_synthesis_constraints_ms={:.3} worker_vk_setup_ms={:.3} qap_fft_h_exponent_prep_ms={:.3} h_query_access_dispatch_ms={:.3} assignment_query_prep_dispatch_ms={:.3} proof_scalar_terms_ms={:.3} wait_and_assembly_ms={:.3} create_proof_body_ms={:.3}",
+            circuit_synthesis_ms,
+            worker_vk_setup_ms,
+            qap_fft_h_exponent_prep_ms,
+            h_query_access_dispatch_ms,
+            assignment_query_prep_dispatch_ms,
+            proof_scalar_terms_ms,
+            wait_and_assembly_ms,
+            create_proof_body_ms,
+        );
+    }
+
+    Ok(proof)
 }

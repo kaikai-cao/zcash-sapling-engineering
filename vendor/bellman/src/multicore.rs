@@ -54,6 +54,17 @@ mod implementation {
             // the growing work queue and minimize the chances of memory
             // exhaustion.
             if previous_count > *WORKER_SPAWN_MAX_COUNT {
+                if std::env::var("SAPLING_PROFILE")
+                .map(|value| value == "1")
+                .unwrap_or(false)
+                {
+                    eprintln!(
+                                "BELLMAN_WORKER_FALLBACK previous_count={} max_count={} rayon_threads={}",
+                                 previous_count,
+                                *WORKER_SPAWN_MAX_COUNT,
+                                current_num_threads(),
+                            );
+}
                 let thread_index = rayon::current_thread_index().unwrap_or(0);
                 rayon::scope(move |_| {
                     trace!(

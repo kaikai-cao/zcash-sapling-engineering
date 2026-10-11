@@ -77,6 +77,16 @@ A reproducible engineering study of Zcash Sapling zk-SNARK proving performance.
 | `bellman` | 0.15.0 |
 | `groth16` | 0.2.0 |
 
+
+## Current Findings
+
+Through source-level profiling of Sapling Spend Groth16 proving:
+
+- MSM dominates proving cost (>80%).
+- H_query_G1 is the largest single MSM component.
+- Multi-thread scaling reaches around 5.9x speedup at 16 threads.
+- Further optimization should focus on reducing MSM computation rather than increasing parallelism.
+
 实际构建配置、依赖来源和源码 revision 应以对应实验记录为准。不同实验批次的条件不应在未核实的情况下混用。
 
 ---
@@ -499,3 +509,20 @@ The current deliverable is a reproducible engineering baseline and an initial so
 The objective is not to claim a speedup prematurely. It is to establish reliable evidence about where proving time is spent, what the present profiling can support, and what remains unexplained.
 
 **Current conclusion:** MSM-related operations are important cost contributors in the tested Sapling Spend and Output profiling workloads. The next task is to complete and reconcile the stage-level measurements needed to explain Spend proving time without mixing instrumented and uninstrumented results.
+
+## Research Scope
+
+This repository is an engineering study of Zcash Sapling
+zk-SNARK proving performance.
+
+The goal is to build a reproducible experimental framework
+for:
+
+- benchmarking Sapling proof generation;
+- profiling Groth16 proving stages;
+- identifying computational bottlenecks.
+
+This project does not modify the Sapling protocol.
+Instead, it analyzes the existing implementation to
+understand where proving costs come from and what
+optimization opportunities may exist.

@@ -6,6 +6,7 @@ use std::io;
 use std::iter;
 use std::ops::AddAssign;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
@@ -19,6 +20,16 @@ use super::SynthesisError;
 
 // Process-wide sequence number for instrumented multiexp calls.
 static MSM_PROFILE_CALL_ID: AtomicUsize = AtomicUsize::new(1);
+
+fn msm_profile_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_PROFILE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
 
 /// An object that builds a source of bases.
 pub trait SourceBuilder<G: PrimeCurveAffine>: Send + Sync + 'static + Clone {
@@ -332,38 +343,56 @@ where
         assert!(query_size == exponents.len());
     }
 
-    let call_id = MSM_PROFILE_CALL_ID.fetch_add(1, Ordering::Relaxed);
+    let profile = msm_profile_enabled();
+    let call_id = if profile {
+        Some(MSM_PROFILE_CALL_ID.fetch_add(1, Ordering::Relaxed))
+    } else {
+        None
+    };
+
     let exponent_count = exponents.len();
-    let density_map_size = density_map.as_ref().get_query_size();
+    let density_map_size = if profile {
+        density_map.as_ref().get_query_size()
+    } else {
+        None
+    };
     let window = c;
-    let submitted_at = Instant::now();
-    let submit_start = Instant::now();
+
+    let submitted_at = profile.then(Instant::now);
+    let submit_start = profile.then(Instant::now);
 
     let waiter = pool.compute(move || {
-        let task_start_delay_ms = submitted_at.elapsed().as_secs_f64() * 1000.0;
-        let start = Instant::now();
+        let task_start_delay_ms = submitted_at.map(|t| t.elapsed().as_secs_f64() * 1000.0);
+        let start = profile.then(Instant::now);
         let result = multiexp_inner(bases, density_map, exponents, c);
-        let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
 
-        eprintln!(
-            "BELLMAN_MSM_PROFILE call_id={} exponent_count={} density_map_size={:?} window={} task_start_delay_ms={:.3} elapsed_ms={:.3}",
-            call_id,
-            exponent_count,
-            density_map_size,
-            window,
-            task_start_delay_ms,
-            elapsed_ms,
-        );
+        if let (Some(call_id), Some(task_start_delay_ms), Some(start)) =
+            (call_id, task_start_delay_ms, start)
+        {
+            let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
+
+            eprintln!(
+                "BELLMAN_MSM_PROFILE call_id={} exponent_count={} density_map_size={:?} window={} task_start_delay_ms={:.3} elapsed_ms={:.3}",
+                call_id,
+                exponent_count,
+                density_map_size,
+                window,
+                task_start_delay_ms,
+                elapsed_ms,
+            );
+        }
 
         result
     });
 
-    let submit_elapsed_ms = submit_start.elapsed().as_secs_f64() * 1000.0;
-    eprintln!(
-        "BELLMAN_MSM_SUBMIT_PROFILE call_id={} submit_elapsed_ms={:.3}",
-        call_id,
-        submit_elapsed_ms,
-    );
+    if let (Some(call_id), Some(submit_start)) = (call_id, submit_start) {
+        let submit_elapsed_ms = submit_start.elapsed().as_secs_f64() * 1000.0;
+
+        eprintln!(
+            "BELLMAN_MSM_SUBMIT_PROFILE call_id={} submit_elapsed_ms={:.3}",
+            call_id, submit_elapsed_ms,
+        );
+    }
 
     waiter
 }
