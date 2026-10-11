@@ -1,0 +1,6 @@
+﻿run,circuit_synthesis_constraints_ms,worker_vk_setup_ms,qap_fft_h_exponent_prep_ms,h_query_access_dispatch_ms,assignment_query_prep_dispatch_ms,proof_scalar_terms_ms,wait_and_assembly_ms,create_proof_body_ms
+1,153.334,0.001,379.312,0.144,2332.175,1.526,591.827,3458.32
+2,99.776,0.003,378.304,0.032,2337.731,1.497,593.872,3411.215
+3,102.013,0.003,379.353,0.035,2329.957,1.493,591.043,3403.897
+4,99.91,0.003,378.491,0.03,2339.077,1.502,591.445,3410.459
+5,100.876,0.003,383.138,0.039,2392.394,1.509,619.42,3497.379

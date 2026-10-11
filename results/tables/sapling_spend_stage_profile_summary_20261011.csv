@@ -1,0 +1,9 @@
+﻿stage,median_ms
+circuit_synthesis_constraints_ms,100.876
+worker_vk_setup_ms,0.003
+qap_fft_h_exponent_prep_ms,379.312
+h_query_access_dispatch_ms,0.035
+assignment_query_prep_dispatch_ms,2337.731
+proof_scalar_terms_ms,1.502
+wait_and_assembly_ms,591.827
+create_proof_body_ms,3411.215
