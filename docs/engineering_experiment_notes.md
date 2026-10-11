@@ -99,7 +99,8 @@ Do not combine these batches into a single performance summary. Use `results/tab
 
 | 指标 | Spend | Output |
 |---|---:|---:|
-| Peak Working Set | 101.31 MiB | 22.22 MiB |
+| Peak Working Set 中位数 | 101.30 MiB（4 次） | 21.54 MiB（4 次） |
+| 观测范围 | 101.29–101.45 MiB | 20.79–22.36 MiB |
 | 线程设置 | 1 | 1 |
 | 构建配置 | release | release |
 | 独立进程退出码 | 0 | 0 |
@@ -107,7 +108,7 @@ Do not combine these batches into a single performance summary. Use `results/tab
 
 该指标来自 Windows 进程的 `PeakWorkingSet64`。测量脚本每 250 ms 查询一次该高水位指标，并记录观测值中的最大值。
 
-这里记录的是整个实验进程的峰值工作集，包括参数加载、参数验证、证明生成和验证，并非证明算法单独占用的峰值内存。每种电路目前只测量了一次，因此只能作为初步观测值。
+这里记录的是整个实验进程的峰值工作集，包括参数加载、参数验证、证明生成和验证，并非证明算法单独占用的峰值内存。每种电路目前有 4 次独立进程测量，可报告本次实验的中位数和观测范围，但这些数据仍不足以建立普遍适用的内存上限。测量范围覆盖整个实验进程，而非 Prove 阶段独占内存。
 
 原始记录：`experiments/raw/csv/sapling_process_memory_raw.csv`
 汇总记录：`results/tables/engineering_memory.csv`
@@ -146,8 +147,8 @@ Do not combine these batches into a single performance summary. Use `results/tab
 1. Spend 的约束规模约为 Output 的 12.62 倍；本次测得的证明时间中位数约为其 6.58 倍。这是两个不同电路在当前环境中的测量结果，不代表仅由约束数量决定的通用性能比例。
 2. 两种电路的证明都成功通过检查，编码后的证明大小均为 192 bytes。
 3. Spend 的参数文件明显更大，参数读取与验证也耗时更长。由于当前每种参数仅有单次元数据测量，不能据此建立稳定的缓存或冷启动模型。
-4. 当前已有单线程 release 配置下的 5 次证明与验证数据，但尚未形成严格控制操作系统缓存状态的冷启动/热启动对照实验。
-5. 峰值工作集只有每种电路一次测量，且统计整个进程生命周期。它不是 Prove 阶段独占内存的测量。
+4. 当前已有单线程 release 配置下的 5 次证明与验证数据，并开展了进程级 cold-versus-warm 探索性对照实验。但该实验未严格隔离所有操作系统缓存状态，因此不能作为严格冷启动/热启动基准。
+5. 峰值工作集现有每种电路 4 次独立进程观测，统计范围为整个进程生命周期，不是 Prove 阶段独占内存；当前样本只用于描述本次实验环境下的观测范围。
 6. 当前实验不是完整的 Zcash 端到端交易基准，不能据此直接声称真实交易创建或整个系统的性能水平。
 7. 当前结果是工程学习和可复现基线；它们尚不构成经过多次独立重复、误差分析和跨环境验证的性能研究结论。
 
@@ -196,7 +197,8 @@ Do not combine these batches into a single performance summary. Use `results/tab
 - `scripts/run_process_first_repeat.ps1`：启动独立进程、采集系统负载并生成补充记录。
 - `scripts/measure_process_peak_working_set.ps1`：独立进程峰值工作集测量脚本。
 
-控制脚本已保存并完成 PowerShell 语法检查。峰值工作集脚本已保存并通过语法检查，但此次补充阶段未用新版脚本重新执行内存测量；此前记录的 Spend 101.31 MiB、Output 22.22 MiB 仍是每种电路单次观测。
+控制脚本已保存并完成 PowerShell 语法检查。峰值工作集脚本已保存并通过语法检查。当时的补充阶段尚未使用新版脚本重新执行内存测量，因此该阶段记录的 Spend 101.31 MiB、Output 22.22 MiB 为单次观测。此后追加的独立进程测量已合并至原始 CSV，当前汇总结果见 `results/tables/engineering_memory.csv`。
+
 
 ### 10.5 异常解释与结论边界
 
@@ -209,4 +211,4 @@ Output 的部分进程出现证明时间和验证时间同步升高；Spend 的�
 - Spend：`1791613854129`
 - Output：`1791549582046`
 
-本次结果说明当前测量环境存在需要谨慎对待的波动；严格的冷／热缓存对照尚未完成。
+本次结果说明当前测量环境存在需要谨慎对待的波动；已完成的 cold／warm 对照属于探索性实验，若未来需要研究缓存行为，应在干净工作区和完整控制日志条件下重新开展严格测量。

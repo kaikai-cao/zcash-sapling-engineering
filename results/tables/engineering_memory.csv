@@ -1,3 +1,3 @@
 ﻿circuit,measurement_method,rayon_threads,build_profile,measurement_count,successful_process_count,failed_process_count,batch_ids,peak_working_set_median_mib,peak_working_set_min_mib,peak_working_set_max_mib,scope_note
-Spend,Windows Process.PeakWorkingSet64 sampled every 250ms,1,release,1,1,0,1791615270097,101.31,101.31,101.31,"Whole process lifetime; includes parameter loading, validation, proving and verification"
-Output,Windows Process.PeakWorkingSet64 sampled every 250ms,1,release,1,1,0,1791615366610,22.22,22.22,22.22,"Whole process lifetime; includes parameter loading, validation, proving and verification"
+Spend,Windows Process.PeakWorkingSet64 sampled every 250ms,1,release,4,4,0,1791615270097;1791689208169;1791689260273;1791689302624,101.30,101.29,101.45,"Whole process lifetime; includes parameter loading, validation, proving and verification"
+Output,Windows Process.PeakWorkingSet64 sampled every 250ms,1,release,4,4,0,1791615366610;1791689228070;1791689232976;1791689322538,21.54,20.79,22.36,"Whole process lifetime; includes parameter loading, validation, proving and verification"

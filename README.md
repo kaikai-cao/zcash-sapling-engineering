@@ -133,12 +133,14 @@ The designated summary is [`results/tables/engineering_performance.csv`](results
 
 | Metric | Spend | Output |
 |---|---:|---:|
-| Peak working set | 101.31 MiB | 22.22 MiB |
-| Independent process samples | 1 | 1 |
+| Peak working set median | 101.30 MiB | 21.54 MiB |
+| Independent process samples | 4 | 4 |
 
-These values were collected from Windows `Process.PeakWorkingSet64` at 250 ms polling intervals. They represent whole-process peak working set across parameter loading, validation, proving, and verification; they are not Prove-only memory measurements. With one observation per circuit, they do not establish memory variability or a stable distribution. See [`results/tables/engineering_memory.csv`](results/tables/engineering_memory.csv).
+These values are based on four successful independent process measurements per circuit. They represent whole-process peak working set across parameter loading, validation, proving, and verification; they are not Prove-only memory measurements.
 
-A controlled cold-versus-warm benchmark has not been completed. The available first-versus-repeat runs did not clear the operating-system file cache and are exploratory observations only. Runtime variation was observed, but its cause has not been established.
+Spend ranged from 101.29 to 101.45 MiB, while Output ranged from 20.79 to 22.36 MiB. These observations characterize variability in the current host and experiment session, not a universal memory bound. See [`results/tables/engineering_memory.csv`](results/tables/engineering_memory.csv).
+
+Exploratory process-level cold-versus-warm comparisons have been conducted for both Spend and Output. The cold condition attempted to clear the Windows standby list, while the warm condition pre-read the parameter file. These are approximate controls, not strict isolation of all operating-system cache layers. Some historical RAMMap control logs are missing, and the initial Spend runs started with a dirty worktree. The observed Prove-time differences were small and inconsistent in direction, so the current data do not establish a stable cache-related proving-time benefit. See `experiments/metadata/sapling_measurement_campaign_closure_20261011.md` and `experiments/raw/csv/sapling_cache_condition_raw.csv`.
 
 ## What the profiling supports
 
@@ -255,8 +257,8 @@ python scripts/summarize_engineering.py
 
 ## Current limitations and next steps
 
-- Complete a controlled cold-versus-warm measurement protocol; current first-versus-repeat observations are not a strict cache benchmark.
-- Repeat peak-working-set measurements to characterize variability; current figures are one whole-process observation per circuit.
+- Cold-versus-warm cache comparisons have been conducted as exploratory process-level experiments. The conditions are approximate rather than strict cache isolation; some historical RAMMap logs are missing, and initial Spend runs used a dirty worktree. Repeat this experiment only if cache behavior becomes a central research question, using a clean worktree and complete provenance records.
+- Peak working set has been measured across four independent processes per circuit. Report the median and observed range for the current environment; these are whole-process measurements, not Prove-only memory usage or a universal memory bound.
 - If extending the exploratory Spend profile, use a committed clean experiment revision and record the source revision, parameter hashes, build profile, thread count, batch ID, and timing boundaries.
 - For future measurements, record the engineering commit/worktree revision, Sapling source commit, parameter hashes, build profile, thread count, batch ID, and timing boundaries.
 - If an optimization is eventually implemented, report both the local stage change and end-to-end Prove change, along with any costs or regressions elsewhere.
