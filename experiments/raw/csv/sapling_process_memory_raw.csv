@@ -1,3 +1,9 @@
 circuit,measurement_method,peak_working_set_mib,rayon_threads,build_profile,batch_id,process_exit_code,proof_experiment_pass,scope_note
 Spend,Windows Process.PeakWorkingSet64 sampled every 250ms,101.31,1,release,1791615270097,0,true,"Whole process lifetime; includes parameter loading, validation, proving and verification"
 Output,Windows Process.PeakWorkingSet64 sampled every 250ms,22.22,1,release,1791615366610,0,true,"Whole process lifetime; includes parameter loading, validation, proving and verification"
+"Spend","Windows Process.PeakWorkingSet64 sampled every 250ms","101.45","1","release","1791689208169","0","true","Whole process lifetime; includes parameter loading, validation, proving and verification"
+"Output","Windows Process.PeakWorkingSet64 sampled every 250ms","22.36","1","release","1791689228070","0","true","Whole process lifetime; includes parameter loading, validation, proving and verification"
+"Output","Windows Process.PeakWorkingSet64 sampled every 250ms","20.86","1","release","1791689232976","0","true","Whole process lifetime; includes parameter loading, validation, proving and verification"
+"Spend","Windows Process.PeakWorkingSet64 sampled every 250ms","101.29","1","release","1791689260273","0","true","Whole process lifetime; includes parameter loading, validation, proving and verification"
+"Spend","Windows Process.PeakWorkingSet64 sampled every 250ms","101.29","1","release","1791689302624","0","true","Whole process lifetime; includes parameter loading, validation, proving and verification"
+"Output","Windows Process.PeakWorkingSet64 sampled every 250ms","20.79","1","release","1791689322538","0","true","Whole process lifetime; includes parameter loading, validation, proving and verification"

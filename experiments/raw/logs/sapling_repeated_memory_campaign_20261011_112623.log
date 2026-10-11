@@ -1,0 +1,90 @@
+ENGINEERING_COMMIT=c4f4befaaa73bba750663a8d005f10dd437bda4d
+WORKTREE_DIRTY_AT_START=True
+BELLMAN_MULTEXP_SHA256=730AF1249B78BD422DC62453A3604CB01236C94B2A2331E87E484CBDCE876266
+RAYON_THREADS=1
+BUILD_PROFILE=release
+CAMPAIGN_ORDER=Spend,Output,Output,Spend,Spend,Output
+Circuit: Spend
+Executable: D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\spend_prover_smoke.exe
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Spend_memory_20261011_112623_519.log
+Sampling PeakWorkingSet64 every 250 ms...
+
+=== Peak Working Set Result ===
+Circuit: Spend
+Batch: 1791689208169
+Peak Working Set: 101.45 MiB
+Process Exit Code: 0
+Proof Experiment Pass: True
+Process Duration: 42.41 seconds
+Memory CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_process_memory_raw.csv
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Spend_memory_20261011_112623_519.log
+Circuit: Output
+Executable: D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\sapling-output-smoke.exe
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Output_memory_20261011_112705_992.log
+Sampling PeakWorkingSet64 every 250 ms...
+
+=== Peak Working Set Result ===
+Circuit: Output
+Batch: 1791689228070
+Peak Working Set: 22.36 MiB
+Process Exit Code: 0
+Proof Experiment Pass: True
+Process Duration: 4.90 seconds
+Memory CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_process_memory_raw.csv
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Output_memory_20261011_112705_992.log
+Circuit: Output
+Executable: D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\sapling-output-smoke.exe
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Output_memory_20261011_112710_911.log
+Sampling PeakWorkingSet64 every 250 ms...
+
+=== Peak Working Set Result ===
+Circuit: Output
+Batch: 1791689232976
+Peak Working Set: 20.86 MiB
+Process Exit Code: 0
+Proof Experiment Pass: True
+Process Duration: 4.91 seconds
+Memory CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_process_memory_raw.csv
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Output_memory_20261011_112710_911.log
+Circuit: Spend
+Executable: D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\spend_prover_smoke.exe
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Spend_memory_20261011_112715_847.log
+Sampling PeakWorkingSet64 every 250 ms...
+
+=== Peak Working Set Result ===
+Circuit: Spend
+Batch: 1791689260273
+Peak Working Set: 101.29 MiB
+Process Exit Code: 0
+Proof Experiment Pass: True
+Process Duration: 42.21 seconds
+Memory CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_process_memory_raw.csv
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Spend_memory_20261011_112715_847.log
+Circuit: Spend
+Executable: D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\spend_prover_smoke.exe
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Spend_memory_20261011_112758_099.log
+Sampling PeakWorkingSet64 every 250 ms...
+
+=== Peak Working Set Result ===
+Circuit: Spend
+Batch: 1791689302624
+Peak Working Set: 101.29 MiB
+Process Exit Code: 0
+Proof Experiment Pass: True
+Process Duration: 42.37 seconds
+Memory CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_process_memory_raw.csv
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Spend_memory_20261011_112758_099.log
+Circuit: Output
+Executable: D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\sapling-output-smoke.exe
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Output_memory_20261011_112840_492.log
+Sampling PeakWorkingSet64 every 250 ms...
+
+=== Peak Working Set Result ===
+Circuit: Output
+Batch: 1791689322538
+Peak Working Set: 20.79 MiB
+Process Exit Code: 0
+Proof Experiment Pass: True
+Process Duration: 4.91 seconds
+Memory CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_process_memory_raw.csv
+Log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\sapling_Output_memory_20261011_112840_492.log

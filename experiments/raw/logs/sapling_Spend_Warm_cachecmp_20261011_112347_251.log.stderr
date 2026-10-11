@@ -1,0 +1,80 @@
+BELLMAN_MSM_SUBMIT_PROFILE call_id=1 submit_elapsed_ms=0.008
+BELLMAN_MSM_SUBMIT_PROFILE call_id=2 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=3 submit_elapsed_ms=0.003
+BELLMAN_MSM_SUBMIT_PROFILE call_id=4 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=5 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=1 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.128 elapsed_ms=1447.277
+BELLMAN_MSM_PROFILE call_id=2 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1449.039 elapsed_ms=398.807
+BELLMAN_MSM_PROFILE call_id=3 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1852.313 elapsed_ms=0.950
+BELLMAN_MSM_PROFILE call_id=4 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1853.070 elapsed_ms=279.930
+BELLMAN_MSM_PROFILE call_id=5 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2135.852 elapsed_ms=0.767
+BELLMAN_MSM_PROFILE call_id=6 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2134.085 elapsed_ms=210.257
+BELLMAN_MSM_SUBMIT_PROFILE call_id=6 submit_elapsed_ms=2349.375
+BELLMAN_MSM_SUBMIT_PROFILE call_id=7 submit_elapsed_ms=0.009
+BELLMAN_MSM_SUBMIT_PROFILE call_id=8 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=7 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.013 elapsed_ms=2.177
+BELLMAN_MSM_PROFILE call_id=8 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=3.248 elapsed_ms=594.808
+BELLMAN_MSM_SUBMIT_PROFILE call_id=9 submit_elapsed_ms=0.005
+BELLMAN_MSM_SUBMIT_PROFILE call_id=10 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=11 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=12 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=13 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=9 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.054 elapsed_ms=1451.250
+BELLMAN_MSM_PROFILE call_id=10 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1445.022 elapsed_ms=398.234
+BELLMAN_MSM_PROFILE call_id=11 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1848.813 elapsed_ms=0.957
+BELLMAN_MSM_PROFILE call_id=12 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1850.427 elapsed_ms=279.531
+BELLMAN_MSM_PROFILE call_id=13 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2136.340 elapsed_ms=0.769
+BELLMAN_MSM_PROFILE call_id=14 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2137.956 elapsed_ms=211.169
+BELLMAN_MSM_SUBMIT_PROFILE call_id=14 submit_elapsed_ms=2356.347
+BELLMAN_MSM_SUBMIT_PROFILE call_id=15 submit_elapsed_ms=0.004
+BELLMAN_MSM_SUBMIT_PROFILE call_id=16 submit_elapsed_ms=0.002
+BELLMAN_MSM_PROFILE call_id=15 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.009 elapsed_ms=2.171
+BELLMAN_MSM_PROFILE call_id=16 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=3.131 elapsed_ms=591.679
+BELLMAN_MSM_SUBMIT_PROFILE call_id=17 submit_elapsed_ms=0.006
+BELLMAN_MSM_SUBMIT_PROFILE call_id=18 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=19 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=20 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=21 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=17 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.098 elapsed_ms=1453.786
+BELLMAN_MSM_PROFILE call_id=18 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1452.753 elapsed_ms=399.550
+BELLMAN_MSM_PROFILE call_id=19 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1853.303 elapsed_ms=0.938
+BELLMAN_MSM_PROFILE call_id=20 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1854.837 elapsed_ms=278.342
+BELLMAN_MSM_PROFILE call_id=21 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2134.958 elapsed_ms=0.765
+BELLMAN_MSM_PROFILE call_id=22 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2136.635 elapsed_ms=210.624
+BELLMAN_MSM_SUBMIT_PROFILE call_id=22 submit_elapsed_ms=2356.303
+BELLMAN_MSM_SUBMIT_PROFILE call_id=23 submit_elapsed_ms=0.006
+BELLMAN_MSM_SUBMIT_PROFILE call_id=24 submit_elapsed_ms=0.002
+BELLMAN_MSM_PROFILE call_id=23 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.012 elapsed_ms=2.155
+BELLMAN_MSM_PROFILE call_id=24 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2.750 elapsed_ms=593.547
+BELLMAN_MSM_SUBMIT_PROFILE call_id=25 submit_elapsed_ms=0.005
+BELLMAN_MSM_SUBMIT_PROFILE call_id=26 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=27 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=28 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=29 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=25 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.126 elapsed_ms=1456.173
+BELLMAN_MSM_PROFILE call_id=26 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1459.721 elapsed_ms=399.380
+BELLMAN_MSM_PROFILE call_id=27 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1859.749 elapsed_ms=0.941
+BELLMAN_MSM_PROFILE call_id=28 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1861.293 elapsed_ms=277.106
+BELLMAN_MSM_PROFILE call_id=29 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2143.698 elapsed_ms=0.766
+BELLMAN_MSM_PROFILE call_id=30 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2145.309 elapsed_ms=211.457
+BELLMAN_MSM_SUBMIT_PROFILE call_id=30 submit_elapsed_ms=2364.457
+BELLMAN_MSM_SUBMIT_PROFILE call_id=31 submit_elapsed_ms=0.005
+BELLMAN_MSM_SUBMIT_PROFILE call_id=32 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=31 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.009 elapsed_ms=2.131
+BELLMAN_MSM_PROFILE call_id=32 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=3.058 elapsed_ms=592.611
+BELLMAN_MSM_SUBMIT_PROFILE call_id=33 submit_elapsed_ms=0.005
+BELLMAN_MSM_SUBMIT_PROFILE call_id=34 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=35 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=36 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=37 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=33 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.078 elapsed_ms=1457.593
+BELLMAN_MSM_PROFILE call_id=34 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1455.163 elapsed_ms=397.285
+BELLMAN_MSM_PROFILE call_id=35 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1859.031 elapsed_ms=0.936
+BELLMAN_MSM_PROFILE call_id=36 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1860.588 elapsed_ms=280.333
+BELLMAN_MSM_PROFILE call_id=37 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2147.455 elapsed_ms=0.763
+BELLMAN_MSM_PROFILE call_id=38 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2149.107 elapsed_ms=212.629
+BELLMAN_MSM_SUBMIT_PROFILE call_id=38 submit_elapsed_ms=2369.007
+BELLMAN_MSM_SUBMIT_PROFILE call_id=39 submit_elapsed_ms=0.006
+BELLMAN_MSM_SUBMIT_PROFILE call_id=40 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=39 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.011 elapsed_ms=2.134
+BELLMAN_MSM_PROFILE call_id=40 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=3.081 elapsed_ms=591.016
