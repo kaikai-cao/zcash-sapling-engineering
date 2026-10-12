@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = 'D:\Research\zcash-sapling-engineering'
-Set-Location $repoRoot
+$repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+Set-Location -LiteralPath $repoRoot
 $env:RAYON_NUM_THREADS = '1'
 
 $exe = Join-Path $repoRoot 'experiments\prover-smoke\target\release\spend_prover_smoke.exe'
