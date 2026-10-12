@@ -4,15 +4,58 @@ param(
     [string]$Circuit,
 
     [ValidateRange(1, 5)]
-    [int]$Pairs = 3
-)
+    [int]$Pairs = 3,
 
+    [string]$RamMapPath = '',
+    [string]$SpendParamsPath = '',
+    [string]$OutputParamsPath = ''
+)
 $ErrorActionPreference = "Stop"
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+
+$repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
 $env:RAYON_NUM_THREADS = "1"
 
-$rammap = "D:\Tools\RAMMap\RAMMap64.exe"
+# Parameter directory: explicit file paths take precedence.
+$parameterDirectory = if (
+    -not [string]::IsNullOrWhiteSpace($env:ZCASH_PARAMS_DIR)
+) {
+    $env:ZCASH_PARAMS_DIR
+}
+else {
+    'D:\Research\zcash-params'
+}
+
+if ([string]::IsNullOrWhiteSpace($SpendParamsPath)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:SAPLING_SPEND_PARAMS)) {
+        $SpendParamsPath = $env:SAPLING_SPEND_PARAMS
+    }
+    else {
+        $SpendParamsPath = Join-Path $parameterDirectory 'sapling-spend.params'
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputParamsPath)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:SAPLING_OUTPUT_PARAMS)) {
+        $OutputParamsPath = $env:SAPLING_OUTPUT_PARAMS
+    }
+    else {
+        $OutputParamsPath = Join-Path $parameterDirectory 'sapling-output.params'
+    }
+}
+
+# RAMMap: explicit argument, environment variable, then legacy default.
+if ([string]::IsNullOrWhiteSpace($RamMapPath)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:SAPLING_RAMMAP_PATH)) {
+        $RamMapPath = $env:SAPLING_RAMMAP_PATH
+    }
+    else {
+        $RamMapPath = 'D:\Tools\RAMMap\RAMMap64.exe'
+    }
+}
+
+$rammap = $RamMapPath
+
 $manifest = Join-Path $repoRoot "experiments\prover-smoke\Cargo.toml"
 $rawDir = Join-Path $repoRoot "experiments\raw\csv"
 $logDir = Join-Path $repoRoot "experiments\raw\logs"
@@ -22,14 +65,14 @@ switch ($Circuit) {
     "Spend" {
         $binary = "spend_prover_smoke"
         $exeName = "spend_prover_smoke.exe"
-        $paramPath = "D:\Research\zcash-params\sapling-spend.params"
+        $paramPath = $SpendParamsPath
         $sourceCsv = Join-Path $rawDir "sapling_spend_prover_runs_release.csv"
         $passMarker = "SPEND_PROOF_EXPERIMENT=PASS"
     }
     "Output" {
         $binary = "sapling-output-smoke"
         $exeName = "sapling-output-smoke.exe"
-        $paramPath = "D:\Research\zcash-params\sapling-output.params"
+        $paramPath = $OutputParamsPath
         $sourceCsv = Join-Path $rawDir "sapling_output_prover_runs_release.csv"
         $passMarker = "OUTPUT_PROOF_EXPERIMENT=PASS"
     }
@@ -51,7 +94,7 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 New-Item -ItemType Directory -Force -Path $rawDir | Out-Null
 
 Write-Host "=== Build check ==="
-& cargo build --release --manifest-path $manifest --bin $binary
+& cargo build --release --locked --manifest-path $manifest --bin $binary
 if ($LASTEXITCODE -ne 0) { throw "Release build failed; experiment stopped." }
 
 $exe = Join-Path $repoRoot "experiments\prover-smoke\target\release\$exeName"
@@ -67,11 +110,55 @@ $bellmanHash = (Get-FileHash -LiteralPath $bellmanPath -Algorithm SHA256).Hash
 $paramsHash = (Get-FileHash -LiteralPath $paramPath -Algorithm SHA256).Hash
 $paramsBytes = (Get-Item -LiteralPath $paramPath).Length
 
-$saplingRepo = "D:\Research\zcash-sapling-crypto"
-$saplingCommit = ""
-if (Test-Path -LiteralPath (Join-Path $saplingRepo ".git")) {
-    $saplingCommit = (& git -C $saplingRepo rev-parse HEAD).Trim()
+
+# Resolve the actual dependency revision from Cargo's locked dependency graph.
+# Do not infer it from an unrelated local checkout.
+$cargo = (Get-Command cargo -ErrorAction Stop).Source
+
+$metadataOutput = & $cargo metadata `
+    --format-version 1 `
+    --locked `
+    --manifest-path $manifest 2>$null
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'cargo metadata failed. Verify Cargo.toml and Cargo.lock.'
 }
+
+$metadataText = ($metadataOutput -join "`n")
+
+try {
+    $cargoMetadata = $metadataText | ConvertFrom-Json -ErrorAction Stop
+}
+catch {
+    throw "Could not parse cargo metadata: $($_.Exception.Message)"
+}
+
+$saplingPackages = @(
+    $cargoMetadata.packages |
+    Where-Object {
+        $_.name -eq 'sapling-crypto' -and
+        $_.version -eq '0.9.0'
+    }
+)
+
+if ($saplingPackages.Count -ne 1) {
+    throw "Expected one resolved sapling-crypto 0.9.0 package; found $($saplingPackages.Count)."
+}
+
+$saplingSource = [string]$saplingPackages[0].source
+
+$sourcePattern = (
+    '^git\+https://github\.com/zcash/sapling-crypto' +
+    '(?:\.git)?(?:\?.*)?#([0-9a-f]{40})$'
+)
+
+$sourceMatch = [regex]::Match($saplingSource, $sourcePattern)
+
+if (-not $sourceMatch.Success) {
+    throw "Unexpected sapling-crypto dependency source: '$saplingSource'."
+}
+
+$saplingCommit = $sourceMatch.Groups[1].Value
 
 # Read the parameter file into the Windows file cache before each Warm trial.
 function Invoke-ParameterPreRead {
