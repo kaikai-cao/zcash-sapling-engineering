@@ -1,0 +1,10 @@
+﻿metric,label,single_batch_id,single_threads,single_runs,single_median_ms,parallel_batch_id,parallel_threads,parallel_runs,parallel_median_ms,single_over_parallel_speedup,parallel_time_reduction_pct,single_min_ms,single_max_ms,parallel_min_ms,parallel_max_ms
+outer_prove_ms,Outer Prove,1791801666809,1,5,3535.699,1791802391142,20,5,578.335,6.113583,83.643,3522.333,3663.001,561.15,647.747
+circuit_synthesis_constraints_ms,Circuit synthesis / constraints,1791801666809,1,5,102.182,1791802391142,20,5,103.247,0.989685,-1.0423,102.087,154.273,101.965,154.851
+worker_vk_setup_ms,Worker / VK setup,1791801666809,1,5,0.001,1791802391142,20,5,0.001,1.0,0.0,0.001,0.001,0.001,0.003
+qap_fft_h_exponent_prep_ms,QAP / FFT / H preparation,1791801666809,1,5,384.724,1791802391142,20,5,119.883,3.209162,68.8392,383.305,385.608,118.489,121.611
+h_query_access_dispatch_ms,H-query access / dispatch,1791801666809,1,5,5.771,1791802391142,20,5,6.102,0.945755,-5.7356,1.28,52.852,3.261,17.644
+assignment_query_prep_dispatch_ms,Assignment / query prep / dispatch,1791801666809,1,5,2428.592,1791802391142,20,5,13.714,177.088523,99.4353,2416.106,2458.79,10.053,55.432
+proof_scalar_terms_ms,Proof scalar terms,1791801666809,1,5,1.506,1791802391142,20,5,1.966,0.766022,-30.5445,1.482,1.536,1.63,3.609
+wait_and_assembly_ms,Wait / assembly,1791801666809,1,5,608.975,1791802391142,20,5,322.071,1.89081,47.1126,606.998,613.948,294.255,341.786
+create_proof_body_ms,Proof body total,1791801666809,1,5,3533.094,1791802391142,20,5,575.654,6.137531,83.7068,3519.564,3660.007,558.28,644.684

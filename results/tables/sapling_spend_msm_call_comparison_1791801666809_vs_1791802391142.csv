@@ -1,0 +1,9 @@
+﻿query,group,exponent_count,single_threads,single_runs,single_elapsed_median_ms,single_elapsed_min_ms,single_elapsed_max_ms,parallel_threads,parallel_runs,parallel_elapsed_median_ms,parallel_elapsed_min_ms,parallel_elapsed_max_ms,single_over_parallel_elapsed_speedup,parallel_elapsed_reduction_pct,single_task_start_delay_median_ms,parallel_task_start_delay_median_ms,single_submit_median_ms,parallel_submit_median_ms
+H_query_G1,G1,131071,1,5,1494.115,1489.794,1497.516,20,5,346.63,334.46,369.461,4.310403,76.8003,0.013,0.013,0.005,0.004
+L_query_G1,G1,98638,1,5,408.817,405.175,411.437,20,5,327.595,324.499,344.462,1.247934,19.8676,1491.035,0.111,0.003,0.004
+A_input_G1,G1,8,1,5,0.955,0.945,1.072,20,5,0.605,0.501,1.339,1.578512,36.6492,1906.757,0.012,0.002,0.003
+A_aux_G1,G1,98638,1,5,284.678,281.602,285.507,20,5,324.591,195.43,330.321,0.877036,-14.0204,1908.106,0.015,0.001,0.003
+B_G1_input,G1,8,1,5,0.785,0.76,0.826,20,5,0.916,0.715,1.788,0.856987,-16.6879,2198.331,0.012,0.001,0.003
+B_G1_aux,G1,98638,1,5,214.134,213.7,215.581,20,5,322.304,184.452,340.858,0.664385,-50.5151,2200.012,0.022,2421.059,0.002
+B_G2_input,G2,8,1,5,2.172,2.129,2.196,20,5,1.714,1.083,106.603,1.267211,21.0866,0.008,0.013,0.005,0.003
+B_G2_aux,G2,98638,1,5,600.879,600.449,603.17,20,5,317.585,101.107,326.663,1.892026,47.1466,3.1,0.016,0.001,0.005
