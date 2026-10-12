@@ -1,0 +1,5 @@
+   Compiling bellman v0.15.0 (D:\Research\zcash-sapling-engineering\vendor\bellman)
+   Compiling groth16 v0.2.0 (D:\Research\zcash-sapling-engineering\vendor\groth16)
+   Compiling sapling-crypto v0.9.0 (D:\Research\zcash-sapling-crypto)
+   Compiling sapling-output-smoke v0.1.0 (D:\Research\zcash-sapling-engineering\experiments\prover-smoke)
+    Finished `release` profile [optimized] target(s) in 14.62s
