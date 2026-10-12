@@ -12,9 +12,29 @@ use sapling_crypto::{
 use std::{
     fs::{create_dir_all, File, OpenOptions},
     io::Write,
+    path::PathBuf,
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
 use zcash_note_encryption::Domain;
+
+fn resolve_output_params_path() -> PathBuf {
+    if let Ok(path) = std::env::var("SAPLING_OUTPUT_PARAMS") {
+        let path = path.trim();
+        if !path.is_empty() {
+            return PathBuf::from(path);
+        }
+    }
+
+    if let Ok(directory) = std::env::var("ZCASH_PARAMS_DIR") {
+        let directory = directory.trim();
+        if !directory.is_empty() {
+            return PathBuf::from(directory).join("sapling-output.params");
+        }
+    }
+
+    // Preserve compatibility with the original local setup.
+    PathBuf::from(r"D:\Research\zcash-params\sapling-output.params")
+}
 
 fn main() {
     const REPEATS: usize = 5;
@@ -24,12 +44,19 @@ fn main() {
     // 1. 读取参数并校验点编码。
     let start = Instant::now();
 
+    let params_path = resolve_output_params_path();
+    println!("params_path={}", params_path.display());
+
     let params = OutputParameters::read(
-        File::open(r"D:\Research\zcash-params\sapling-output.params")
-            .expect("无法打开 Output 参数文件"),
+        File::open(&params_path).unwrap_or_else(|error| {
+            panic!(
+                "无法打开 Output 参数文件 {}: {error}",
+                params_path.display()
+            )
+        }),
         true,
     )
-    .expect("无法读取 Output 参数文件");
+    .expect("无法读取或验证 Output 参数文件");
 
     let params_read_validate_ms = start.elapsed().as_secs_f64() * 1000.0;
 
