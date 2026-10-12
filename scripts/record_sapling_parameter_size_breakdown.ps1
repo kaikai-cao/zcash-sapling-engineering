@@ -1,10 +1,29 @@
 param(
-    [string]$RepoPath = 'D:\Research\zcash-sapling-engineering',
-    [string]$SpendParamsPath = 'D:\Research\zcash-params\sapling-spend.params',
-    [string]$OutputParamsPath = 'D:\Research\zcash-params\sapling-output.params'
+    [string]$RepoPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path,
+    [string]$SpendParamsPath = '',
+    [string]$OutputParamsPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
+
+$RepoPath = (Resolve-Path -LiteralPath $RepoPath).Path
+
+$parameterDirectory = if (
+    -not [string]::IsNullOrWhiteSpace($env:ZCASH_PARAMS_DIR)
+) {
+    $env:ZCASH_PARAMS_DIR
+}
+else {
+    'D:\Research\zcash-params'
+}
+
+if ([string]::IsNullOrWhiteSpace($SpendParamsPath)) {
+    $SpendParamsPath = Join-Path $parameterDirectory 'sapling-spend.params'
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputParamsPath)) {
+    $OutputParamsPath = Join-Path $parameterDirectory 'sapling-output.params'
+}
 
 # Records the serialization layout of the two Sapling MPC parameter files.
 # Reads parameter files only; does not modify them or run proof-generation code.
