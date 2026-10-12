@@ -2,6 +2,8 @@
 param(
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
     [string]$ParameterPath = 'D:\Research\zcash-params\sapling-spend.params',
+    [ValidateRange(1, 128)]
+    [int]$Threads = 1,
     [switch]$AllowDirtyWorktree
 )
 
@@ -106,7 +108,7 @@ $stdout = ''
 $stderr = ''
 try {
     $env:SAPLING_PROFILE = '1'
-    $env:RAYON_NUM_THREADS = '1'
+    $env:RAYON_NUM_THREADS = [string]$Threads
     $process = Start-Process -FilePath $exe -WorkingDirectory $RepoRoot -PassThru -Wait -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
     $exitCode = $process.ExitCode
     $stdout = if (Test-Path -LiteralPath $stdoutPath) { [IO.File]::ReadAllText($stdoutPath) } else { '' }
@@ -134,6 +136,10 @@ if ($newBatchIds.Count -ne 1 -or [string]$newBatchIds[0] -ne $batchId) {
 $batchRows = @($newRows | Where-Object { [string]$_.batch_id -eq $batchId } | Sort-Object { [int]$_.run })
 if ($batchRows.Count -ne 5) { throw "Expected five prover runs for batch $batchId; got $($batchRows.Count)." }
 if (@($batchRows | Where-Object { $_.verified.ToLowerInvariant() -ne 'true' }).Count -ne 0) { throw "At least one proof did not verify in batch $batchId." }
+$recordedThreadCounts = @($batchRows | Select-Object -ExpandProperty rayon_threads -Unique)
+if ($recordedThreadCounts.Count -ne 1 -or [string]$recordedThreadCounts[0] -ne [string]$Threads) {
+    throw "Requested Threads=$Threads but prover CSV recorded rayon_threads=$($recordedThreadCounts -join ','). Preserve logs and investigate."
+}
 
 $msmRegex = [regex]'BELLMAN_MSM_PROFILE call_id=(\d+) exponent_count=(\d+) density_map_size=(None|Some\(\d+\)) window=(\d+) task_start_delay_ms=([\d.]+) elapsed_ms=([\d.]+)'
 $submitRegex = [regex]'BELLMAN_MSM_SUBMIT_PROFILE call_id=(\d+) submit_elapsed_ms=([\d.]+)'
@@ -190,7 +196,7 @@ foreach ($m in $msmMatches) {
         task_start_delay_ms = [double]$m.Groups[5].Value
         elapsed_ms = [double]$m.Groups[6].Value
         submit_elapsed_ms = [double]$submitByCall[$callId]
-        threads = 1
+        threads = $Threads
         build_profile = 'release'
     }
 }
@@ -271,7 +277,7 @@ $report = @"
 
 - Circuit: Sapling Spend
 - Batch ID: $batchId
-- Runs: 5; verified proofs: 5/5; build: Release; RAYON_NUM_THREADS=1; SAPLING_PROFILE=1
+- Runs: 5; verified proofs: 5/5; build: Release; RAYON_NUM_THREADS=$Threads; SAPLING_PROFILE=1
 - Run start: $runStarted
 - Run end: $runEnded
 - Repository branch: $branch
