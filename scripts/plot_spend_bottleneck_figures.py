@@ -6,15 +6,17 @@ Run at repository root:
 
 Requires matplotlib: python -m pip install matplotlib
 
-The thread plot reads the committed raw 30-run CSV. Stage/MSM measurements below
-are transcribed from the five-run diagnostic output supplied for batch
-spend_worker_fallback_20261011_194743. On first run, the script writes these
-observations to experiments/raw/csv/*.csv; later runs read those CSV files
-without overwriting them. Commit the generated CSV files with this script.
-No proof is generated, and no optimization is performed.
+This script is a data-processing and plotting tool only. It must read the
+versioned raw CSV inputs and must never manufacture raw measurements from
+hardcoded/transcribed values. If the raw stage/MSM CSVs or their source logs
+are missing, preserve that limitation and rerun the experiment with archived
+stdout/stderr rather than recreating observations here. A new batch can be
+selected with --stage-csv, --msm-csv and --output-tag. No proof is generated.
 """
 
 from pathlib import Path
+import argparse
+import re
 import csv
 import statistics
 import sys
@@ -30,6 +32,16 @@ ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "experiments/raw/csv"
 TABLES = ROOT / "results/tables"
 FIGURES = ROOT / "results/figures"
+OUTPUT_TAG = None
+
+
+def table_path(stem):
+    suffix = OUTPUT_TAG if OUTPUT_TAG else "20261011"
+    return TABLES / f"{stem}_{suffix}.csv"
+
+
+def figure_path(stem):
+    return FIGURES / (f"{stem}_{OUTPUT_TAG}.png" if OUTPUT_TAG else f"{stem}.png")
 THREAD_CSV = RAW / "sapling_spend_thread_scaling_20261011_202051.csv"
 STAGE_CSV = RAW / "sapling_spend_stage_profile_20261011.csv"
 MSM_CSV = RAW / "sapling_spend_msm_call_profile_20261011.csv"
@@ -46,13 +58,7 @@ STAGE_FIELDS = [
 ]
 # run, circuit synthesis, worker/VK, QAP/FFT/H, H access, assignment/query/dispatch,
 # proof scalar terms, wait/assembly, full create_proof_body (all milliseconds)
-STAGE_ROWS = [
-    [1, 153.334, 0.001, 379.312, 0.144, 2332.175, 1.526, 591.827, 3458.320],
-    [2, 99.776, 0.003, 378.304, 0.032, 2337.731, 1.497, 593.872, 3411.215],
-    [3, 102.013, 0.003, 379.353, 0.035, 2329.957, 1.493, 591.043, 3403.897],
-    [4, 99.910, 0.003, 378.491, 0.030, 2339.077, 1.502, 591.445, 3410.459],
-    [5, 100.876, 0.003, 383.138, 0.039, 2392.394, 1.509, 619.420, 3497.379],
-]
+# Stage timing is loaded from the selected existing raw CSV; never transcribe data here.
 # query, group, exponent count, window
 QUERIES = [
     ("H_query_G1", "G1", 131071, 12),
@@ -64,71 +70,6 @@ QUERIES = [
     ("B_G2_input", "G2", 8, 3),
     ("B_G2_aux", "G2", 98638, 12),
 ]
-# Five runs of (call_id, task_start_delay_ms, elapsed_ms), in query order.
-MSM_RUNS = [
-    [
-        (1, 0.015, 1442.063),
-        (2, 1439.439, 398.915),
-        (3, 1838.327, 0.954),
-        (4, 1839.291, 276.306),
-        (5, 2115.640, 0.760),
-        (6, 2116.420, 212.930),
-        (7, 0.050, 2.200),
-        (8, 2.280, 590.730),
-    ],
-    [
-        (9, 0.010, 1446.624),
-        (10, 1443.961, 397.200),
-        (11, 1841.182, 0.958),
-        (12, 1842.153, 280.715),
-        (13, 2122.900, 0.770),
-        (14, 2123.680, 211.220),
-        (15, 0.170, 2.180),
-        (16, 2.350, 592.660),
-    ],
-    [
-        (17, 0.014, 1444.423),
-        (18, 1441.402, 398.582),
-        (19, 1839.944, 0.948),
-        (20, 1840.906, 275.139),
-        (21, 2116.080, 0.880),
-        (22, 2116.980, 209.750),
-        (23, 0.090, 2.140),
-        (24, 2.270, 589.920),
-    ],
-    [
-        (25, 0.015, 1448.739),
-        (26, 1446.030, 399.348),
-        (27, 1845.370, 0.940),
-        (28, 1846.310, 278.323),
-        (29, 2124.660, 0.770),
-        (30, 2125.450, 210.700),
-        (31, 0.000, 2.240),
-        (32, 2.270, 590.340),
-    ],
-    [
-        (33, 0.016, 1472.114),
-        (34, 1469.483, 411.375),
-        (35, 1880.879, 0.950),
-        (36, 1881.840, 288.732),
-        (37, 2170.600, 0.830),
-        (38, 2171.450, 218.070),
-        (39, 0.050, 2.200),
-        (40, 2.290, 618.280),
-    ],
-]
-
-
-def write_if_missing(path, headers, rows):
-    if path.exists():
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8-sig") as f:
-        w = csv.writer(f)
-        w.writerow(headers)
-        w.writerows(rows)
-    print("Created input CSV:", path.relative_to(ROOT))
-
 
 def read_csv(path):
     if not path.exists():
@@ -150,40 +91,6 @@ def write_summary(path, headers, rows):
         w = csv.writer(f)
         w.writerow(headers)
         w.writerows(rows)
-
-
-def create_transcribed_csvs():
-    write_if_missing(STAGE_CSV, ["run"] + STAGE_FIELDS, STAGE_ROWS)
-    msm_rows = []
-    for run, calls in enumerate(MSM_RUNS, 1):
-        for idx, (call_id, delay, elapsed) in enumerate(calls):
-            query, group, count, window = QUERIES[idx]
-            msm_rows.append(
-                [
-                    run,
-                    call_id,
-                    query,
-                    group,
-                    count,
-                    window,
-                    f"{delay:.3f}",
-                    f"{elapsed:.3f}",
-                ]
-            )
-    write_if_missing(
-        MSM_CSV,
-        [
-            "run",
-            "call_id",
-            "query",
-            "group",
-            "exponent_count",
-            "window",
-            "task_start_delay_ms",
-            "elapsed_ms",
-        ],
-        msm_rows,
-    )
 
 
 def summarize_threads():
@@ -230,7 +137,7 @@ def summarize_threads():
             ]
         )
     write_summary(
-        TABLES / "sapling_spend_thread_scaling_summary_20261011.csv",
+        table_path("sapling_spend_thread_scaling_summary"),
         [
             "threads",
             "runs",
@@ -254,7 +161,7 @@ def summarize_stages():
         field: statistics.median(num(r, field) for r in rows) for field in STAGE_FIELDS
     }
     write_summary(
-        TABLES / "sapling_spend_stage_profile_summary_20261011.csv",
+        table_path("sapling_spend_stage_profile_summary"),
         ["stage", "median_ms"],
         [[field, f"{med[field]:.3f}"] for field in STAGE_FIELDS],
     )
@@ -283,7 +190,7 @@ def summarize_msm():
             }
         )
     write_summary(
-        TABLES / "sapling_spend_msm_profile_summary_20261011.csv",
+        table_path("sapling_spend_msm_profile_summary"),
         [
             "query",
             "group",
@@ -342,7 +249,7 @@ def plot_threads(data):
         fontsize=8,
     )
     fig.tight_layout(rect=[0, 0.06, 1, 1])
-    out = FIGURES / "sapling_spend_thread_scaling.png"
+    out = figure_path("sapling_spend_thread_scaling")
     fig.savefig(out, dpi=180)
     plt.close(fig)
     return out
@@ -376,7 +283,7 @@ def plot_msm(data):
         fontsize=8,
     )
     fig.tight_layout(rect=[0, 0.06, 1, 1])
-    out = FIGURES / "sapling_spend_msm_breakdown.png"
+    out = figure_path("sapling_spend_msm_breakdown")
     fig.savefig(out, dpi=180)
     plt.close(fig)
     return out
@@ -426,18 +333,37 @@ def plot_stages(stage_medians):
         fontsize=8,
     )
     fig.tight_layout(rect=[0, 0.08, 1, 1])
-    out = FIGURES / "sapling_spend_stage_breakdown.png"
+    out = figure_path("sapling_spend_stage_breakdown")
     fig.savefig(out, dpi=180)
     plt.close(fig)
     return out
 
 
 def main():
-    if not THREAD_CSV.exists():
-        raise FileNotFoundError(f"Thread raw CSV not found: {THREAD_CSV}")
+    global THREAD_CSV, STAGE_CSV, MSM_CSV, OUTPUT_TAG
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--thread-csv", default=str(THREAD_CSV), help="Path to the existing thread-scaling raw CSV")
+    parser.add_argument("--stage-csv", default=str(STAGE_CSV), help="Path to the existing stage raw CSV")
+    parser.add_argument("--msm-csv", default=str(MSM_CSV), help="Path to the existing MSM-call raw CSV")
+    parser.add_argument("--output-tag", default=None, help="Optional tag for new summary/figure files (e.g. batch ID); prevents overwriting old outputs")
+    args = parser.parse_args()
+
+    def resolve_input(value):
+        path = Path(value)
+        return path.resolve() if path.is_absolute() else (ROOT / path).resolve()
+
+    THREAD_CSV = resolve_input(args.thread_csv)
+    STAGE_CSV = resolve_input(args.stage_csv)
+    MSM_CSV = resolve_input(args.msm_csv)
+    OUTPUT_TAG = args.output_tag
+    if OUTPUT_TAG and not re.fullmatch(r"[A-Za-z0-9_-]+", OUTPUT_TAG):
+        raise ValueError("--output-tag may contain only letters, numbers, '_' and '-'.")
+
+    missing = [str(path) for path in (THREAD_CSV, STAGE_CSV, MSM_CSV) if not path.is_file()]
+    if missing:
+        raise FileNotFoundError("Required raw input CSV(s) missing; no raw data were synthesized:\n" + "\n".join(missing))
     for folder in (RAW, TABLES, FIGURES):
         folder.mkdir(parents=True, exist_ok=True)
-    create_transcribed_csvs()
     threads = summarize_threads()
     stages = summarize_stages()
     msm = summarize_msm()
@@ -450,9 +376,9 @@ def main():
         print(" ", p.relative_to(ROOT))
     print("Updated summary tables:")
     for p in (
-        TABLES / "sapling_spend_thread_scaling_summary_20261011.csv",
-        TABLES / "sapling_spend_stage_profile_summary_20261011.csv",
-        TABLES / "sapling_spend_msm_profile_summary_20261011.csv",
+        table_path("sapling_spend_thread_scaling_summary"),
+        table_path("sapling_spend_stage_profile_summary"),
+        table_path("sapling_spend_msm_profile_summary"),
     ):
         print(" ", p.relative_to(ROOT))
     print("No proving workload was executed.")
