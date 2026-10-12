@@ -1,5 +1,5 @@
 param(
-    [string]$RepoPath = 'D:\Research\zcash-sapling-engineering',
+    [string]$RepoPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path,
     [string]$ParameterReport = 'experiments\metadata\sapling_parameter_size_breakdown_20261011_142729.md',
     [string]$ParameterDetailCsv = 'experiments\raw\csv\sapling_parameter_size_breakdown_20261011_142729.csv',
     [string]$ParameterSummaryCsv = 'experiments\raw\csv\sapling_parameter_size_summary_20261011_142729.csv'

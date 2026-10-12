@@ -1,5 +1,5 @@
 param(
-    [string]$RepoPath = 'D:\Research\zcash-sapling-engineering',
+    [string]$RepoPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path,
     [switch]$SkipPush
 )
 
