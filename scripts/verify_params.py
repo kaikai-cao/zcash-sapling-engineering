@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import hashlib
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 # Parameters are stored outside the Git repository.
-PARAM_DIR = Path(r"D:\Research\zcash-params")
+# Priority: command-line argument > environment variable > default path.
+DEFAULT_PARAM_DIR = Path(
+    os.environ.get("ZCASH_PARAMS_DIR") or r"D:\Research\zcash-params"
+)
 
 OUTPUT_CSV = (
     Path(__file__).resolve().parents[1]
@@ -14,6 +19,7 @@ OUTPUT_CSV = (
     / "metadata"
     / "parameter_validation.csv"
 )
+
 
 # Official BLAKE2b-512 hashes from Zcash Protocol Specification, section 5.8.
 # Each published hash consists of two consecutive 64-character hexadecimal lines.
@@ -51,15 +57,44 @@ def blake2b512(path: Path) -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Validate Zcash Sapling parameter files."
+    )
+    parser.add_argument(
+        "--param-dir",
+        type=Path,
+        default=DEFAULT_PARAM_DIR,
+        help=(
+            "Directory containing the Sapling parameter files. "
+            "Can also be configured with ZCASH_PARAMS_DIR."
+        ),
+    )
+    parser.add_argument(
+        "--output-csv",
+        type=Path,
+        default=OUTPUT_CSV,
+        help="Path for the validation report CSV.",
+    )
+    args = parser.parse_args()
+
+    param_dir = args.param_dir.expanduser()
+    output_csv = args.output_csv.expanduser()
+
+    if not param_dir.is_dir():
+        print(f"FAIL: parameter directory does not exist: {param_dir}")
+        return 1
+
+    print(f"Parameter directory: {param_dir.resolve()}")
+
     checked_at = datetime.now(timezone.utc).isoformat()
     rows = []
     all_passed = True
 
     for name, expected in PARAMS.items():
-        path = PARAM_DIR / name
+        path = param_dir / name
 
         if not path.is_file():
-            print(f"FAIL: missing file: {path}")
+            print(f"\nFAIL: missing file: {path}")
             all_passed = False
             continue
 
@@ -75,6 +110,7 @@ def main() -> int:
 
         print(f"\n{name}")
         print(f"  Actual bytes: {actual_size:,}")
+        print(f"  Expected bytes: {expected['size']:,}")
         print(f"  Size matches: {size_ok}")
         print(f"  BLAKE2b-512:  {actual_hash}")
         print(f"  Hash matches: {hash_ok}")
@@ -94,8 +130,6 @@ def main() -> int:
             }
         )
 
-    OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
-
     columns = [
         "checked_at_utc",
         "file",
@@ -108,12 +142,23 @@ def main() -> int:
         "status",
     ]
 
-    with OUTPUT_CSV.open("w", newline="", encoding="utf-8-sig") as file:
-        writer = csv.DictWriter(file, fieldnames=columns)
-        writer.writeheader()
-        writer.writerows(rows)
+    try:
+        output_csv.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"\nValidation report: {OUTPUT_CSV}")
+        with output_csv.open(
+            "w",
+            newline="",
+            encoding="utf-8-sig",
+        ) as file:
+            writer = csv.DictWriter(file, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    except OSError as exc:
+        print(f"\nFAIL: could not write validation report: {exc}")
+        return 1
+
+    print(f"\nValidation report: {output_csv.resolve()}")
 
     if not all_passed:
         print("RESULT: FAIL — do not use the parameters yet.")
