@@ -2,7 +2,8 @@ param(
     [string]$RepoPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path,
     [string]$ParameterReport = 'experiments\metadata\sapling_parameter_size_breakdown_20261011_142729.md',
     [string]$ParameterDetailCsv = 'experiments\raw\csv\sapling_parameter_size_breakdown_20261011_142729.csv',
-    [string]$ParameterSummaryCsv = 'experiments\raw\csv\sapling_parameter_size_summary_20261011_142729.csv'
+    [string]$ParameterSummaryCsv = 'experiments\raw\csv\sapling_parameter_size_summary_20261011_142729.csv',
+    [switch]$AllowOverwriteArtifacts
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,9 +32,37 @@ if (-not (Test-Path -LiteralPath $RepoPath -PathType Container)) {
 
 $branch = Get-GitText -GitArgs @('branch', '--show-current')
 $head = Get-GitText -GitArgs @('rev-parse', 'HEAD')
+
 $metadataFull = Join-Path $RepoPath $ParameterReport
 $detailFull = Join-Path $RepoPath $ParameterDetailCsv
 $summaryFull = Join-Path $RepoPath $ParameterSummaryCsv
+
+# Refuse to overwrite finalized campaign artifacts by default.
+$timestamp = '20261011'
+
+$closureRelative = "experiments\metadata\sapling_measurement_campaign_closure_$timestamp.md"
+$closureFull = Join-Path $RepoPath $closureRelative
+
+$manifestRelative = "experiments\metadata\sapling_measurement_artifact_manifest_$timestamp.csv"
+$manifestFull = Join-Path $RepoPath $manifestRelative
+
+$existingFinalArtifacts = @(
+    $closureFull,
+    $manifestFull
+) | Where-Object {
+    Test-Path -LiteralPath $_ -PathType Leaf
+}
+
+if ($existingFinalArtifacts.Count -gt 0 -and -not $AllowOverwriteArtifacts) {
+    $existingList = $existingFinalArtifacts -join "`n"
+    throw @"
+Final campaign artifacts already exist.
+Refusing to overwrite historical outputs:
+$existingList
+
+Use -AllowOverwriteArtifacts only when intentionally replacing these files.
+"@
+}
 
 foreach ($required in @($metadataFull, $detailFull, $summaryFull)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
@@ -91,11 +120,6 @@ if (Test-Path -LiteralPath $generatorFull -PathType Leaf) {
     }
 }
 
-$timestamp = '20261011'
-$closureRelative = "experiments\metadata\sapling_measurement_campaign_closure_$timestamp.md"
-$closureFull = Join-Path $RepoPath $closureRelative
-$manifestRelative = "experiments\metadata\sapling_measurement_artifact_manifest_$timestamp.csv"
-$manifestFull = Join-Path $RepoPath $manifestRelative
 $measuredAt = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssK')
 
 $closure = @"
