@@ -8,10 +8,10 @@ The scripts have different side effects. Some only analyze existing data; others
 
 | Script | Purpose | Important behavior |
 |---|---|---|
-| `verify_params.py` | Verify the expected sizes and BLAKE2b-512 hashes of the Sapling Spend and Output parameter files. | Supports `--param-dir` and `--output-csv`. By default, writes `experiments/metadata/parameter_validation.csv`. Use a temporary output path when preserving the existing record. |
-| `record_sapling_parameter_size_breakdown.ps1` | Analyze the serialized layout and size breakdown of the Spend and Output parameter files. | Reads parameter files and writes detailed CSV and metadata artifacts. Its default repository and parameter paths are machine-specific. |
-| `finalize_sapling_measurement_campaign.ps1` | Check campaign evidence, metadata, artifact manifests, and recorded hashes. | Uses configured repository and artifact paths. Inspect the arguments before running it on another checkout. |
-| `commit_sapling_measurement_campaign.ps1` | Validate and archive the measurement campaign through Git. | **Commits changes and pushes to `origin main` by default.** `-SkipPush` skips the push but does not skip the commit. Run only after inspecting the staged files and confirming that the commit is intended. |
+| `verify_params.py` | Verify the expected sizes and BLAKE2b-512 hashes of the Sapling Spend and Output parameter files. | Parameter directory precedence: `--param-dir` > `ZCASH_PARAMS_DIR` > the legacy Windows default. Writes `experiments/metadata/parameter_validation.csv` by default and overwrites the selected output CSV. Use `--output-csv` to preserve existing records. |
+| `record_sapling_parameter_size_breakdown.ps1` | Analyze the serialized layout and size breakdown of the Spend and Output parameter files. | Repository root is resolved relative to the script. Explicit `-SpendParamsPath` and `-OutputParamsPath` values take precedence; otherwise parameter files are resolved from `ZCASH_PARAMS_DIR`, falling back to the legacy Windows parameter directory. Writes timestamped CSV and Markdown artifacts; does not generate proofs. |
+| `finalize_sapling_measurement_campaign.ps1` | Validate and finalize the specific 2026-10-11 measurement campaign. | Defaults to fixed, date-stamped input and output artifacts. It edits the parameter-sizing report, may patch the generator script, and writes a closure report and manifest. It refuses to overwrite existing closure or manifest files unless `-AllowOverwriteArtifacts` is explicitly supplied. This is not a read-only audit command. |
+| `commit_sapling_measurement_campaign.ps1` | Perform the final Git archival operation for the original 2026-10-11 campaign. | **Historical one-off helper, not a general-purpose commit command.** It requires branch `main`, a hardcoded expected HEAD, and a fixed artifact set. It normalizes trailing blank lines, refreshes the manifest, stages and commits the audited files, and pushes to `origin main` unless `-SkipPush` is supplied. The expected HEAD no longer matches the current branch; do not run without deliberately reviewing and redesigning its historical guards. |
 
 ## 2. Proof-Generation and System Measurements
 
@@ -22,7 +22,7 @@ The scripts have different side effects. Some only analyze existing data; others
 | `run_spend_cpu_frequency_diagnostic.ps1` | Sample CPU utilization, processor frequency, and performance counters during a single-thread Spend run. | Runs a proving workload and writes time-series CSV data and logs. Requires suitable Windows performance counters. |
 | `measure_process_peak_working_set.ps1` | Measure process memory usage for either Spend or Output. | Requires `-Circuit Spend` or `-Circuit Output`. Runs the relevant executable and records memory measurements and logs. |
 | `run_process_first_repeat.ps1` | Study the first proving repeat and process/system load behavior. | Requires `-Circuit Spend` or `-Circuit Output`; accepts `-Processes` to control the number of processes. Runs actual proving workloads. |
-| `run_sapling_cache_condition_comparison.ps1` | Compare proving under different cache conditions. | Requires `-Circuit Spend` or `-Circuit Output`; accepts `-Pairs`. Depends on RAMMap at the configured path and runs actual proving workloads. |
+| `run_sapling_cache_condition_comparison.ps1` | Compare proving under different cache conditions. | Requires `-Circuit Spend` or `-Circuit Output`; accepts `-Pairs`, `-RamMapPath`, `-SpendParamsPath`, and `-OutputParamsPath`. Parameter paths also support `SAPLING_SPEND_PARAMS`, `SAPLING_OUTPUT_PARAMS`, and `ZCASH_PARAMS_DIR`; RAMMap supports `SAPLING_RAMMAP_PATH`. Requires an elevated PowerShell session, invokes RAMMap for the approximate cold condition, runs real proof-generation processes, and appends records to the cache-comparison CSV. Do not run for syntax or documentation checks. |
 
 ## 3. MSM and Worker-Execution Analysis
 
@@ -78,9 +78,16 @@ Some legacy utilities write to fixed output filenames or update existing derived
 
 ### Check machine-specific dependencies
 
-Some older scripts retain absolute Windows paths for the repository, parameter files, or external tools such as RAMMap. A script working on the original machine is not necessarily portable to a fresh checkout.
+Some scripts retain legacy Windows defaults or fixed historical input files, so a fresh checkout may require configuration before use.
 
-The parameter verification and the Spend combined-profile runner support parameter-path configuration. Other utilities may require their paths to be adjusted before reuse.
+The following utilities support parameter-path configuration:
+
+- `verify_params.py`: `--param-dir`, then `ZCASH_PARAMS_DIR`, then its legacy default directory.
+- `record_sapling_parameter_size_breakdown.ps1`: explicit per-file path parameters, then `ZCASH_PARAMS_DIR`, then its legacy default directory.
+- `run_spend_combined_profile.ps1`: `-ParameterPath`, then `ZCASH_PARAMS_DIR`, then its legacy default directory.
+- `run_sapling_cache_condition_comparison.ps1`: explicit per-file parameters, corresponding `SAPLING_SPEND_PARAMS` / `SAPLING_OUTPUT_PARAMS` environment variables, then `ZCASH_PARAMS_DIR`; RAMMap can be configured with `-RamMapPath` or `SAPLING_RAMMAP_PATH`.
+
+These settings do not make every legacy script portable. Check each script's fixed input batch IDs, output names, expected repository revision, external tools, and overwrite behavior before running it.
 
 ### Preserve provenance
 
