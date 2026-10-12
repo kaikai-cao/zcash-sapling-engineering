@@ -15,8 +15,24 @@ use std::{
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
-const PARAMS_PATH: &str =
-    r"D:\Research\zcash-params\sapling-spend.params";
+fn resolve_params_path() -> PathBuf {
+    if let Ok(path) = std::env::var("SAPLING_SPEND_PARAMS") {
+        let path = path.trim();
+        if !path.is_empty() {
+            return PathBuf::from(path);
+        }
+    }
+
+    if let Ok(directory) = std::env::var("ZCASH_PARAMS_DIR") {
+        let directory = directory.trim();
+        if !directory.is_empty() {
+            return PathBuf::from(directory).join("sapling-spend.params");
+        }
+    }
+
+    // Keep the original path as a backward-compatible fallback.
+    PathBuf::from(r"D:\Research\zcash-params\sapling-spend.params")
+}
 
 const TREE_DEPTH: usize = 32;
 const REPEATS: usize = 5;
@@ -27,25 +43,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 1. 读取并验证 Spend 参数文件。
     let start = Instant::now();
 
+    let params_path = resolve_params_path();
+    println!("params_path={}", params_path.display());
+
     let params = SpendParameters::read(
-        File::open(PARAMS_PATH).expect("无法打开 Spend 参数文件"),
+        File::open(&params_path).unwrap_or_else(|error| {
+            panic!("无法打开 Spend 参数文件 {}: {error}", params_path.display())
+        }),
         true,
     )
     .expect("无法读取或验证 Spend 参数文件");
 
-    let params_read_validate_ms =
-        start.elapsed().as_secs_f64() * 1000.0;
+    let params_read_validate_ms = start.elapsed().as_secs_f64() * 1000.0;
 
-    println!(
-        "params_read_validate_ms={params_read_validate_ms:.3}"
-    );
+    println!("params_read_validate_ms={params_read_validate_ms:.3}");
 
     // 2. 预处理验证密钥，只执行一次。
     let start = Instant::now();
     let prepared_vk = params.prepared_verifying_key();
 
-    let prepare_vk_ms =
-        start.elapsed().as_secs_f64() * 1000.0;
+    let prepare_vk_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     println!("prepare_vk_ms={prepare_vk_ms:.3}");
 
@@ -90,23 +107,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 生成 32 层路径。路径中的节点可以是随机值，
     // 但 anchor 必须由这条路径和当前笔记承诺计算得到。
     let path_elems: Vec<Node> = (0..TREE_DEPTH)
-        .map(|_| {
-            Node::from_scalar(bls12_381::Scalar::random(&mut rng))
-        })
+        .map(|_| Node::from_scalar(bls12_381::Scalar::random(&mut rng)))
         .collect();
 
     // 使用位置 0，因此路径的每一层都将当前节点放在左侧。
     let position = 0u64;
 
-    let merkle_path = MerklePath::from_parts(
-        path_elems,
-        position.into(),
-    )
-    .expect("Merkle 路径长度必须为 32");
+    let merkle_path =
+        MerklePath::from_parts(path_elems, position.into()).expect("Merkle 路径长度必须为 32");
 
-    let anchor: bls12_381::Scalar = merkle_path
-        .root(Node::from_cmu(&note.cmu()))
-        .into();
+    let anchor: bls12_381::Scalar = merkle_path.root(Node::from_cmu(&note.cmu())).into();
 
     // 使用 Sapling 的正式接口准备 Spend 电路。
     let circuit = SpendParameters::prepare_circuit(
@@ -129,19 +139,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let sighash = [0u8; 32];
 
     // 使用与 rk 相匹配的随机化授权密钥签名。
-    let spend_auth_sig = expsk
-        .ask()
-        .randomize(&alpha)
-        .sign(&mut rng, &sighash);
+    let spend_auth_sig = expsk.ask().randomize(&alpha).sign(&mut rng, &sighash);
 
-    let input_prep_ms =
-        start.elapsed().as_secs_f64() * 1000.0;
+    let input_prep_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     println!("input_prep_ms={input_prep_ms:.3}");
 
     // 4. 打开原始 CSV 文件，使用独立批次编号。
-    let raw_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../experiments/raw/csv");
+    let raw_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../experiments/raw/csv");
 
     create_dir_all(&raw_dir)?;
 
@@ -161,13 +166,10 @@ proof_bytes,verified,rayon_threads,build_profile"
         )?;
     }
 
-    let batch_id = SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
-        .as_millis();
+    let batch_id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
 
     let rayon_threads =
-        std::env::var("RAYON_NUM_THREADS")
-            .unwrap_or_else(|_| "default".to_string());
+        std::env::var("RAYON_NUM_THREADS").unwrap_or_else(|_| "default".to_string());
 
     let build_profile = if cfg!(debug_assertions) {
         "debug"
@@ -182,11 +184,9 @@ proof_bytes,verified,rayon_threads,build_profile"
         let start = Instant::now();
         let proof = params.create_proof(circuit_for_run, &mut rng);
 
-        let prove_ms =
-            start.elapsed().as_secs_f64() * 1000.0;
+        let prove_ms = start.elapsed().as_secs_f64() * 1000.0;
 
-        let encoded_proof =
-            SpendParameters::encode_proof(proof.clone());
+        let encoded_proof = SpendParameters::encode_proof(proof.clone());
 
         let proof_bytes = encoded_proof.len();
 
@@ -205,8 +205,7 @@ proof_bytes,verified,rayon_threads,build_profile"
             &prepared_vk,
         );
 
-        let verify_ms =
-            start.elapsed().as_secs_f64() * 1000.0;
+        let verify_ms = start.elapsed().as_secs_f64() * 1000.0;
 
         writeln!(
             csv,

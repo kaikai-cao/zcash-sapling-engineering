@@ -224,6 +224,7 @@ foreach ($row in $beforeRows) {
 
 $oldProfile = [Environment]::GetEnvironmentVariable('SAPLING_PROFILE', 'Process')
 $oldThreads = [Environment]::GetEnvironmentVariable('RAYON_NUM_THREADS', 'Process')
+$oldSpendParams = [Environment]::GetEnvironmentVariable('SAPLING_SPEND_PARAMS', 'Process')
 
 $runStarted = (Get-Date).ToString('o')
 $exitCode = -1
@@ -233,6 +234,7 @@ $stderr = ''
 try {
     $env:SAPLING_PROFILE = '1'
     $env:RAYON_NUM_THREADS = [string]$Threads
+    $env:SAPLING_SPEND_PARAMS = $ParameterPath
 
     $process = Start-Process `
         -FilePath $exe `
@@ -271,6 +273,13 @@ finally {
     }
     else {
         $env:RAYON_NUM_THREADS = $oldThreads
+    }
+
+    if ($null -eq $oldSpendParams) {
+        Remove-Item Env:SAPLING_SPEND_PARAMS -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:SAPLING_SPEND_PARAMS = $oldSpendParams
     }
 }
 
