@@ -31,6 +31,28 @@ fn msm_profile_enabled() -> bool {
     })
 }
 
+// Branch counters can be disabled independently of timing instrumentation.
+// If the variable is absent, preserve the historical profile=1 behavior.
+fn msm_branch_counts_enabled(profile: bool) -> bool {
+    profile
+        && std::env::var("SAPLING_MSM_BRANCH_COUNTS")
+            .map(|value| value == "1")
+            .unwrap_or(true)
+}
+
+// Keep outer MSM/Groth16 profiling enabled while optionally disabling the
+// finer-grained timers inside each multiexp window/chunk.
+fn msm_inner_stage_timing_enabled(profile: bool) -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+
+    profile
+        && *ENABLED.get_or_init(|| {
+            std::env::var("SAPLING_MSM_STAGE_TIMING")
+                .map(|value| value != "0")
+                .unwrap_or(true)
+        })
+}
+
 #[derive(Default)]
 struct MsmStageProfile {
     bucket_init_sum_ns: std::sync::atomic::AtomicU64,
@@ -312,6 +334,8 @@ fn multiexp_inner<Q, D, G, S>(
     exponents: Arc<Vec<Exponent<G::Scalar>>>,
     c: u32,
     profile: bool,
+    branch_counts: bool,
+    stage_timing: bool,
     call_id: Option<usize>,
 ) -> Result<G, SynthesisError>
 where
@@ -329,7 +353,7 @@ where
     let worker_stage_profile = stage_profile.clone();
 
     // Split the exponents into windows and measure this preprocessing step.
-    let exponent_chunk_prep_start = profile.then(Instant::now);
+    let exponent_chunk_prep_start = stage_timing.then(Instant::now);
     let chunked_exponents = Arc::new(
         exponents
             .iter()
@@ -363,7 +387,7 @@ where
         };
 
         // Allocate the bucket array.
-        let bucket_init_start = profile.then(Instant::now);
+        let bucket_init_start = stage_timing.then(Instant::now);
         let mut buckets = vec![G::identity(); bucket_count];
         if let (Some(stage), Some(start)) =
             (worker_stage_profile.as_ref(), bucket_init_start)
@@ -392,8 +416,8 @@ where
         let mut base_skip_calls = 0usize;
         let mut base_skip_elements = 0usize;
 
-        let bucket_fill_start = profile.then(Instant::now);
-        if profile {
+        let bucket_fill_start = stage_timing.then(Instant::now);
+        if branch_counts {
             // Diagnostic branch: count source-level operations with local
             // counters. This adds overhead to bucket-fill timing in this batch.
             for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
@@ -473,25 +497,27 @@ where
             );
         }
 
-        if let Some(stage) = worker_stage_profile.as_ref() {
-            stage.density_true_slot_visits.fetch_add(density_true_slot_visits, Ordering::Relaxed);
-            stage.density_false_slot_visits.fetch_add(density_false_slot_visits, Ordering::Relaxed);
-            stage.zero_exponent_slot_visits.fetch_add(zero_exponent_slot_visits, Ordering::Relaxed);
-            stage.one_exponent_slot_visits.fetch_add(one_exponent_slot_visits, Ordering::Relaxed);
-            stage.chunked_exponent_slot_visits.fetch_add(chunked_exponent_slot_visits, Ordering::Relaxed);
-            stage.zero_window_digit_visits.fetch_add(zero_window_digit_visits, Ordering::Relaxed);
-            stage.nonzero_window_digit_visits.fetch_add(nonzero_window_digit_visits, Ordering::Relaxed);
-            stage.bucket_base_add_calls.fetch_add(bucket_base_add_calls, Ordering::Relaxed);
-            stage.direct_one_add_calls.fetch_add(direct_one_add_calls, Ordering::Relaxed);
-            stage.base_skip_calls.fetch_add(base_skip_calls, Ordering::Relaxed);
-            stage.base_skip_elements.fetch_add(base_skip_elements, Ordering::Relaxed);
+        if branch_counts {
+            if let Some(stage) = worker_stage_profile.as_ref() {
+                stage.density_true_slot_visits.fetch_add(density_true_slot_visits, Ordering::Relaxed);
+                stage.density_false_slot_visits.fetch_add(density_false_slot_visits, Ordering::Relaxed);
+                stage.zero_exponent_slot_visits.fetch_add(zero_exponent_slot_visits, Ordering::Relaxed);
+                stage.one_exponent_slot_visits.fetch_add(one_exponent_slot_visits, Ordering::Relaxed);
+                stage.chunked_exponent_slot_visits.fetch_add(chunked_exponent_slot_visits, Ordering::Relaxed);
+                stage.zero_window_digit_visits.fetch_add(zero_window_digit_visits, Ordering::Relaxed);
+                stage.nonzero_window_digit_visits.fetch_add(nonzero_window_digit_visits, Ordering::Relaxed);
+                stage.bucket_base_add_calls.fetch_add(bucket_base_add_calls, Ordering::Relaxed);
+                stage.direct_one_add_calls.fetch_add(direct_one_add_calls, Ordering::Relaxed);
+                stage.base_skip_calls.fetch_add(base_skip_calls, Ordering::Relaxed);
+                stage.base_skip_elements.fetch_add(base_skip_elements, Ordering::Relaxed);
+            }
         }
 
         // Summation by parts.
         // e.g. 3a + 2b + 1c = a +
         //                    (a) + b +
         //                    ((a) + b) + c
-        let bucket_reduce_start = profile.then(Instant::now);
+        let bucket_reduce_start = stage_timing.then(Instant::now);
         let mut running_sum = G::identity();
         for exp in buckets.into_iter().rev() {
             running_sum.add_assign(&exp);
@@ -511,7 +537,7 @@ where
     };
 
     // This wall-clock measurement includes parallel scheduling and all chunk work.
-    let chunk_parallel_start = profile.then(Instant::now);
+    let chunk_parallel_start = stage_timing.then(Instant::now);
     let parts = (0..G::Scalar::NUM_BITS)
         .into_par_iter()
         .step_by(c as usize)
@@ -529,7 +555,7 @@ where
     let chunk_count = parts.len();
 
     // Combine the independent chunk results.
-    let result_merge_start = profile.then(Instant::now);
+    let result_merge_start = stage_timing.then(Instant::now);
     let final_result = parts
         .into_iter()
         .rev()
@@ -567,21 +593,23 @@ where
             ns_to_ms(result_merge_ns),
         );
 
-        eprintln!(
-            "BELLMAN_MSM_BRANCH_PROFILE call_id={} density_true_slot_visits={} density_false_slot_visits={} zero_exponent_slot_visits={} one_exponent_slot_visits={} chunked_exponent_slot_visits={} zero_window_digit_visits={} nonzero_window_digit_visits={} bucket_base_add_calls={} direct_one_add_calls={} base_skip_calls={} base_skip_elements={}",
-            call_id.unwrap_or(0),
-            stage.density_true_slot_visits.load(Ordering::Relaxed),
-            stage.density_false_slot_visits.load(Ordering::Relaxed),
-            stage.zero_exponent_slot_visits.load(Ordering::Relaxed),
-            stage.one_exponent_slot_visits.load(Ordering::Relaxed),
-            stage.chunked_exponent_slot_visits.load(Ordering::Relaxed),
-            stage.zero_window_digit_visits.load(Ordering::Relaxed),
-            stage.nonzero_window_digit_visits.load(Ordering::Relaxed),
-            stage.bucket_base_add_calls.load(Ordering::Relaxed),
-            stage.direct_one_add_calls.load(Ordering::Relaxed),
-            stage.base_skip_calls.load(Ordering::Relaxed),
-            stage.base_skip_elements.load(Ordering::Relaxed),
-        );
+        if branch_counts {
+            eprintln!(
+                "BELLMAN_MSM_BRANCH_PROFILE call_id={} density_true_slot_visits={} density_false_slot_visits={} zero_exponent_slot_visits={} one_exponent_slot_visits={} chunked_exponent_slot_visits={} zero_window_digit_visits={} nonzero_window_digit_visits={} bucket_base_add_calls={} direct_one_add_calls={} base_skip_calls={} base_skip_elements={}",
+                call_id.unwrap_or(0),
+                stage.density_true_slot_visits.load(Ordering::Relaxed),
+                stage.density_false_slot_visits.load(Ordering::Relaxed),
+                stage.zero_exponent_slot_visits.load(Ordering::Relaxed),
+                stage.one_exponent_slot_visits.load(Ordering::Relaxed),
+                stage.chunked_exponent_slot_visits.load(Ordering::Relaxed),
+                stage.zero_window_digit_visits.load(Ordering::Relaxed),
+                stage.nonzero_window_digit_visits.load(Ordering::Relaxed),
+                stage.bucket_base_add_calls.load(Ordering::Relaxed),
+                stage.direct_one_add_calls.load(Ordering::Relaxed),
+                stage.base_skip_calls.load(Ordering::Relaxed),
+                stage.base_skip_elements.load(Ordering::Relaxed),
+            );
+        }
     }
 
     final_result
@@ -616,6 +644,8 @@ where
     }
 
     let profile = msm_profile_enabled();
+    let branch_counts = msm_branch_counts_enabled(profile);
+    let stage_timing = msm_inner_stage_timing_enabled(profile);
     let call_id = if profile {
         Some(MSM_PROFILE_CALL_ID.fetch_add(1, Ordering::Relaxed))
     } else {
@@ -637,7 +667,7 @@ where
         let task_start_delay_ms = submitted_at.map(|t| t.elapsed().as_secs_f64() * 1000.0);
         let start = profile.then(Instant::now);
         let result = multiexp_inner(
-            bases, density_map, exponents, c, profile, call_id,
+            bases, density_map, exponents, c, profile, branch_counts, stage_timing, call_id,
         );
 
         if let (Some(call_id), Some(task_start_delay_ms), Some(start)) =

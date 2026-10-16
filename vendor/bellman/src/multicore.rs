@@ -45,6 +45,9 @@ mod implementation {
             // stack space consumed by all of the pending closures to be
             // executed.
             let previous_count = WORKER_SPAWN_COUNTER.fetch_add(1, Ordering::SeqCst);
+            let force_async = std::env::var("BELLMAN_FORCE_ASYNC_WORKER")
+                .map(|value| value == "1")
+                .unwrap_or(false);
 
             // If the number of spawns requested has exceeded the number
             // of cores available for processing by some factor (the
@@ -53,7 +56,7 @@ mod implementation {
             // scope call (which blocks the current thread) to help clear
             // the growing work queue and minimize the chances of memory
             // exhaustion.
-            if previous_count > *WORKER_SPAWN_MAX_COUNT {
+            if previous_count > *WORKER_SPAWN_MAX_COUNT && !force_async {
                 if std::env::var("SAPLING_PROFILE")
                 .map(|value| value == "1")
                 .unwrap_or(false)
@@ -78,6 +81,14 @@ mod implementation {
                     WORKER_SPAWN_COUNTER.fetch_sub(1, Ordering::SeqCst);
                 });
             } else {
+                if previous_count > *WORKER_SPAWN_MAX_COUNT && force_async {
+                    eprintln!(
+                        "BELLMAN_WORKER_ASYNC_OVERRIDE previous_count={} max_count={} rayon_threads={}",
+                        previous_count,
+                        *WORKER_SPAWN_MAX_COUNT,
+                        current_num_threads(),
+                    );
+                }
                 rayon::spawn(move || {
                     let res = f();
                     sender.send(res).unwrap();

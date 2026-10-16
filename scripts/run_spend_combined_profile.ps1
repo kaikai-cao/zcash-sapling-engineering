@@ -4,6 +4,13 @@ param(
     [string]$ParameterPath = '',
     [ValidateRange(1, 128)]
     [int]$Threads = 1,
+    [ValidateSet('enabled', 'disabled')]
+    [string]$BranchCounters = 'enabled',
+    [ValidateSet('enabled', 'disabled')]
+    [string]$InnerStageTiming = 'enabled',
+    [switch]$ForceAsyncWorker,
+    [ValidatePattern('^[a-z0-9][a-z0-9_-]{0,39}$')]
+    [string]$RunDataLabel = 'release',
     [switch]$AllowDirtyWorktree
 )
 
@@ -93,17 +100,21 @@ $exe = Join-Path $RepoRoot 'experiments\prover-smoke\target\release\spend_prover
 $rawDir = Join-Path $RepoRoot 'experiments\raw\csv'
 $logDir = Join-Path $RepoRoot 'experiments\raw\logs'
 $metadataDir = Join-Path $RepoRoot 'experiments\metadata'
-$sourceCsv = Join-Path $rawDir 'sapling_spend_prover_runs_release.csv'
+if ($RunDataLabel -eq 'release') {
+    $sourceCsv = Join-Path $rawDir 'sapling_spend_prover_runs_release.csv'
+}
+else {
+    $sourceCsv = Join-Path $rawDir ("sapling_spend_prover_runs_{0}.csv" -f $RunDataLabel)
+}
 $bellmanSource = Join-Path $RepoRoot 'vendor\bellman\src\multiexp.rs'
+$workerSource = Join-Path $RepoRoot 'vendor\bellman\src\multicore.rs'
 $groth16Source = Join-Path $RepoRoot 'vendor\groth16\src\prover.rs'
 
-foreach ($path in @(
-        $manifest,
-        $ParameterPath,
-        $sourceCsv,
-        $bellmanSource,
-        $groth16Source
-    )) {
+$requiredPaths = @($manifest, $ParameterPath, $bellmanSource, $workerSource, $groth16Source)
+if ($RunDataLabel -eq 'release') {
+    $requiredPaths += $sourceCsv
+}
+foreach ($path in $requiredPaths) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required file not found: $path"
     }
@@ -227,6 +238,13 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
     throw "Release executable missing after build: $exe"
 }
 
+# Create a dedicated labeled data CSV only after recording that the starting
+# source worktree was clean. This file is never the formal release baseline.
+if (-not (Test-Path -LiteralPath $sourceCsv -PathType Leaf)) {
+    $csvHeader = "batch_id,run,params_read_validate_ms,prepare_vk_ms,input_prep_ms,prove_ms,verify_ms,proof_bytes,verified,rayon_threads,build_profile`n"
+    [System.IO.File]::WriteAllText($sourceCsv, $csvHeader, [System.Text.UTF8Encoding]::new($false))
+}
+
 # Snapshot existing batch IDs so this run cannot accidentally reuse old records.
 $beforeRows = Get-RowsFromCsv -Path $sourceCsv
 $beforeIds = @{}
@@ -240,6 +258,10 @@ foreach ($row in $beforeRows) {
 $oldProfile = [Environment]::GetEnvironmentVariable('SAPLING_PROFILE', 'Process')
 $oldThreads = [Environment]::GetEnvironmentVariable('RAYON_NUM_THREADS', 'Process')
 $oldSpendParams = [Environment]::GetEnvironmentVariable('SAPLING_SPEND_PARAMS', 'Process')
+$oldBranchCounters = [Environment]::GetEnvironmentVariable('SAPLING_MSM_BRANCH_COUNTS', 'Process')
+$oldInnerStageTiming = [Environment]::GetEnvironmentVariable('SAPLING_MSM_STAGE_TIMING', 'Process')
+$oldForceAsyncWorker = [Environment]::GetEnvironmentVariable('BELLMAN_FORCE_ASYNC_WORKER', 'Process')
+$oldProverRunsCsv = [Environment]::GetEnvironmentVariable('SAPLING_PROVER_RUNS_CSV', 'Process')
 
 $runStarted = (Get-Date).ToString('o')
 $exitCode = -1
@@ -250,6 +272,25 @@ try {
     $env:SAPLING_PROFILE = '1'
     $env:RAYON_NUM_THREADS = [string]$Threads
     $env:SAPLING_SPEND_PARAMS = $ParameterPath
+    $env:SAPLING_PROVER_RUNS_CSV = $sourceCsv
+    if ($BranchCounters -eq 'enabled') {
+        $env:SAPLING_MSM_BRANCH_COUNTS = '1'
+    }
+    else {
+        $env:SAPLING_MSM_BRANCH_COUNTS = '0'
+    }
+    if ($InnerStageTiming -eq 'enabled') {
+        $env:SAPLING_MSM_STAGE_TIMING = '1'
+    }
+    else {
+        $env:SAPLING_MSM_STAGE_TIMING = '0'
+    }
+    if ($ForceAsyncWorker) {
+        $env:BELLMAN_FORCE_ASYNC_WORKER = '1'
+    }
+    else {
+        $env:BELLMAN_FORCE_ASYNC_WORKER = '0'
+    }
 
     $process = Start-Process `
         -FilePath $exe `
@@ -295,6 +336,34 @@ finally {
     }
     else {
         $env:SAPLING_SPEND_PARAMS = $oldSpendParams
+    }
+
+    if ($null -eq $oldBranchCounters) {
+        Remove-Item Env:SAPLING_MSM_BRANCH_COUNTS -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:SAPLING_MSM_BRANCH_COUNTS = $oldBranchCounters
+    }
+
+    if ($null -eq $oldInnerStageTiming) {
+        Remove-Item Env:SAPLING_MSM_STAGE_TIMING -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:SAPLING_MSM_STAGE_TIMING = $oldInnerStageTiming
+    }
+
+    if ($null -eq $oldForceAsyncWorker) {
+        Remove-Item Env:BELLMAN_FORCE_ASYNC_WORKER -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:BELLMAN_FORCE_ASYNC_WORKER = $oldForceAsyncWorker
+    }
+
+    if ($null -eq $oldProverRunsCsv) {
+        Remove-Item Env:SAPLING_PROVER_RUNS_CSV -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:SAPLING_PROVER_RUNS_CSV = $oldProverRunsCsv
     }
 }
 
@@ -355,11 +424,15 @@ $msmRegex = [regex]'BELLMAN_MSM_PROFILE call_id=(\d+) exponent_count=(\d+) densi
 $submitRegex = [regex]'BELLMAN_MSM_SUBMIT_PROFILE call_id=(\d+) submit_elapsed_ms=([\d.]+)'
 $stageRegex = [regex]'G16_STAGE_PROFILE circuit_synthesis_constraints_ms=([\d.]+) worker_vk_setup_ms=([\d.]+) qap_fft_h_exponent_prep_ms=([\d.]+) h_query_access_dispatch_ms=([\d.]+) assignment_query_prep_dispatch_ms=([\d.]+) proof_scalar_terms_ms=([\d.]+) wait_and_assembly_ms=([\d.]+) create_proof_body_ms=([\d.]+)'
 $innerStageRegex = [regex]'BELLMAN_MSM_STAGE_PROFILE call_id=(\d+) exponent_count=(\d+) window=(\d+) bucket_count=(\d+) chunk_count=(\d+) bucket_element_size_bytes=(\d+) exponent_chunk_prep_ms=([\d.]+) chunk_parallel_wall_ms=([\d.]+) bucket_init_sum_ms=([\d.]+) bucket_init_max_ms=([\d.]+) bucket_fill_sum_ms=([\d.]+) bucket_fill_max_ms=([\d.]+) bucket_reduce_sum_ms=([\d.]+) bucket_reduce_max_ms=([\d.]+) max_concurrent_chunk_regions=(\d+) bucket_payload_at_max_concurrency_estimate_bytes=(\d+) result_merge_ms=([\d.]+)'
+$workerFallbackRegex = [regex]'BELLMAN_WORKER_FALLBACK previous_count=(\d+) max_count=(\d+) rayon_threads=(\d+)'
+$workerAsyncOverrideRegex = [regex]'BELLMAN_WORKER_ASYNC_OVERRIDE previous_count=(\d+) max_count=(\d+) rayon_threads=(\d+)'
 
 $msmMatches = $msmRegex.Matches($stderr)
 $submitMatches = $submitRegex.Matches($stderr)
 $stageMatches = $stageRegex.Matches($stderr)
 $innerStageMatches = $innerStageRegex.Matches($stderr)
+$workerFallbackMatches = $workerFallbackRegex.Matches($stderr)
+$workerAsyncOverrideMatches = $workerAsyncOverrideRegex.Matches($stderr)
 
 if ($msmMatches.Count -ne 40) {
     throw "Expected 40 BELLMAN_MSM_PROFILE records; found $($msmMatches.Count). Preserve logs and do not publish partial profile data."
@@ -527,6 +600,23 @@ if ($seenInnerStageCalls.Count -ne 40) {
     throw "Expected 40 unique inner-stage call IDs; found $($seenInnerStageCalls.Count)."
 }
 
+if ($Threads -eq 1 -and $ForceAsyncWorker) {
+    if ($workerFallbackMatches.Count -ne 0) {
+        throw "Forced-async batch still emitted $($workerFallbackMatches.Count) fallback events."
+    }
+    if ($workerAsyncOverrideMatches.Count -eq 0) {
+        throw 'Forced-async mode did not record any fallback override; the intervention was not shown to activate.'
+    }
+}
+elseif ($Threads -eq 1) {
+    if ($workerFallbackMatches.Count -eq 0) {
+        throw 'One-thread control emitted no worker fallback events; the control condition was not shown to activate.'
+    }
+    if ($workerAsyncOverrideMatches.Count -ne 0) {
+        throw "Control batch unexpectedly emitted $($workerAsyncOverrideMatches.Count) forced-async override events."
+    }
+}
+
 $innerStageSummaryObjects = @()
 foreach ($query in $queries) {
     $queryRows = @(
@@ -567,7 +657,12 @@ foreach ($query in $queries) {
         max_concurrent_chunk_regions_observed = [int](($queryRows | Measure-Object -Property max_concurrent_chunk_regions -Maximum).Maximum)
         median_bucket_payload_estimate_bytes = Get-Median -Values $bucketEstimate
         max_bucket_payload_estimate_bytes = [long](($queryRows | Measure-Object -Property bucket_payload_at_max_concurrency_estimate_bytes -Maximum).Maximum)
-        note = 'Stage sums aggregate chunk timings; chunk_parallel_wall_ms is wall time. Payload estimate is not measured process peak memory.'
+        note = $(if ($InnerStageTiming -eq 'enabled') {
+            'Fine-grained stage timers enabled. Stage sums aggregate chunk timings; chunk_parallel_wall_ms is wall time. Payload estimate is not measured process peak memory.'
+        }
+        else {
+            'Fine-grained stage timers disabled (SAPLING_MSM_STAGE_TIMING=0); phase timing fields are zero placeholders. Active chunk counts and payload estimates remain instrumented; payload estimate is not measured process peak memory.'
+        })
     }
 }
 
@@ -712,6 +807,12 @@ $report = @"
 - Circuit: Sapling Spend
 - Batch ID: $batchId
 - Runs: 5; verified proofs: 5/5; build: Release; RAYON_NUM_THREADS=$Threads; SAPLING_PROFILE=1
+- Run data label: $RunDataLabel
+- Branch counters: $BranchCounters
+- Fine-grained MSM inner-stage timing: $InnerStageTiming
+- Force async worker: $($ForceAsyncWorker.IsPresent)
+- Worker fallback records: $($workerFallbackMatches.Count)
+- Forced-async override records: $($workerAsyncOverrideMatches.Count)
 - Run start: $runStarted
 - Run end: $runEnded
 - Repository branch: $branch
@@ -737,6 +838,7 @@ $report = @"
 ## Instrumented source identity
 
 - vendor/bellman/src/multiexp.rs SHA-256: $(Get-Sha256 $bellmanSource)
+- vendor/bellman/src/multicore.rs SHA-256: $(Get-Sha256 $workerSource)
 - vendor/groth16/src/prover.rs SHA-256: $(Get-Sha256 $groth16Source)
 - spend_prover_smoke.rs SHA-256: $(Get-Sha256 (Join-Path $RepoRoot 'experiments\prover-smoke\src\bin\spend_prover_smoke.rs'))
 - Runner SHA-256: $(Get-Sha256 $PSCommandPath)
@@ -759,11 +861,13 @@ The inner-stage timing fields distinguish cumulative per-chunk work from wall-cl
 
 The three existing MSM timing fields describe different measurement intervals. In particular, submit_elapsed_ms is not an additional disjoint work segment that can be summed with task_start_delay_ms and elapsed_ms. Worker fallback may execute queued work while a submit call is in progress. Treat these values as diagnostic timing fields, not as a mutually exclusive cost decomposition.
 
+The fallback ablation uses the same instrumented source for both conditions. Set `-BranchCounters disabled` for paired runs so per-slot counter increments do not contaminate the timing comparison. `-ForceAsyncWorker` suppresses synchronous fallback only when the normal fallback threshold would otherwise be crossed; override records confirm when that intervention was exercised.
+
 The share above is computed per run and then summarized; it is not computed by dividing separately calculated medians. This diagnostic batch is not the frozen formal performance baseline and should not be combined with historical profiling batches.
 
 ## Artifacts
 
-- Prover run records: experiments/raw/csv/sapling_spend_prover_runs_release.csv (filtered by this batch ID)
+- Prover run records: experiments/raw/csv/$(Split-Path $sourceCsv -Leaf) (filtered by this batch ID)
 - Prover run CSV SHA-256: $(Get-Sha256 $sourceCsv)
 - Stage CSV: experiments/raw/csv/$(Split-Path $stageCsv -Leaf)
 - Stage CSV SHA-256: $(Get-Sha256 $stageCsv)
@@ -815,5 +919,8 @@ Write-Host "MSM CSV: $msmCsv"
 Write-Host "Per-run summary: $summaryCsv"
 Write-Host "MSM inner-stage CSV: $innerStageCsv"
 Write-Host "MSM inner-stage query summary: $innerStageSummaryCsv"
+Write-Host "Fine-grained MSM inner-stage timing: $InnerStageTiming"
 Write-Host "Metadata report: $metadataPath"
+Write-Host "Worker fallback records: $($workerFallbackMatches.Count)"
+Write-Host "Forced-async override records: $($workerAsyncOverrideMatches.Count)"
 Write-Host 'All logs are preserved under experiments/raw/logs.'
