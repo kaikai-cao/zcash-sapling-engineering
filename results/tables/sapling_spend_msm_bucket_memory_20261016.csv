@@ -1,0 +1,9 @@
+﻿query,group,exponent_count,recorded_threads,scalar_num_bits,window,bucket_count_per_chunk,chunk_count,bucket_element_type,bucket_element_size_bytes,bucket_array_payload_bytes_per_chunk,bucket_slots_across_all_chunks,cumulative_bucket_payload_bytes_across_chunks,active_chunks_upper_bound_at_20_threads,single_call_concurrent_payload_upper_bound_bytes,single_chunk_payload_MiB,cumulative_payload_MiB,single_call_upper_bound_MiB,status
+H_query_G1,G1,131071,20,255,12,4095,22,G1Projective,144,589680,90090,12972960,20,11793600,0.562363,12.371979,11.247253,derived_static_estimate_not_runtime_peak
+L_query_G1,G1,98638,20,255,12,4095,22,G1Projective,144,589680,90090,12972960,20,11793600,0.562363,12.371979,11.247253,derived_static_estimate_not_runtime_peak
+A_input_G1,G1,8,20,255,3,7,85,G1Projective,144,1008,595,85680,20,20160,0.000961,0.081711,0.019226,derived_static_estimate_not_runtime_peak
+A_aux_G1,G1,98638,20,255,12,4095,22,G1Projective,144,589680,90090,12972960,20,11793600,0.562363,12.371979,11.247253,derived_static_estimate_not_runtime_peak
+B_G1_input,G1,8,20,255,3,7,85,G1Projective,144,1008,595,85680,20,20160,0.000961,0.081711,0.019226,derived_static_estimate_not_runtime_peak
+B_G1_aux,G1,98638,20,255,12,4095,22,G1Projective,144,589680,90090,12972960,20,11793600,0.562363,12.371979,11.247253,derived_static_estimate_not_runtime_peak
+B_G2_input,G2,8,20,255,3,7,85,G2Projective,288,2016,595,171360,20,40320,0.001923,0.163422,0.038452,derived_static_estimate_not_runtime_peak
+B_G2_aux,G2,98638,20,255,12,4095,22,G2Projective,288,1179360,90090,25945920,20,23587200,1.124725,24.743958,22.494507,derived_static_estimate_not_runtime_peak
