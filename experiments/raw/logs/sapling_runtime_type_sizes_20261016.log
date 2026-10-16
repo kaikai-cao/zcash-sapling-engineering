@@ -1,0 +1,19 @@
+===== Elliptic Curve Runtime Types =====
+G1Affine                         size= 104 bytes, align= 8 bytes
+G2Affine                         size= 200 bytes, align= 8 bytes
+G1Projective                     size= 144 bytes, align= 8 bytes
+G2Projective                     size= 288 bytes, align= 8 bytes
+Scalar                           size=  32 bytes, align= 8 bytes
+Exponent<Scalar>                 size=  40 bytes, align= 8 bytes
+
+===== Container Headers =====
+Vec<G1Affine> header             size=  24 bytes, align= 8 bytes
+Vec<G2Affine> header             size=  24 bytes, align= 8 bytes
+Vec<G1Projective> header        size=  24 bytes, align= 8 bytes
+Vec<G2Projective> header        size=  24 bytes, align= 8 bytes
+Vec<Scalar> header               size=  24 bytes, align= 8 bytes
+Vec<Exponent<Scalar>> header     size=  24 bytes, align= 8 bytes
+Arc<Vec<G1Affine>> handle        size=   8 bytes, align= 8 bytes
+Arc<Vec<G2Affine>> handle        size=   8 bytes, align= 8 bytes
+
+Archive note: reconstructed from console output shared on 2026-10-16.

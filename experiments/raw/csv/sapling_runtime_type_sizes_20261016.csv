@@ -1,0 +1,15 @@
+﻿type_name,size_bytes,alignment_bytes,category
+G1Affine,104,8,curve_point
+G2Affine,200,8,curve_point
+G1Projective,144,8,curve_point
+G2Projective,288,8,curve_point
+Scalar,32,8,scalar
+Exponent<Scalar>,40,8,exponent
+Vec<G1Affine> header,24,8,container_header
+Vec<G2Affine> header,24,8,container_header
+Vec<G1Projective> header,24,8,container_header
+Vec<G2Projective> header,24,8,container_header
+Vec<Scalar> header,24,8,container_header
+Vec<Exponent<Scalar>> header,24,8,container_header
+Arc<Vec<G1Affine>> handle,8,8,arc_handle
+Arc<Vec<G2Affine>> handle,8,8,arc_handle

@@ -1,0 +1,8 @@
+﻿circuit,component,element_count,capacity,element_size_bytes,len_payload_bytes,capacity_payload_bytes,status
+Spend,VK_FIXED_POINTS,6,6,,912,912,measured_fixed_points
+Spend,VK_IC,8,8,104,832,832,measured
+Spend,H_G1,131071,131072,104,13631384,13631488,measured
+Spend,L_G1,98638,131072,104,10258352,13631488,measured
+Spend,A_G1,85390,131072,104,8880560,13631488,measured
+Spend,B_G1,61300,65536,104,6375200,6815744,measured
+Spend,B_G2,61300,65536,200,12260000,13107200,measured

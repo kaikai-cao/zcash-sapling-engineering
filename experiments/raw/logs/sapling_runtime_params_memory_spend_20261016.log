@@ -1,0 +1,18 @@
+===== D:\Research\zcash-params\sapling-spend.params =====
+groth16_body_read_validate_ms=29772.887
+vk_fixed_points=6 vk_fixed_object_bytes=912
+VK_IC        len=      8 capacity=      8 element_size=104 B len_payload=       832 B capacity_payload=       832 B
+H_G1         len= 131071 capacity= 131072 element_size=104 B len_payload=  13631384 B capacity_payload=  13631488 B
+L_G1         len=  98638 capacity= 131072 element_size=104 B len_payload=  10258352 B capacity_payload=  13631488 B
+A_G1         len=  85390 capacity= 131072 element_size=104 B len_payload=   8880560 B capacity_payload=  13631488 B
+B_G1         len=  61300 capacity=  65536 element_size=104 B len_payload=   6375200 B capacity_payload=   6815744 B
+B_G2         len=  61300 capacity=  65536 element_size=200 B len_payload=  12260000 B capacity_payload=  13107200 B
+point_object_payload_by_len_bytes=51407240
+point_buffer_payload_by_capacity_bytes=60819152
+point_object_payload_by_len_MiB=49.025764
+point_buffer_payload_by_capacity_MiB=58.001663
+vec_header_bytes=24 arc_handle_bytes=8
+g1_affine_bytes=104 g2_affine_bytes=200
+
+Archive note: reconstructed from console output shared on 2026-10-16.
+Output runtime memory results were not included in the supplied output and remain pending.

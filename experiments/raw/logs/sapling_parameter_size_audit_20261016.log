@@ -1,0 +1,17 @@
+===== Output =====
+VK_FIXED_POINTS          count=      6 payload=       864 B prefix= 0 B encoded=       864 B
+VK_IC                    count=      6 payload=       576 B prefix= 4 B encoded=       580 B
+H_G1                     count=  8,191 payload=   786,336 B prefix= 4 B encoded=   786,340 B
+L_G1                     count=  7,821 payload=   750,816 B prefix= 4 B encoded=   750,820 B
+A_G1                     count=  6,298 payload=   604,608 B prefix= 4 B encoded=   604,612 B
+B_G1                     count=  4,850 payload=   465,600 B prefix= 4 B encoded=   465,604 B
+B_G2                     count=  4,850 payload=   931,200 B prefix= 4 B encoded=   931,204 B
+MPC_CIRCUIT_HASH         count=      1 payload=        64 B prefix= 0 B encoded=        64 B
+MPC_CONTRIBUTOR_COUNT    count=     97 payload=         0 B prefix= 4 B encoded=         4 B
+MPC_CONTRIBUTION_RECORDS count=     97 payload=    52,768 B prefix= 0 B encoded=    52,768 B
+PASS: Output = 3,592,860 bytes
+
+所有参数文件的字节账均通过检查。
+
+Archive note: preserved from console output shared on 2026-10-16.
+The shared console excerpt contains the Output section; the original parameter breakdown CSV contains both circuits.
