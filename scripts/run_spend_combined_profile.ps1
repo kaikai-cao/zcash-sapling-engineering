@@ -208,7 +208,7 @@ $saplingCommit = $saplingSourceMatch.Groups[1].Value
 $saplingRepoUrl = 'https://github.com/zcash/sapling-crypto'
 
 # Build with --locked so the profiling build cannot silently rewrite Cargo.lock.
-$buildArgs = 'build --release --locked --manifest-path \"{0}\" --bin spend_prover_smoke' -f $manifest
+$buildArgs = 'build --release --locked --manifest-path "{0}" --bin spend_prover_smoke' -f $manifest
 
 $buildProc = Start-Process `
     -FilePath $cargo `
