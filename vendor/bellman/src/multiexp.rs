@@ -31,6 +31,78 @@ fn msm_profile_enabled() -> bool {
     })
 }
 
+#[derive(Default)]
+struct MsmStageProfile {
+    bucket_init_sum_ns: std::sync::atomic::AtomicU64,
+    bucket_init_max_ns: std::sync::atomic::AtomicU64,
+    bucket_fill_sum_ns: std::sync::atomic::AtomicU64,
+    bucket_fill_max_ns: std::sync::atomic::AtomicU64,
+    bucket_reduce_sum_ns: std::sync::atomic::AtomicU64,
+    bucket_reduce_max_ns: std::sync::atomic::AtomicU64,
+    active_chunk_regions: AtomicUsize,
+    max_active_chunk_regions: AtomicUsize,
+}
+
+struct ActiveBucketRegionGuard {
+    profile: Arc<MsmStageProfile>,
+}
+
+impl Drop for ActiveBucketRegionGuard {
+    fn drop(&mut self) {
+        self.profile
+            .active_chunk_regions
+            .fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+fn update_atomic_max(target: &AtomicUsize, value: usize) {
+    let mut current = target.load(Ordering::Relaxed);
+
+    while value > current {
+        match target.compare_exchange_weak(
+            current,
+            value,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => break,
+            Err(observed) => current = observed,
+        }
+    }
+}
+
+fn record_timing(
+    sum_ns: &std::sync::atomic::AtomicU64,
+    max_ns: &std::sync::atomic::AtomicU64,
+    start: Option<Instant>,
+) {
+    if let Some(start) = start {
+        let elapsed_ns = start.elapsed().as_nanos() as u64;
+        sum_ns.fetch_add(elapsed_ns, Ordering::Relaxed);
+
+        let mut current = max_ns.load(Ordering::Relaxed);
+        while elapsed_ns > current {
+            match max_ns.compare_exchange_weak(
+                current,
+                elapsed_ns,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => break,
+                Err(observed) => current = observed,
+            }
+        }
+    }
+}
+
+fn elapsed_ns(start: Option<Instant>) -> u64 {
+    start.map(|value| value.elapsed().as_nanos() as u64).unwrap_or(0)
+}
+
+fn ns_to_ms(value: u64) -> f64 {
+    value as f64 / 1_000_000.0
+}
+
 /// An object that builds a source of bases.
 pub trait SourceBuilder<G: PrimeCurveAffine>: Send + Sync + 'static + Clone {
     type Source: Source<G>;
@@ -228,6 +300,8 @@ fn multiexp_inner<Q, D, G, S>(
     density_map: D,
     exponents: Arc<Vec<Exponent<G::Scalar>>>,
     c: u32,
+    profile: bool,
+    call_id: Option<usize>,
 ) -> Result<G, SynthesisError>
 where
     for<'a> &'a Q: QueryDensity,
@@ -236,25 +310,65 @@ where
     G::Scalar: PrimeFieldBits,
     S: SourceBuilder<G::Affine>,
 {
-    // Perform this region of the multiexp
+    let exponent_count = exponents.len();
+    let bucket_count = (1usize << c) - 1;
+
+    // Allocate profiling counters only for diagnostic runs.
+    let stage_profile = profile.then(|| Arc::new(MsmStageProfile::default()));
+    let worker_stage_profile = stage_profile.clone();
+
+    // Split the exponents into windows and measure this preprocessing step.
+    let exponent_chunk_prep_start = profile.then(Instant::now);
+    let chunked_exponents = Arc::new(
+        exponents
+            .iter()
+            .map(|exp| exp.chunks(c as usize))
+            .collect::<Vec<_>>(),
+    );
+    let exponent_chunk_prep_ns = elapsed_ns(exponent_chunk_prep_start);
+
+    // Perform one chunk of the multiexponentiation.
     let this = move |bases: S,
                      density_map: D,
                      exponents: Arc<Vec<ChunkedExponent>>,
                      chunk: usize|
-          -> Result<_, SynthesisError> {
-        // Accumulate the result
+          -> Result<G, SynthesisError> {
         let mut acc = G::identity();
-
-        // Build a source for the bases
         let mut bases = bases.build();
 
-        // Create space for the buckets
-        let mut buckets = vec![G::identity(); (1 << c) - 1];
+        // Track overlapping chunk regions for this single MSM call. The guard
+        // is dropped even if a checked source operation returns an error.
+        let _active_bucket_guard = if let Some(profile) = worker_stage_profile.as_ref() {
+            let active = profile
+                .active_chunk_regions
+                .fetch_add(1, Ordering::Relaxed)
+                + 1;
+            update_atomic_max(&profile.max_active_chunk_regions, active);
+            Some(ActiveBucketRegionGuard {
+                profile: Arc::clone(profile),
+            })
+        } else {
+            None
+        };
 
-        // only the first round uses this
+        // Allocate the bucket array.
+        let bucket_init_start = profile.then(Instant::now);
+        let mut buckets = vec![G::identity(); bucket_count];
+        if let (Some(stage), Some(start)) =
+            (worker_stage_profile.as_ref(), bucket_init_start)
+        {
+            record_timing(
+                &stage.bucket_init_sum_ns,
+                &stage.bucket_init_max_ns,
+                Some(start),
+            );
+        }
+
+        // Only the first round handles exponents equal to one directly.
         let handle_trivial = chunk == 0;
 
-        // Sort the bases into buckets
+        // Sort the bases into buckets.
+        let bucket_fill_start = profile.then(Instant::now);
         for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
             if density {
                 match exp {
@@ -278,41 +392,98 @@ where
                 }
             }
         }
+        if let (Some(stage), Some(start)) =
+            (worker_stage_profile.as_ref(), bucket_fill_start)
+        {
+            record_timing(
+                &stage.bucket_fill_sum_ns,
+                &stage.bucket_fill_max_ns,
+                Some(start),
+            );
+        }
 
-        // Summation by parts
+        // Summation by parts.
         // e.g. 3a + 2b + 1c = a +
         //                    (a) + b +
         //                    ((a) + b) + c
+        let bucket_reduce_start = profile.then(Instant::now);
         let mut running_sum = G::identity();
         for exp in buckets.into_iter().rev() {
             running_sum.add_assign(&exp);
             acc.add_assign(&running_sum);
         }
+        if let (Some(stage), Some(start)) =
+            (worker_stage_profile.as_ref(), bucket_reduce_start)
+        {
+            record_timing(
+                &stage.bucket_reduce_sum_ns,
+                &stage.bucket_reduce_max_ns,
+                Some(start),
+            );
+        }
 
         Ok(acc)
     };
 
-    // Split the exponents into chunks.
-    let exponents = Arc::new(
-        exponents
-            .iter()
-            .map(|exp| exp.chunks(c as usize))
-            .collect::<Vec<_>>(),
-    );
-
+    // This wall-clock measurement includes parallel scheduling and all chunk work.
+    let chunk_parallel_start = profile.then(Instant::now);
     let parts = (0..G::Scalar::NUM_BITS)
         .into_par_iter()
         .step_by(c as usize)
         .enumerate()
-        .map(|(chunk, _)| this(bases.clone(), density_map.clone(), exponents.clone(), chunk))
+        .map(|(chunk, _)| {
+            this(
+                bases.clone(),
+                density_map.clone(),
+                chunked_exponents.clone(),
+                chunk,
+            )
+        })
         .collect::<Vec<Result<_, _>>>();
+    let chunk_parallel_wall_ns = elapsed_ns(chunk_parallel_start);
+    let chunk_count = parts.len();
 
-    parts
+    // Combine the independent chunk results.
+    let result_merge_start = profile.then(Instant::now);
+    let final_result = parts
         .into_iter()
         .rev()
         .try_fold(G::identity(), |acc, part| {
             part.map(|part| (0..c).fold(acc, |acc, _| acc.double()) + part)
-        })
+        });
+    let result_merge_ns = elapsed_ns(result_merge_start);
+
+    if let Some(stage) = stage_profile.as_ref() {
+        let max_concurrent_chunk_regions = stage
+            .max_active_chunk_regions
+            .load(Ordering::Relaxed);
+        let bucket_element_size_bytes = std::mem::size_of::<G>();
+        let bucket_payload_at_max_concurrency_estimate_bytes =
+            max_concurrent_chunk_regions * bucket_count * bucket_element_size_bytes;
+
+        eprintln!(
+            "BELLMAN_MSM_STAGE_PROFILE call_id={} exponent_count={} window={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_chunk_prep_ms={:.3} chunk_parallel_wall_ms={:.3} bucket_init_sum_ms={:.3} bucket_init_max_ms={:.3} bucket_fill_sum_ms={:.3} bucket_fill_max_ms={:.3} bucket_reduce_sum_ms={:.3} bucket_reduce_max_ms={:.3} max_concurrent_chunk_regions={} bucket_payload_at_max_concurrency_estimate_bytes={} result_merge_ms={:.3}",
+            call_id.unwrap_or(0),
+            exponent_count,
+            c,
+            bucket_count,
+            chunk_count,
+            bucket_element_size_bytes,
+            ns_to_ms(exponent_chunk_prep_ns),
+            ns_to_ms(chunk_parallel_wall_ns),
+            ns_to_ms(stage.bucket_init_sum_ns.load(Ordering::Relaxed)),
+            ns_to_ms(stage.bucket_init_max_ns.load(Ordering::Relaxed)),
+            ns_to_ms(stage.bucket_fill_sum_ns.load(Ordering::Relaxed)),
+            ns_to_ms(stage.bucket_fill_max_ns.load(Ordering::Relaxed)),
+            ns_to_ms(stage.bucket_reduce_sum_ns.load(Ordering::Relaxed)),
+            ns_to_ms(stage.bucket_reduce_max_ns.load(Ordering::Relaxed)),
+            max_concurrent_chunk_regions,
+            bucket_payload_at_max_concurrency_estimate_bytes,
+            ns_to_ms(result_merge_ns),
+        );
+    }
+
+    final_result
 }
 
 /// Perform multi-exponentiation. The caller is responsible for ensuring the
@@ -364,7 +535,9 @@ where
     let waiter = pool.compute(move || {
         let task_start_delay_ms = submitted_at.map(|t| t.elapsed().as_secs_f64() * 1000.0);
         let start = profile.then(Instant::now);
-        let result = multiexp_inner(bases, density_map, exponents, c);
+        let result = multiexp_inner(
+            bases, density_map, exponents, c, profile, call_id,
+        );
 
         if let (Some(call_id), Some(task_start_delay_ms), Some(start)) =
             (call_id, task_start_delay_ms, start)
