@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
+    [string]$RepoRoot = '',
     [string]$ParameterPath = '',
     [ValidateRange(1, 128)]
     [int]$Threads = 1,
@@ -9,6 +9,21 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+# Resolve the repository root after script initialization.
+# Avoid using $PSScriptRoot inside a parameter default expression.
+if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
+    $runnerPath = $MyInvocation.MyCommand.Path
+
+    if ([string]::IsNullOrWhiteSpace($runnerPath)) {
+        throw "Cannot resolve runner script path. Pass -RepoRoot explicitly."
+    }
+
+    $runnerDirectory = Split-Path -Parent $runnerPath
+    $RepoRoot = (
+        Resolve-Path -LiteralPath (Join-Path $runnerDirectory '..')
+    ).Path
+}
 
 function Get-GitValue {
     param([string[]]$GitArgs)
