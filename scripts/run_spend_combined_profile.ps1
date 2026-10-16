@@ -339,10 +339,12 @@ if ($recordedThreadCounts.Count -ne 1 -or [string]$recordedThreadCounts[0] -ne [
 $msmRegex = [regex]'BELLMAN_MSM_PROFILE call_id=(\d+) exponent_count=(\d+) density_map_size=(None|Some\(\d+\)) window=(\d+) task_start_delay_ms=([\d.]+) elapsed_ms=([\d.]+)'
 $submitRegex = [regex]'BELLMAN_MSM_SUBMIT_PROFILE call_id=(\d+) submit_elapsed_ms=([\d.]+)'
 $stageRegex = [regex]'G16_STAGE_PROFILE circuit_synthesis_constraints_ms=([\d.]+) worker_vk_setup_ms=([\d.]+) qap_fft_h_exponent_prep_ms=([\d.]+) h_query_access_dispatch_ms=([\d.]+) assignment_query_prep_dispatch_ms=([\d.]+) proof_scalar_terms_ms=([\d.]+) wait_and_assembly_ms=([\d.]+) create_proof_body_ms=([\d.]+)'
+$innerStageRegex = [regex]'BELLMAN_MSM_STAGE_PROFILE call_id=(\d+) exponent_count=(\d+) window=(\d+) bucket_count=(\d+) chunk_count=(\d+) bucket_element_size_bytes=(\d+) exponent_chunk_prep_ms=([\d.]+) chunk_parallel_wall_ms=([\d.]+) bucket_init_sum_ms=([\d.]+) bucket_init_max_ms=([\d.]+) bucket_fill_sum_ms=([\d.]+) bucket_fill_max_ms=([\d.]+) bucket_reduce_sum_ms=([\d.]+) bucket_reduce_max_ms=([\d.]+) max_concurrent_chunk_regions=(\d+) bucket_payload_at_max_concurrency_estimate_bytes=(\d+) result_merge_ms=([\d.]+)'
 
 $msmMatches = $msmRegex.Matches($stderr)
 $submitMatches = $submitRegex.Matches($stderr)
 $stageMatches = $stageRegex.Matches($stderr)
+$innerStageMatches = $innerStageRegex.Matches($stderr)
 
 if ($msmMatches.Count -ne 40) {
     throw "Expected 40 BELLMAN_MSM_PROFILE records; found $($msmMatches.Count). Preserve logs and do not publish partial profile data."
@@ -354,6 +356,10 @@ if ($submitMatches.Count -ne 40) {
 
 if ($stageMatches.Count -ne 5) {
     throw "Expected 5 G16_STAGE_PROFILE records; found $($stageMatches.Count). Preserve logs and do not publish partial profile data."
+}
+
+if ($innerStageMatches.Count -ne 40) {
+    throw "Expected 40 BELLMAN_MSM_STAGE_PROFILE records; found $($innerStageMatches.Count). Preserve logs and do not publish partial profile data."
 }
 
 $submitByCall = @{}
@@ -424,6 +430,130 @@ foreach ($m in $msmMatches) {
 
 if ($seenCalls.Count -ne 40 -or @($seenCalls.Keys | Where-Object { $_ -lt 1 -or $_ -gt 40 }).Count -gt 0) {
     throw 'MSM call ID set is incomplete or outside 1..40.'
+}
+
+$innerStageObjects = @()
+$seenInnerStageCalls = @{}
+
+foreach ($m in $innerStageMatches) {
+    $callId = [int]$m.Groups[1].Value
+
+    if ($callId -lt 1 -or $callId -gt 40) {
+        throw "Inner-stage call ID $callId is outside expected range 1..40."
+    }
+    if ($seenInnerStageCalls.ContainsKey($callId)) {
+        throw "Duplicate inner-stage call ID: $callId"
+    }
+    $seenInnerStageCalls[$callId] = $true
+
+    $run = [int][Math]::Floor(($callId - 1) / 8) + 1
+    $query = $queries[($callId - 1) % 8]
+
+    $exponentCount = [int]$m.Groups[2].Value
+    $window = [int]$m.Groups[3].Value
+    $bucketCount = [int]$m.Groups[4].Value
+    $chunkCount = [int]$m.Groups[5].Value
+    $elementSize = [int]$m.Groups[6].Value
+    $expectedWindow = if ($query.Count -lt 32) { 3 } else { 12 }
+    $expectedBucketCount = [int]([Math]::Pow(2, $expectedWindow) - 1)
+    $expectedChunkCount = [int][Math]::Ceiling(255.0 / $expectedWindow)
+    $expectedElementSize = if ($query.Group -eq 'G1') { 144 } else { 288 }
+    $maxConcurrent = [int]$m.Groups[15].Value
+    $bucketPayloadEstimate = [long]$m.Groups[16].Value
+    $expectedBucketPayloadEstimate = [long]$maxConcurrent * $bucketCount * $elementSize
+
+    if ($exponentCount -ne [int]$query.Count) {
+        throw "Inner-stage call $callId ($($query.Name)) exponent_count mismatch: $exponentCount."
+    }
+    if ($window -ne $expectedWindow -or $bucketCount -ne $expectedBucketCount) {
+        throw "Inner-stage call $callId ($($query.Name)) has unexpected window/bucket count."
+    }
+    if ($chunkCount -ne $expectedChunkCount) {
+        throw "Inner-stage call $callId ($($query.Name)) chunk_count mismatch: $chunkCount; expected $expectedChunkCount."
+    }
+    if ($elementSize -ne $expectedElementSize) {
+        throw "Inner-stage call $callId ($($query.Name)) element size mismatch: $elementSize; expected $expectedElementSize."
+    }
+    if ($maxConcurrent -lt 1 -or $maxConcurrent -gt $chunkCount) {
+        throw "Inner-stage call $callId ($($query.Name)) reports invalid concurrent chunk count: $maxConcurrent."
+    }
+    if ($bucketPayloadEstimate -ne $expectedBucketPayloadEstimate) {
+        throw "Inner-stage call $callId ($($query.Name)) bucket payload estimate mismatch."
+    }
+
+    $innerStageObjects += [PSCustomObject]@{
+        batch_id = $batchId
+        run = $run
+        call_id = $callId
+        query = $query.Name
+        group = $query.Group
+        exponent_count = $exponentCount
+        window = $window
+        bucket_count = $bucketCount
+        chunk_count = $chunkCount
+        bucket_element_size_bytes = $elementSize
+        exponent_chunk_prep_ms = [double]$m.Groups[7].Value
+        chunk_parallel_wall_ms = [double]$m.Groups[8].Value
+        bucket_init_sum_ms = [double]$m.Groups[9].Value
+        bucket_init_max_ms = [double]$m.Groups[10].Value
+        bucket_fill_sum_ms = [double]$m.Groups[11].Value
+        bucket_fill_max_ms = [double]$m.Groups[12].Value
+        bucket_reduce_sum_ms = [double]$m.Groups[13].Value
+        bucket_reduce_max_ms = [double]$m.Groups[14].Value
+        max_concurrent_chunk_regions = $maxConcurrent
+        bucket_payload_at_max_concurrency_estimate_bytes = $bucketPayloadEstimate
+        result_merge_ms = [double]$m.Groups[17].Value
+        threads = $Threads
+        build_profile = 'release'
+    }
+}
+
+if ($seenInnerStageCalls.Count -ne 40) {
+    throw "Expected 40 unique inner-stage call IDs; found $($seenInnerStageCalls.Count)."
+}
+
+$innerStageSummaryObjects = @()
+foreach ($query in $queries) {
+    $queryRows = @(
+        $innerStageObjects |
+        Where-Object { $_.query -eq $query.Name } |
+        Sort-Object run
+    )
+    if ($queryRows.Count -ne 5) {
+        throw "Expected five inner-stage records for $($query.Name); found $($queryRows.Count)."
+    }
+
+    $prep = @($queryRows | ForEach-Object { [double]$_.exponent_chunk_prep_ms })
+    $wall = @($queryRows | ForEach-Object { [double]$_.chunk_parallel_wall_ms })
+    $init = @($queryRows | ForEach-Object { [double]$_.bucket_init_sum_ms })
+    $fill = @($queryRows | ForEach-Object { [double]$_.bucket_fill_sum_ms })
+    $reduce = @($queryRows | ForEach-Object { [double]$_.bucket_reduce_sum_ms })
+    $merge = @($queryRows | ForEach-Object { [double]$_.result_merge_ms })
+    $concurrent = @($queryRows | ForEach-Object { [double]$_.max_concurrent_chunk_regions })
+    $bucketEstimate = @($queryRows | ForEach-Object { [double]$_.bucket_payload_at_max_concurrency_estimate_bytes })
+
+    $innerStageSummaryObjects += [PSCustomObject]@{
+        batch_id = $batchId
+        query = $query.Name
+        group = $query.Group
+        exponent_count = $query.Count
+        window = [int]$queryRows[0].window
+        bucket_count = [int]$queryRows[0].bucket_count
+        chunk_count = [int]$queryRows[0].chunk_count
+        bucket_element_size_bytes = [int]$queryRows[0].bucket_element_size_bytes
+        runs = $queryRows.Count
+        median_exponent_chunk_prep_ms = Get-Median -Values $prep
+        median_chunk_parallel_wall_ms = Get-Median -Values $wall
+        median_bucket_init_sum_ms = Get-Median -Values $init
+        median_bucket_fill_sum_ms = Get-Median -Values $fill
+        median_bucket_reduce_sum_ms = Get-Median -Values $reduce
+        median_result_merge_ms = Get-Median -Values $merge
+        median_max_concurrent_chunk_regions = Get-Median -Values $concurrent
+        max_concurrent_chunk_regions_observed = [int](($queryRows | Measure-Object -Property max_concurrent_chunk_regions -Maximum).Maximum)
+        median_bucket_payload_estimate_bytes = Get-Median -Values $bucketEstimate
+        max_bucket_payload_estimate_bytes = [long](($queryRows | Measure-Object -Property bucket_payload_at_max_concurrency_estimate_bytes -Maximum).Maximum)
+        note = 'Stage sums aggregate chunk timings; chunk_parallel_wall_ms is wall time. Payload estimate is not measured process peak memory.'
+    }
 }
 
 $stageFieldNames = @(
@@ -502,11 +632,15 @@ $stageCsv = Join-Path $rawDir "sapling_spend_stage_profile_$batchId.csv"
 $msmCsv = Join-Path $rawDir "sapling_spend_msm_call_profile_$batchId.csv"
 $summaryCsv = Join-Path $rawDir "sapling_spend_profile_run_summary_$batchId.csv"
 $metadataPath = Join-Path $metadataDir "sapling_spend_combined_profile_$batchId.md"
+$innerStageCsv = Join-Path $rawDir "sapling_spend_msm_inner_stage_profile_$batchId.csv"
+$innerStageSummaryCsv = Join-Path $rawDir "sapling_spend_msm_inner_stage_summary_$batchId.csv"
 
 if (
     (Test-Path $stageCsv) -or
     (Test-Path $msmCsv) -or
     (Test-Path $summaryCsv) -or
+    (Test-Path $innerStageCsv) -or
+    (Test-Path $innerStageSummaryCsv) -or
     (Test-Path $metadataPath)
 ) {
     throw "Output artifact for batch $batchId already exists. Do not overwrite previous experiment data."
@@ -515,6 +649,8 @@ if (
 $stageObjects | Export-Csv -LiteralPath $stageCsv -NoTypeInformation -Encoding UTF8
 $msmObjects | Export-Csv -LiteralPath $msmCsv -NoTypeInformation -Encoding UTF8
 $perRun | Export-Csv -LiteralPath $summaryCsv -NoTypeInformation -Encoding UTF8
+$innerStageObjects | Export-Csv -LiteralPath $innerStageCsv -NoTypeInformation -Encoding UTF8
+$innerStageSummaryObjects | Export-Csv -LiteralPath $innerStageSummaryCsv -NoTypeInformation -Encoding UTF8
 
 $system = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
 $cpu = @(
@@ -546,6 +682,13 @@ $taskDelayMedian = Get-Median -Values @(
 
 $msmElapsedMedian = Get-Median -Values @(
     $msmObjects | ForEach-Object { [double]$_.elapsed_ms }
+)
+
+$maxConcurrentChunkRegions = [int](
+    ($innerStageObjects | Measure-Object -Property max_concurrent_chunk_regions -Maximum).Maximum
+)
+$maxBucketPayloadEstimateBytes = [long](
+    ($innerStageObjects | Measure-Object -Property bucket_payload_at_max_concurrency_estimate_bytes -Maximum).Maximum
 )
 
 $report = @"
@@ -592,8 +735,14 @@ $report = @"
 - task_start_delay_ms median across MSM calls (ms): $([Math]::Round($taskDelayMedian, 3))
 - elapsed_ms median across MSM calls (ms): $([Math]::Round($msmElapsedMedian, 3))
 - submit_elapsed_ms median across MSM calls (ms): $([Math]::Round($submitMedian, 3))
+- MSM inner-stage records: $($innerStageObjects.Count) / 40
+- Per-query MSM inner-stage summary rows: $($innerStageSummaryObjects.Count) / 8
+- Maximum observed concurrent chunk regions within one MSM call: $maxConcurrentChunkRegions
+- Maximum estimated bucket payload for observed concurrency (bytes): $maxBucketPayloadEstimateBytes
 
-The three MSM timing fields describe different measurement intervals. In particular, submit_elapsed_ms is not an additional disjoint work segment that can be summed with task_start_delay_ms and elapsed_ms. Worker fallback may execute queued work while a submit call is in progress. Treat these values as diagnostic timing fields, not as a mutually exclusive cost decomposition.
+The inner-stage timing fields distinguish cumulative per-chunk work from wall-clock time. Bucket payload figures are analytical estimates based on active chunk-region instrumentation, not process peak memory.
+
+The three existing MSM timing fields describe different measurement intervals. In particular, submit_elapsed_ms is not an additional disjoint work segment that can be summed with task_start_delay_ms and elapsed_ms. Worker fallback may execute queued work while a submit call is in progress. Treat these values as diagnostic timing fields, not as a mutually exclusive cost decomposition.
 
 The share above is computed per run and then summarized; it is not computed by dividing separately calculated medians. This diagnostic batch is not the frozen formal performance baseline and should not be combined with historical profiling batches.
 
@@ -607,6 +756,10 @@ The share above is computed per run and then summarized; it is not computed by d
 - MSM call CSV SHA-256: $(Get-Sha256 $msmCsv)
 - Per-run ratio summary CSV: experiments/raw/csv/$(Split-Path $summaryCsv -Leaf)
 - Per-run ratio summary CSV SHA-256: $(Get-Sha256 $summaryCsv)
+- MSM inner-stage CSV: experiments/raw/csv/$(Split-Path $innerStageCsv -Leaf)
+- MSM inner-stage CSV SHA-256: $(Get-Sha256 $innerStageCsv)
+- MSM inner-stage per-query summary CSV: experiments/raw/csv/$(Split-Path $innerStageSummaryCsv -Leaf)
+- MSM inner-stage per-query summary CSV SHA-256: $(Get-Sha256 $innerStageSummaryCsv)
 - Prover stdout: experiments/raw/logs/$(Split-Path $stdoutPath -Leaf)
 - Prover stdout SHA-256: $(Get-Sha256 $stdoutPath)
 - Prover stderr / source instrumentation records: experiments/raw/logs/$(Split-Path $stderrPath -Leaf)
@@ -622,6 +775,8 @@ The share above is computed per run and then summarized; it is not computed by d
 - MSM call records: $($msmObjects.Count) / 40
 - Submit timing records: $($submitMatches.Count) / 40
 - Stage timing records: $($stageObjects.Count) / 5
+- MSM inner-stage records: $($innerStageObjects.Count) / 40
+- MSM inner-stage query summary rows: $($innerStageSummaryObjects.Count) / 8
 - Proof verification: 5/5 passed
 - Maximum absolute per-run stage-sum minus body timing (ms): $([Math]::Round($maxStageClosureMs, 3))
 
@@ -643,5 +798,7 @@ Write-Host "MSM elapsed/body share median: $([Math]::Round($shareMedian, 2))%"
 Write-Host "Stage CSV: $stageCsv"
 Write-Host "MSM CSV: $msmCsv"
 Write-Host "Per-run summary: $summaryCsv"
+Write-Host "MSM inner-stage CSV: $innerStageCsv"
+Write-Host "MSM inner-stage query summary: $innerStageSummaryCsv"
 Write-Host "Metadata report: $metadataPath"
 Write-Host 'All logs are preserved under experiments/raw/logs.'
