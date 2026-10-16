@@ -39,6 +39,17 @@ struct MsmStageProfile {
     bucket_fill_max_ns: std::sync::atomic::AtomicU64,
     bucket_reduce_sum_ns: std::sync::atomic::AtomicU64,
     bucket_reduce_max_ns: std::sync::atomic::AtomicU64,
+    density_true_slot_visits: AtomicUsize,
+    density_false_slot_visits: AtomicUsize,
+    zero_exponent_slot_visits: AtomicUsize,
+    one_exponent_slot_visits: AtomicUsize,
+    chunked_exponent_slot_visits: AtomicUsize,
+    zero_window_digit_visits: AtomicUsize,
+    nonzero_window_digit_visits: AtomicUsize,
+    bucket_base_add_calls: AtomicUsize,
+    direct_one_add_calls: AtomicUsize,
+    base_skip_calls: AtomicUsize,
+    base_skip_elements: AtomicUsize,
     active_chunk_regions: AtomicUsize,
     max_active_chunk_regions: AtomicUsize,
 }
@@ -367,26 +378,86 @@ where
         // Only the first round handles exponents equal to one directly.
         let handle_trivial = chunk == 0;
 
-        // Sort the bases into buckets.
+        // Sort the bases into buckets. Counters are only updated in diagnostic
+        // mode and remain local to a chunk until the timed fill loop finishes.
+        let mut density_true_slot_visits = 0usize;
+        let mut density_false_slot_visits = 0usize;
+        let mut zero_exponent_slot_visits = 0usize;
+        let mut one_exponent_slot_visits = 0usize;
+        let mut chunked_exponent_slot_visits = 0usize;
+        let mut zero_window_digit_visits = 0usize;
+        let mut nonzero_window_digit_visits = 0usize;
+        let mut bucket_base_add_calls = 0usize;
+        let mut direct_one_add_calls = 0usize;
+        let mut base_skip_calls = 0usize;
+        let mut base_skip_elements = 0usize;
+
         let bucket_fill_start = profile.then(Instant::now);
-        for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
-            if density {
-                match exp {
-                    ChunkedExponent::Zero => bases.skip(1)?,
-                    ChunkedExponent::One => {
-                        if handle_trivial {
-                            acc.add_assign_from_source(&mut bases)?;
-                        } else {
+        if profile {
+            // Diagnostic branch: count source-level operations with local
+            // counters. This adds overhead to bucket-fill timing in this batch.
+            for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
+                if density {
+                    density_true_slot_visits += 1;
+                    match exp {
+                        ChunkedExponent::Zero => {
+                            zero_exponent_slot_visits += 1;
+                            base_skip_calls += 1;
+                            base_skip_elements += 1;
                             bases.skip(1)?;
                         }
-                    }
-                    ChunkedExponent::Chunks(chunks) => {
-                        let exp = chunks[chunk];
+                        ChunkedExponent::One => {
+                            one_exponent_slot_visits += 1;
+                            if handle_trivial {
+                                direct_one_add_calls += 1;
+                                acc.add_assign_from_source(&mut bases)?;
+                            } else {
+                                base_skip_calls += 1;
+                                base_skip_elements += 1;
+                                bases.skip(1)?;
+                            }
+                        }
+                        ChunkedExponent::Chunks(chunks) => {
+                            chunked_exponent_slot_visits += 1;
+                            let digit = chunks[chunk];
 
-                        if exp != 0 {
-                            buckets[(exp - 1) as usize].add_assign_from_source(&mut bases)?;
-                        } else {
-                            bases.skip(1)?;
+                            if digit != 0 {
+                                nonzero_window_digit_visits += 1;
+                                bucket_base_add_calls += 1;
+                                buckets[(digit - 1) as usize].add_assign_from_source(&mut bases)?;
+                            } else {
+                                zero_window_digit_visits += 1;
+                                base_skip_calls += 1;
+                                base_skip_elements += 1;
+                                bases.skip(1)?;
+                            }
+                        }
+                    }
+                } else {
+                    density_false_slot_visits += 1;
+                }
+            }
+        } else {
+            // Production path preserves the original loop without branch counters.
+            for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
+                if density {
+                    match exp {
+                        ChunkedExponent::Zero => bases.skip(1)?,
+                        ChunkedExponent::One => {
+                            if handle_trivial {
+                                acc.add_assign_from_source(&mut bases)?;
+                            } else {
+                                bases.skip(1)?;
+                            }
+                        }
+                        ChunkedExponent::Chunks(chunks) => {
+                            let exp = chunks[chunk];
+
+                            if exp != 0 {
+                                buckets[(exp - 1) as usize].add_assign_from_source(&mut bases)?;
+                            } else {
+                                bases.skip(1)?;
+                            }
                         }
                     }
                 }
@@ -400,6 +471,20 @@ where
                 &stage.bucket_fill_max_ns,
                 Some(start),
             );
+        }
+
+        if let Some(stage) = worker_stage_profile.as_ref() {
+            stage.density_true_slot_visits.fetch_add(density_true_slot_visits, Ordering::Relaxed);
+            stage.density_false_slot_visits.fetch_add(density_false_slot_visits, Ordering::Relaxed);
+            stage.zero_exponent_slot_visits.fetch_add(zero_exponent_slot_visits, Ordering::Relaxed);
+            stage.one_exponent_slot_visits.fetch_add(one_exponent_slot_visits, Ordering::Relaxed);
+            stage.chunked_exponent_slot_visits.fetch_add(chunked_exponent_slot_visits, Ordering::Relaxed);
+            stage.zero_window_digit_visits.fetch_add(zero_window_digit_visits, Ordering::Relaxed);
+            stage.nonzero_window_digit_visits.fetch_add(nonzero_window_digit_visits, Ordering::Relaxed);
+            stage.bucket_base_add_calls.fetch_add(bucket_base_add_calls, Ordering::Relaxed);
+            stage.direct_one_add_calls.fetch_add(direct_one_add_calls, Ordering::Relaxed);
+            stage.base_skip_calls.fetch_add(base_skip_calls, Ordering::Relaxed);
+            stage.base_skip_elements.fetch_add(base_skip_elements, Ordering::Relaxed);
         }
 
         // Summation by parts.
@@ -480,6 +565,22 @@ where
             max_concurrent_chunk_regions,
             bucket_payload_at_max_concurrency_estimate_bytes,
             ns_to_ms(result_merge_ns),
+        );
+
+        eprintln!(
+            "BELLMAN_MSM_BRANCH_PROFILE call_id={} density_true_slot_visits={} density_false_slot_visits={} zero_exponent_slot_visits={} one_exponent_slot_visits={} chunked_exponent_slot_visits={} zero_window_digit_visits={} nonzero_window_digit_visits={} bucket_base_add_calls={} direct_one_add_calls={} base_skip_calls={} base_skip_elements={}",
+            call_id.unwrap_or(0),
+            stage.density_true_slot_visits.load(Ordering::Relaxed),
+            stage.density_false_slot_visits.load(Ordering::Relaxed),
+            stage.zero_exponent_slot_visits.load(Ordering::Relaxed),
+            stage.one_exponent_slot_visits.load(Ordering::Relaxed),
+            stage.chunked_exponent_slot_visits.load(Ordering::Relaxed),
+            stage.zero_window_digit_visits.load(Ordering::Relaxed),
+            stage.nonzero_window_digit_visits.load(Ordering::Relaxed),
+            stage.bucket_base_add_calls.load(Ordering::Relaxed),
+            stage.direct_one_add_calls.load(Ordering::Relaxed),
+            stage.base_skip_calls.load(Ordering::Relaxed),
+            stage.base_skip_elements.load(Ordering::Relaxed),
         );
     }
 
