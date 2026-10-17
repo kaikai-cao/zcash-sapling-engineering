@@ -121,4 +121,35 @@ BN254 合成基线与 BLS12-381 Sapling 的曲线、工作负载和实现不同�
 - 若继续扩展 Spend profile，使用干净且已提交的实验版本，并为新增批次记录源码 revision、参数哈希、构建配置和计时边界；
 - 若未来尝试优化，同时测量局部阶段耗时和完整 Prove 的端到端变化。
 
+## 10. 后续进展（2026-10-17）：缺口闭合、fallback 消融与核放置
+
+本轮在既有基线上闭环了三项遗留问题，并新发现一个影响**所有单线程数字**的方法学问题。
+
+### 10.1 Prove 阶段内存账（原缺口 1–3 已闭合）
+
+用计数型全局分配器实测（`experiments/metadata/sapling_prove_memory_ledger_20261017.md`）：
+
+- Spend 单线程 Prove 期**绝对** live 高水位 **100.29 MiB**（8 线程 134.82 MiB）；证明前常驻 65.55 MiB；参数加载后常驻 58.00 MiB（与静态 `capacity_payload` 60,819,152 B 仅差 712 B）。
+- 峰值落在 **H query 的 G1 MSM 内部**，主因是「窗口化指数表示」瞬态 **25.97 MB (24.77 MiB)**，远大于桶数组（G1 0.59 MB / G2 1.18 MB）与指数转换（≤9 MB）。
+- 即：内存维度的主因从「桶数组」修正为「H query 的窗口化指数缓冲」。
+
+### 10.2 fallback 消融已收敛（原「待隔离」）
+
+固定线程=1、**绑核**、ABBA 配对，只改 worker 调度分支：
+
+- A（fallback）vs B（强制 async）端到端 Prove 差 **+1.1%（均值）**，Mann–Whitney **p≈0.11**（n=10/条件），**不显著**。
+- 结论：fallback 是**计时归属／调度现象**，不是吞吐瓶颈；强制 async 只把约 2.5 s 从 `assignment_query_prep_dispatch` 挪进 `wait_and_assembly`，端到端不变。
+- 明细：`experiments/metadata/sapling_spend_worker_fallback_ablation_conclusion_20261017.md`。
+
+### 10.3 核放置：单线程测量必须绑核（新发现）
+
+- 同一 exe、同一参数，未约束时单线程 prove 在 **3.4–8.9 s** 间波动（P-core vs E-core，最高 **2.6×**），参数加载 25 s vs 54 s。
+- 既有正式基线本身也被污染：Spend 单线程 27 批中 **9 批（33%）**、Output 30 批中 **4 批（13%）**落在 E-core 区间。
+- 绑核可复现值：**Spend ≈3.72 s、Output ≈0.53 s**。明细：`experiments/metadata/sapling_smoke_fresh_runs_and_cpu_affinity_20261017.md`。
+
+### 10.4 新增与更新的入口
+
+- 综合参数与瓶颈细化报告（中文）：`docs/sapling_proving_parameter_and_bottleneck_breakdown_zh.md`
+- 本轮新增／改动：`vendor/bellman/src/mem_probe.rs`（新增）、`vendor/bellman/src/{lib,multiexp}.rs`、`scripts/run_spend_combined_profile.ps1`（新增 `-AffinityMask`）、`experiments/prover-smoke/src/bin/{prove_memory_ledger,exponent_conversion_memory}.rs`（新增）、`experiments/prover-smoke/src/main.rs`（补 `SAPLING_PROVER_RUNS_CSV` 覆盖）。
+
 本阶段的成果是工程基线和候选热点定位，不是算法优化结果。下一阶段应基于可追溯的实验记录提出具体假设，再设计受控对照，而不是继续以寻找最佳线程数为目标。

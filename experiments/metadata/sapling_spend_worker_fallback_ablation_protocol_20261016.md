@@ -38,3 +38,15 @@ Do not add MSM task elapsed times and interpret the sum as wall-clock time; MSM 
 ## Limitations
 
 This is an exploratory five-run-per-condition comparison on one machine. It changes the Worker scheduling branch, not the cryptographic algorithm. Forced asynchronous submission may increase queued work and alter task ordering or transient memory use. A null result does not prove fallback is irrelevant in other workloads. If results differ substantially, repeat in reversed order or in matched pairs before making a causal claim.
+
+---
+
+## Status: CONVERGED (2026-10-17)
+
+A matched-pair (ABBA), **processor-affinity-pinned** repeat was completed. See
+`experiments/metadata/sapling_spend_worker_fallback_ablation_conclusion_20261017.md`.
+
+- Result: **null effect on end-to-end Prove** (A vs B differ by +41 ms mean / +31 ms median, ~1%; Mann–Whitney U=29, p≈0.11 with n=10/condition).
+- The fallback is a **timing-attribution / scheduling** phenomenon: forcing async moves ~2.5 s from `assignment_query_prep_dispatch_ms` (2523.8→7.3 ms) into `wait_and_assembly_ms` (634.1→3168.1 ms) with no change in total.
+- **Critical method note:** the 2026-10-16 batches were confounded by CPU core placement. On this hybrid CPU, an un-pinned single-thread worker runs ~2.1× slower on an E-core (LP20: prove ≈8.1 s) than on a P-core (LP0: prove ≈3.8 s). The runner now supports `-AffinityMask`, and affinity pinning is required for a reproducible single-thread measurement.
+
