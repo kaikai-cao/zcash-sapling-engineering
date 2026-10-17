@@ -136,6 +136,17 @@ fn ns_to_ms(value: u64) -> f64 {
     value as f64 / 1_000_000.0
 }
 
+/// Timestamp shared by Bellman MSM and Groth16 timeline events.
+/// The origin is initialized once per process and uses a monotonic clock.
+pub fn profile_timestamp_ns() -> u128 {
+    static PROFILE_TIMELINE_ORIGIN: OnceLock<Instant> = OnceLock::new();
+
+    PROFILE_TIMELINE_ORIGIN
+        .get_or_init(Instant::now)
+        .elapsed()
+        .as_nanos()
+}
+
 /// An object that builds a source of bases.
 pub trait SourceBuilder<G: PrimeCurveAffine>: Send + Sync + 'static + Clone {
     type Source: Source<G>;
@@ -662,19 +673,39 @@ where
 
     let submitted_at = profile.then(Instant::now);
     let submit_start = profile.then(Instant::now);
+    // Capture the submit timestamp before Worker::compute; emit it later because
+    // the synchronous fallback branch can make compute block before returning.
+    let submit_begin_timeline_ns = profile.then(profile_timestamp_ns);
 
     let waiter = pool.compute(move || {
         let task_start_delay_ms = submitted_at.map(|t| t.elapsed().as_secs_f64() * 1000.0);
         let start = profile.then(Instant::now);
+        let task_start_timeline_ns = profile.then(profile_timestamp_ns);
         let result = multiexp_inner(
             bases, density_map, exponents, c, profile, branch_counts, stage_timing, call_id,
         );
+        // Read elapsed immediately after the inner call to minimize distortion.
+        let elapsed_ms = start.map(|value| value.elapsed().as_secs_f64() * 1000.0);
+        let inner_end_timeline_ns = profile.then(profile_timestamp_ns);
 
-        if let (Some(call_id), Some(task_start_delay_ms), Some(start)) =
-            (call_id, task_start_delay_ms, start)
+        if let Some(call_id) = call_id {
+            if let Some(t_ns) = task_start_timeline_ns {
+                eprintln!(
+                    "BELLMAN_MSM_TIMELINE event=task_start call_id={} t_ns={}",
+                    call_id, t_ns,
+                );
+            }
+            if let Some(t_ns) = inner_end_timeline_ns {
+                eprintln!(
+                    "BELLMAN_MSM_TIMELINE event=inner_end call_id={} t_ns={}",
+                    call_id, t_ns,
+                );
+            }
+        }
+
+        if let (Some(call_id), Some(task_start_delay_ms), Some(elapsed_ms)) =
+            (call_id, task_start_delay_ms, elapsed_ms)
         {
-            let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
-
             eprintln!(
                 "BELLMAN_MSM_PROFILE call_id={} exponent_count={} density_map_size={:?} window={} task_start_delay_ms={:.3} elapsed_ms={:.3}",
                 call_id,
@@ -688,6 +719,24 @@ where
 
         result
     });
+
+    // This timestamp is taken immediately after compute returns. Under
+    // synchronous fallback, it may follow inner_end by the work duration.
+    let submit_return_timeline_ns = profile.then(profile_timestamp_ns);
+    if let Some(call_id) = call_id {
+        if let Some(t_ns) = submit_begin_timeline_ns {
+            eprintln!(
+                "BELLMAN_MSM_TIMELINE event=submit_begin call_id={} t_ns={}",
+                call_id, t_ns,
+            );
+        }
+        if let Some(t_ns) = submit_return_timeline_ns {
+            eprintln!(
+                "BELLMAN_MSM_TIMELINE event=submit_return call_id={} t_ns={}",
+                call_id, t_ns,
+            );
+        }
+    }
 
     if let (Some(call_id), Some(submit_start)) = (call_id, submit_start) {
         let submit_elapsed_ms = submit_start.elapsed().as_secs_f64() * 1000.0;

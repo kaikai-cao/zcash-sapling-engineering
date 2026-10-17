@@ -12,9 +12,12 @@ use bellman::{Circuit, ConstraintSystem, Index, LinearCombination, SynthesisErro
 
 use bellman::domain::{EvaluationDomain, Scalar};
 
-use bellman::multiexp::{DensityTracker, FullDensity, multiexp};
+use bellman::multiexp::{profile_timestamp_ns, DensityTracker, FullDensity, multiexp};
 
 use bellman::multicore::Worker;
+
+static G16_PROFILE_PROOF_ID: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(1);
 
 fn g16_profile_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
@@ -213,11 +216,20 @@ where
     C: Circuit<E::Fr>,
 {
     let profile = g16_profile_enabled();
+    let proof_id = if profile {
+        G16_PROFILE_PROOF_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    } else {
+        0
+    };
     // Marks delimit sequential wall-clock phases. Each boundary is captured once
     // and reused by adjacent phases, avoiding double-counting between phases.
     let mut profile_marks: [Option<std::time::Instant>; 8] = [None; 8];
     if profile {
         profile_marks[0] = Some(std::time::Instant::now());
+        eprintln!(
+            "G16_TIMELINE event=proof_body_start proof_id={} t_ns={}",
+            proof_id, profile_timestamp_ns(),
+        );
     }
 
     let mut prover = ProvingAssignment {
@@ -392,6 +404,10 @@ where
 
     if profile {
         profile_marks[6] = Some(std::time::Instant::now());
+        eprintln!(
+            "G16_TIMELINE event=wait_and_assembly_start proof_id={} t_ns={}",
+            proof_id, profile_timestamp_ns(),
+        );
     }
 
     let mut a_answer = a_inputs.wait()?;
@@ -419,6 +435,15 @@ where
 
     if profile {
         profile_marks[7] = Some(std::time::Instant::now());
+        let end_t_ns = profile_timestamp_ns();
+        eprintln!(
+            "G16_TIMELINE event=wait_and_assembly_end proof_id={} t_ns={}",
+            proof_id, end_t_ns,
+        );
+        eprintln!(
+            "G16_TIMELINE event=proof_body_end proof_id={} t_ns={}",
+            proof_id, end_t_ns,
+        );
 
         let marks = profile_marks.map(|mark| mark.expect("all G16 profile marks must be set"));
         let duration_ms = |start: std::time::Instant, end: std::time::Instant| {
