@@ -1,0 +1,8 @@
+# target b (signed-digit MSM) ABBA driver
+prover=output threads=1 affinity=0x1 rounds=1 order=ABBA label_prefix=msm_signed_output_drvtest
+git_head=03909b52cb716c1b39314c3b25ab25fad72059b2
+host=DESKTOP-GMELEIR logical_processors=28
+round=1 pos=1 arm=off signed_digits=0 label=msm_signed_output_drvtest_off start=2026-10-17T20:24:17 host_cpu_load_pct=4.1
+round=1 pos=2 arm=on signed_digits=1 label=msm_signed_output_drvtest_on start=2026-10-17T20:24:25 host_cpu_load_pct=11.7
+round=1 pos=3 arm=on signed_digits=1 label=msm_signed_output_drvtest_on start=2026-10-17T20:24:31 host_cpu_load_pct=9.2
+round=1 pos=4 arm=off signed_digits=0 label=msm_signed_output_drvtest_off start=2026-10-17T20:24:38 host_cpu_load_pct=13.3

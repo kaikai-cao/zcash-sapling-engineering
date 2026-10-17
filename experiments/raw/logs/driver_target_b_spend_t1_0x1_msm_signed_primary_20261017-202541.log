@@ -1,0 +1,19 @@
+# target b (signed-digit MSM) ABBA driver
+prover=spend threads=1 affinity=0x1 rounds=3 orders=ABBA/ABBA/BAAB label_prefix=msm_signed_primary
+git_head=d3851b7d36aef6bcf9eda45c6da46d7e532eaf4b
+host=DESKTOP-GMELEIR logical_processors=28
+round=1 order=ABBA
+round=1 pos=1 arm=off signed_digits=0 label=msm_signed_primary_off start=2026-10-17T20:25:43 host_cpu_load_pct=6.9
+round=1 pos=2 arm=on signed_digits=1 label=msm_signed_primary_on start=2026-10-17T20:26:32 host_cpu_load_pct=9.2
+round=1 pos=3 arm=on signed_digits=1 label=msm_signed_primary_on start=2026-10-17T20:27:19 host_cpu_load_pct=9.5
+round=1 pos=4 arm=off signed_digits=0 label=msm_signed_primary_off start=2026-10-17T20:28:06 host_cpu_load_pct=2.9
+round=2 order=ABBA
+round=2 pos=1 arm=off signed_digits=0 label=msm_signed_primary_off start=2026-10-17T20:28:54 host_cpu_load_pct=12
+round=2 pos=2 arm=on signed_digits=1 label=msm_signed_primary_on start=2026-10-17T20:29:43 host_cpu_load_pct=4.2
+round=2 pos=3 arm=on signed_digits=1 label=msm_signed_primary_on start=2026-10-17T20:30:30 host_cpu_load_pct=3.6
+round=2 pos=4 arm=off signed_digits=0 label=msm_signed_primary_off start=2026-10-17T20:31:17 host_cpu_load_pct=5.8
+round=3 order=BAAB
+round=3 pos=1 arm=on signed_digits=1 label=msm_signed_primary_on start=2026-10-17T20:32:06 host_cpu_load_pct=1.4
+round=3 pos=2 arm=off signed_digits=0 label=msm_signed_primary_off start=2026-10-17T20:32:53 host_cpu_load_pct=7.9
+round=3 pos=3 arm=off signed_digits=0 label=msm_signed_primary_off start=2026-10-17T20:33:41 host_cpu_load_pct=8.4
+round=3 pos=4 arm=on signed_digits=1 label=msm_signed_primary_on start=2026-10-17T20:34:30 host_cpu_load_pct=0

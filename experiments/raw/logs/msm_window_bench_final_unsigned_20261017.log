@@ -1,0 +1,25 @@
+# exe_sha256=cd257acdf87e45a6b4e29c0eb7afe36ed76f8e84039dea093243054e42aedb54
+# affinity=0x1 rayon_threads=1 n=131071 reps=3
+# MSM_WINDOW_BENCH_SIGNED=0 MSM_WINDOW_BENCH_C=12
+# exit=0
+bench=msm_window n=131071 reps=3 rayon_threads=1 windows=[12] sweep_signed=0
+fixture bases=131071 exponents=131071 build_ms=2793.2 base_bytes=13631384 exponent_bytes=5242840
+probe=add_single_acc n=131071 median_ms=63.423 ns_per_add=483.9
+probe=add_rand_bucket c=8 buckets=255 bucket_array_bytes=36720 median_ms=61.727 ns_per_add=470.9
+probe=add_rand_bucket c=10 buckets=1023 bucket_array_bytes=147312 median_ms=61.643 ns_per_add=470.3
+probe=add_rand_bucket c=12 buckets=4095 bucket_array_bytes=589680 median_ms=62.554 ns_per_add=477.3
+correctness=naive_prefix c=1 signed=1 ok
+correctness=naive_prefix c=3 signed=1 ok
+correctness=naive_prefix c=5 signed=1 ok
+correctness=naive_prefix c=8 signed=1 ok
+correctness=naive_prefix c=1 signed=0 ok
+correctness=naive_prefix c=3 signed=0 ok
+correctness=naive_prefix c=5 signed=0 ok
+correctness=naive_prefix c=8 signed=0 ok
+correctness=naive_n8 signed=1 ok
+correctness=naive_n8 signed=0 ok
+probe=msm c=12 signed=0 chunks=22 buckets=4095 modelled_ops=3063742 bucket_array_bytes=589680 median_ms=1627.866 ns_per_modelled_op=531.3
+correctness=cross_recoding c=12 ok
+correctness=builtin_equals_c12sfalse signed=1 ok
+correctness=builtin_equals_c12sfalse signed=0 ok
+MSM_WINDOW_BENCH=DONE
