@@ -8,13 +8,12 @@ param(
 
     [long]$AffinityMask = 1,
 
-    # Interleaved rounds. Each round runs four single-batch invocations in the
-    # given order, so `Rounds` rounds of ABBA give 2*Rounds batches per arm.
-    [ValidateRange(1, 8)]
-    [int]$Rounds = 3,
-
-    [ValidateSet('ABBA', 'BAAB')]
-    [string]$Order = 'ABBA',
+    # One entry per interleaved round; each round runs four single-batch
+    # invocations in the given order, so N rounds of ABBA give 2N batches per
+    # arm. The last round is order-reversed by default so a monotone host drift
+    # cannot masquerade as an arm effect.
+    [ValidateCount(1, 8)]
+    [string[]]$Orders = @('ABBA', 'ABBA', 'BAAB'),
 
     # Raw CSV suffix prefix. The two arms land in
     #   sapling_<prover>_prover_runs_<LabelPrefix>_off.csv  (SAPLING_MSM_SIGNED_DIGITS=0)
@@ -35,7 +34,7 @@ $logDir = Join-Path $repoRoot 'experiments\raw\logs'
 if (-not (Test-Path -LiteralPath $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 }
-$driverLog = Join-Path $logDir ("driver_target_b_{0}_t{1}_{2}_{3}.log" -f $Prover, $Threads, $maskTag, $LabelPrefix)
+$driverLog = Join-Path $logDir ("driver_target_b_{0}_t{1}_{2}_{3}_{4}.log" -f $Prover, $Threads, $maskTag, $LabelPrefix, (Get-Date).ToString('yyyyMMdd-HHmmss'))
 
 function Get-HostCpuLoadPct {
     # Instantaneous total CPU load. Used only as the "is the host quiet" record;
@@ -57,14 +56,24 @@ function Get-HostCpuLoadPct {
 if ($Threads -gt 0) { $env:RAYON_NUM_THREADS = "$Threads" } else { Remove-Item Env:RAYON_NUM_THREADS -ErrorAction SilentlyContinue }
 $env:ZCASH_PARAMS_DIR = if ($env:ZCASH_PARAMS_DIR) { $env:ZCASH_PARAMS_DIR } else { 'D:\Research\zcash-params' }
 
-$orderChars = $Order.ToCharArray()
+$orderList = @()
+foreach ($order in $Orders) {
+    if ($order -notmatch '^(ABBA|BAAB)$') {
+        throw ("Round order '{0}' is not one of ABBA/BAAB." -f $order)
+    }
+    $orderList += $order
+}
+$roundCount = $orderList.Count
+
 $lines = New-Object System.Collections.Generic.List[string]
 $lines.Add("# target b (signed-digit MSM) ABBA driver")
-$lines.Add(("prover={0} threads={1} affinity={2} rounds={3} order={4} label_prefix={5}" -f $Prover, $Threads, $maskTag, $Rounds, $Order, $LabelPrefix))
+$lines.Add(("prover={0} threads={1} affinity={2} rounds={3} orders={4} label_prefix={5}" -f $Prover, $Threads, $maskTag, $roundCount, ($orderList -join '/'), $LabelPrefix))
 $lines.Add(("git_head={0}" -f (& git -C $repoRoot rev-parse HEAD).Trim()))
 $lines.Add(("host={0} logical_processors={1}" -f $env:COMPUTERNAME, [Environment]::ProcessorCount))
 
-for ($round = 1; $round -le $Rounds; $round++) {
+for ($round = 1; $round -le $roundCount; $round++) {
+    $orderChars = $orderList[$round - 1].ToCharArray()
+    $lines.Add(("round={0} order={1}" -f $round, $orderList[$round - 1]))
     for ($position = 1; $position -le 4; $position++) {
         $arm = if ($orderChars[$position - 1] -eq 'A') { 'off' } else { 'on' }
         $env:SAPLING_MSM_SIGNED_DIGITS = if ($arm -eq 'on') { '1' } else { '0' }
