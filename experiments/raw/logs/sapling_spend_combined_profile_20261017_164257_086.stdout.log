@@ -1,0 +1,12 @@
+params_path=D:\Research\zcash-params\sapling-spend.params
+params_read_validate_ms=25691.067
+prepare_vk_ms=1.029
+input_prep_ms=13.866
+run=1, prove_ms=3846.089, verify_ms=2.909, proof_bytes=192, verified=true
+run=2, prove_ms=3731.999, verify_ms=2.842, proof_bytes=192, verified=true
+run=3, prove_ms=3734.504, verify_ms=2.865, proof_bytes=192, verified=true
+run=4, prove_ms=3731.064, verify_ms=2.866, proof_bytes=192, verified=true
+run=5, prove_ms=3772.423, verify_ms=2.849, proof_bytes=192, verified=true
+batch_id=1792226607358
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_prover_runs_fallback_ablation_pairs.csv
+SPEND_PROOF_EXPERIMENT=PASS

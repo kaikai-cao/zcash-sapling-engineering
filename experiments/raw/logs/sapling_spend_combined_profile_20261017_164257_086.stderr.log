@@ -1,0 +1,315 @@
+G16_TIMELINE event=proof_body_start proof_id=1 t_ns=100
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=1 t_ns=560544200
+BELLMAN_MSM_TIMELINE event=submit_return call_id=1 t_ns=560550800
+BELLMAN_MSM_SUBMIT_PROFILE call_id=1 submit_elapsed_ms=8.425
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=2 t_ns=576525800
+BELLMAN_MSM_TIMELINE event=submit_return call_id=2 t_ns=576530100
+BELLMAN_MSM_SUBMIT_PROFILE call_id=2 submit_elapsed_ms=6.386
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=3 t_ns=586722500
+BELLMAN_MSM_TIMELINE event=submit_return call_id=3 t_ns=586725500
+BELLMAN_MSM_SUBMIT_PROFILE call_id=3 submit_elapsed_ms=5.601
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=4 t_ns=593927700
+BELLMAN_MSM_TIMELINE event=submit_return call_id=4 t_ns=593930900
+BELLMAN_MSM_SUBMIT_PROFILE call_id=4 submit_elapsed_ms=0.803
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=5 t_ns=595194600
+BELLMAN_MSM_TIMELINE event=submit_return call_id=5 t_ns=595197200
+BELLMAN_MSM_SUBMIT_PROFILE call_id=5 submit_elapsed_ms=0.766
+BELLMAN_WORKER_FALLBACK previous_count=5 max_count=4 rayon_threads=1
+BELLMAN_MSM_STAGE_PROFILE call_id=1 exponent_count=131071 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=1 t_ns=560633200
+BELLMAN_MSM_TIMELINE event=inner_end call_id=1 t_ns=2122518200
+BELLMAN_MSM_PROFILE call_id=1 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.089 elapsed_ms=1561.885
+BELLMAN_MSM_STAGE_PROFILE call_id=2 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=2 t_ns=2125505200
+BELLMAN_MSM_TIMELINE event=inner_end call_id=2 t_ns=2592211000
+BELLMAN_MSM_PROFILE call_id=2 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1548.979 elapsed_ms=466.704
+BELLMAN_MSM_STAGE_PROFILE call_id=3 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=3 t_ns=2594274100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=3 t_ns=2599361400
+BELLMAN_MSM_PROFILE call_id=3 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=2007.551 elapsed_ms=5.087
+BELLMAN_MSM_STAGE_PROFILE call_id=4 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=4 t_ns=2601364400
+BELLMAN_MSM_TIMELINE event=inner_end call_id=4 t_ns=2923783200
+BELLMAN_MSM_PROFILE call_id=4 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2007.437 elapsed_ms=322.419
+BELLMAN_MSM_STAGE_PROFILE call_id=5 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=5 t_ns=2926487400
+BELLMAN_MSM_TIMELINE event=inner_end call_id=5 t_ns=2931372600
+BELLMAN_MSM_PROFILE call_id=5 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2331.293 elapsed_ms=4.885
+BELLMAN_MSM_STAGE_PROFILE call_id=6 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=6 t_ns=2933757700
+BELLMAN_MSM_TIMELINE event=inner_end call_id=6 t_ns=3176325800
+BELLMAN_MSM_PROFILE call_id=6 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2336.791 elapsed_ms=242.568
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=6 t_ns=596966600
+BELLMAN_MSM_TIMELINE event=submit_return call_id=6 t_ns=3178687700
+BELLMAN_MSM_SUBMIT_PROFILE call_id=6 submit_elapsed_ms=2582.456
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=7 t_ns=3180040300
+BELLMAN_MSM_TIMELINE event=submit_return call_id=7 t_ns=3180045400
+BELLMAN_MSM_SUBMIT_PROFILE call_id=7 submit_elapsed_ms=3.045
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=8 t_ns=3183609900
+BELLMAN_MSM_TIMELINE event=submit_return call_id=8 t_ns=3183612000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=8 submit_elapsed_ms=0.723
+G16_TIMELINE event=wait_and_assembly_start proof_id=1 t_ns=3186337400
+BELLMAN_MSM_STAGE_PROFILE call_id=7 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=2016 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=7 t_ns=3180059700
+BELLMAN_MSM_TIMELINE event=inner_end call_id=7 t_ns=3190945700
+BELLMAN_MSM_PROFILE call_id=7 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.019 elapsed_ms=10.886
+BELLMAN_MSM_STAGE_PROFILE call_id=8 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1179360 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=8 t_ns=3193177000
+BELLMAN_MSM_TIMELINE event=inner_end call_id=8 t_ns=3839826400
+BELLMAN_MSM_PROFILE call_id=8 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=9.567 elapsed_ms=646.649
+G16_TIMELINE event=wait_and_assembly_end proof_id=1 t_ns=3842394100
+G16_TIMELINE event=proof_body_end proof_id=1 t_ns=3842394100
+G16_STAGE_PROFILE circuit_synthesis_constraints_ms=161.592 worker_vk_setup_ms=0.001 qap_fft_h_exponent_prep_ms=398.940 h_query_access_dispatch_ms=13.234 assignment_query_prep_dispatch_ms=2611.008 proof_scalar_terms_ms=1.566 wait_and_assembly_ms=656.057 create_proof_body_ms=3842.397
+G16_RANDOMNESS_PROFILE random_scalars_ms=0.001
+G16_TIMELINE event=proof_body_start proof_id=2 t_ns=3849883300
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=9 t_ns=4353337300
+BELLMAN_MSM_TIMELINE event=submit_return call_id=9 t_ns=4353341800
+BELLMAN_MSM_SUBMIT_PROFILE call_id=9 submit_elapsed_ms=7.649
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=10 t_ns=4364092600
+BELLMAN_MSM_TIMELINE event=submit_return call_id=10 t_ns=4364098100
+BELLMAN_MSM_SUBMIT_PROFILE call_id=10 submit_elapsed_ms=1.803
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=11 t_ns=4366542200
+BELLMAN_MSM_TIMELINE event=submit_return call_id=11 t_ns=4366544000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=11 submit_elapsed_ms=0.907
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=12 t_ns=4368022200
+BELLMAN_MSM_TIMELINE event=submit_return call_id=12 t_ns=4368024000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=12 submit_elapsed_ms=0.923
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=13 t_ns=4369375600
+BELLMAN_MSM_TIMELINE event=submit_return call_id=13 t_ns=4369377500
+BELLMAN_MSM_SUBMIT_PROFILE call_id=13 submit_elapsed_ms=0.706
+BELLMAN_WORKER_FALLBACK previous_count=5 max_count=4 rayon_threads=1
+BELLMAN_MSM_STAGE_PROFILE call_id=9 exponent_count=131071 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=9 t_ns=4353399800
+BELLMAN_MSM_TIMELINE event=inner_end call_id=9 t_ns=5916159600
+BELLMAN_MSM_PROFILE call_id=9 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.062 elapsed_ms=1562.760
+BELLMAN_MSM_STAGE_PROFILE call_id=10 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=10 t_ns=5918302500
+BELLMAN_MSM_TIMELINE event=inner_end call_id=10 t_ns=6358196600
+BELLMAN_MSM_PROFILE call_id=10 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1554.210 elapsed_ms=439.894
+BELLMAN_MSM_STAGE_PROFILE call_id=11 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=11 t_ns=6360739100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=11 t_ns=6365588600
+BELLMAN_MSM_PROFILE call_id=11 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1994.197 elapsed_ms=4.849
+BELLMAN_MSM_STAGE_PROFILE call_id=12 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=12 t_ns=6367670600
+BELLMAN_MSM_TIMELINE event=inner_end call_id=12 t_ns=6672659700
+BELLMAN_MSM_PROFILE call_id=12 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1999.648 elapsed_ms=304.989
+BELLMAN_MSM_STAGE_PROFILE call_id=13 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=13 t_ns=6674895800
+BELLMAN_MSM_TIMELINE event=inner_end call_id=13 t_ns=6679089400
+BELLMAN_MSM_PROFILE call_id=13 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2305.520 elapsed_ms=4.194
+BELLMAN_MSM_STAGE_PROFILE call_id=14 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=14 t_ns=6681817900
+BELLMAN_MSM_TIMELINE event=inner_end call_id=14 t_ns=6918267500
+BELLMAN_MSM_PROFILE call_id=14 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2311.316 elapsed_ms=236.449
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=14 t_ns=4370502000
+BELLMAN_MSM_TIMELINE event=submit_return call_id=14 t_ns=6920555300
+BELLMAN_MSM_SUBMIT_PROFILE call_id=14 submit_elapsed_ms=2551.175
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=15 t_ns=6922221900
+BELLMAN_MSM_TIMELINE event=submit_return call_id=15 t_ns=6922226800
+BELLMAN_MSM_SUBMIT_PROFILE call_id=15 submit_elapsed_ms=2.934
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=16 t_ns=6925676000
+BELLMAN_MSM_TIMELINE event=submit_return call_id=16 t_ns=6925677300
+BELLMAN_MSM_SUBMIT_PROFILE call_id=16 submit_elapsed_ms=0.737
+G16_TIMELINE event=wait_and_assembly_start proof_id=2 t_ns=6928371000
+BELLMAN_MSM_STAGE_PROFILE call_id=15 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=2016 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=15 t_ns=6922239600
+BELLMAN_MSM_TIMELINE event=inner_end call_id=15 t_ns=6933091700
+BELLMAN_MSM_PROFILE call_id=15 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.018 elapsed_ms=10.852
+BELLMAN_MSM_STAGE_PROFILE call_id=16 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1179360 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=16 t_ns=6935317200
+BELLMAN_MSM_TIMELINE event=inner_end call_id=16 t_ns=7575193900
+BELLMAN_MSM_PROFILE call_id=16 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=9.641 elapsed_ms=639.876
+G16_TIMELINE event=wait_and_assembly_end proof_id=2 t_ns=7577738500
+G16_TIMELINE event=proof_body_end proof_id=2 t_ns=7577738500
+G16_STAGE_PROFILE circuit_synthesis_constraints_ms=104.224 worker_vk_setup_ms=0.001 qap_fft_h_exponent_prep_ms=399.224 h_query_access_dispatch_ms=8.151 assignment_query_prep_dispatch_ms=2565.371 proof_scalar_terms_ms=1.517 wait_and_assembly_ms=649.367 create_proof_body_ms=3727.855
+G16_RANDOMNESS_PROFILE random_scalars_ms=0.000
+G16_TIMELINE event=proof_body_start proof_id=3 t_ns=7585497800
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=17 t_ns=8092911300
+BELLMAN_MSM_TIMELINE event=submit_return call_id=17 t_ns=8092915900
+BELLMAN_MSM_SUBMIT_PROFILE call_id=17 submit_elapsed_ms=5.961
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=18 t_ns=8101894200
+BELLMAN_MSM_TIMELINE event=submit_return call_id=18 t_ns=8101897100
+BELLMAN_MSM_SUBMIT_PROFILE call_id=18 submit_elapsed_ms=0.890
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=19 t_ns=8103320900
+BELLMAN_MSM_TIMELINE event=submit_return call_id=19 t_ns=8103323000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=19 submit_elapsed_ms=0.889
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=20 t_ns=8104955200
+BELLMAN_MSM_TIMELINE event=submit_return call_id=20 t_ns=8104957400
+BELLMAN_MSM_SUBMIT_PROFILE call_id=20 submit_elapsed_ms=1.023
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=21 t_ns=8106635700
+BELLMAN_MSM_TIMELINE event=submit_return call_id=21 t_ns=8106637600
+BELLMAN_MSM_SUBMIT_PROFILE call_id=21 submit_elapsed_ms=0.783
+BELLMAN_WORKER_FALLBACK previous_count=5 max_count=4 rayon_threads=1
+BELLMAN_MSM_STAGE_PROFILE call_id=17 exponent_count=131071 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=17 t_ns=8092996500
+BELLMAN_MSM_TIMELINE event=inner_end call_id=17 t_ns=9648460400
+BELLMAN_MSM_PROFILE call_id=17 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.085 elapsed_ms=1555.464
+BELLMAN_MSM_STAGE_PROFILE call_id=18 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=18 t_ns=9651621500
+BELLMAN_MSM_TIMELINE event=inner_end call_id=18 t_ns=10085483700
+BELLMAN_MSM_PROFILE call_id=18 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1549.727 elapsed_ms=433.862
+BELLMAN_MSM_STAGE_PROFILE call_id=19 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=19 t_ns=10087642800
+BELLMAN_MSM_TIMELINE event=inner_end call_id=19 t_ns=10092332200
+BELLMAN_MSM_PROFILE call_id=19 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1984.322 elapsed_ms=4.689
+BELLMAN_MSM_STAGE_PROFILE call_id=20 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=20 t_ns=10094458900
+BELLMAN_MSM_TIMELINE event=inner_end call_id=20 t_ns=10403528200
+BELLMAN_MSM_PROFILE call_id=20 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1989.504 elapsed_ms=309.069
+BELLMAN_MSM_STAGE_PROFILE call_id=21 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=21 t_ns=10406942700
+BELLMAN_MSM_TIMELINE event=inner_end call_id=21 t_ns=10411187700
+BELLMAN_MSM_PROFILE call_id=21 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2300.307 elapsed_ms=4.245
+BELLMAN_MSM_STAGE_PROFILE call_id=22 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=22 t_ns=10413648300
+BELLMAN_MSM_TIMELINE event=inner_end call_id=22 t_ns=10651104100
+BELLMAN_MSM_PROFILE call_id=22 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2305.764 elapsed_ms=237.456
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=22 t_ns=8107883700
+BELLMAN_MSM_TIMELINE event=submit_return call_id=22 t_ns=10653414200
+BELLMAN_MSM_SUBMIT_PROFILE call_id=22 submit_elapsed_ms=2546.252
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=23 t_ns=10654720600
+BELLMAN_MSM_TIMELINE event=submit_return call_id=23 t_ns=10654724700
+BELLMAN_MSM_SUBMIT_PROFILE call_id=23 submit_elapsed_ms=3.025
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=24 t_ns=10658247900
+BELLMAN_MSM_TIMELINE event=submit_return call_id=24 t_ns=10658249600
+BELLMAN_MSM_SUBMIT_PROFILE call_id=24 submit_elapsed_ms=0.721
+G16_TIMELINE event=wait_and_assembly_start proof_id=3 t_ns=10661458600
+BELLMAN_MSM_STAGE_PROFILE call_id=23 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=2016 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=23 t_ns=10654736800
+BELLMAN_MSM_TIMELINE event=inner_end call_id=23 t_ns=10665344000
+BELLMAN_MSM_PROFILE call_id=23 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.016 elapsed_ms=10.607
+BELLMAN_MSM_STAGE_PROFILE call_id=24 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1179360 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=24 t_ns=10667513800
+BELLMAN_MSM_TIMELINE event=inner_end call_id=24 t_ns=11313371900
+BELLMAN_MSM_PROFILE call_id=24 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=9.266 elapsed_ms=645.858
+G16_TIMELINE event=wait_and_assembly_end proof_id=3 t_ns=11316524000
+G16_TIMELINE event=proof_body_end proof_id=3 t_ns=11316524000
+G16_STAGE_PROFILE circuit_synthesis_constraints_ms=106.038 worker_vk_setup_ms=0.001 qap_fft_h_exponent_prep_ms=401.370 h_query_access_dispatch_ms=6.515 assignment_query_prep_dispatch_ms=2560.486 proof_scalar_terms_ms=1.550 wait_and_assembly_ms=655.065 create_proof_body_ms=3731.026
+G16_RANDOMNESS_PROFILE random_scalars_ms=0.001
+G16_TIMELINE event=proof_body_start proof_id=4 t_ns=11323681300
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=25 t_ns=11828091600
+BELLMAN_MSM_TIMELINE event=submit_return call_id=25 t_ns=11828096000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=25 submit_elapsed_ms=7.186
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=26 t_ns=11840936100
+BELLMAN_MSM_TIMELINE event=submit_return call_id=26 t_ns=11840941000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=26 submit_elapsed_ms=1.012
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=27 t_ns=11842650300
+BELLMAN_MSM_TIMELINE event=submit_return call_id=27 t_ns=11842653200
+BELLMAN_MSM_SUBMIT_PROFILE call_id=27 submit_elapsed_ms=0.884
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=28 t_ns=11844068000
+BELLMAN_MSM_TIMELINE event=submit_return call_id=28 t_ns=11844069600
+BELLMAN_MSM_SUBMIT_PROFILE call_id=28 submit_elapsed_ms=1.170
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=29 t_ns=11845868800
+BELLMAN_MSM_TIMELINE event=submit_return call_id=29 t_ns=11845870500
+BELLMAN_MSM_SUBMIT_PROFILE call_id=29 submit_elapsed_ms=0.975
+BELLMAN_WORKER_FALLBACK previous_count=5 max_count=4 rayon_threads=1
+BELLMAN_MSM_STAGE_PROFILE call_id=25 exponent_count=131071 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=25 t_ns=11828180100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=25 t_ns=13377972700
+BELLMAN_MSM_PROFILE call_id=25 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.088 elapsed_ms=1549.792
+BELLMAN_MSM_STAGE_PROFILE call_id=26 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=26 t_ns=13380705200
+BELLMAN_MSM_TIMELINE event=inner_end call_id=26 t_ns=13825833400
+BELLMAN_MSM_PROFILE call_id=26 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1539.769 elapsed_ms=445.128
+BELLMAN_MSM_STAGE_PROFILE call_id=27 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=27 t_ns=13827911800
+BELLMAN_MSM_TIMELINE event=inner_end call_id=27 t_ns=13833379100
+BELLMAN_MSM_PROFILE call_id=27 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=1985.261 elapsed_ms=5.467
+BELLMAN_MSM_STAGE_PROFILE call_id=28 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=28 t_ns=13835524700
+BELLMAN_MSM_TIMELINE event=inner_end call_id=28 t_ns=14141636300
+BELLMAN_MSM_PROFILE call_id=28 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=1991.457 elapsed_ms=306.111
+BELLMAN_MSM_STAGE_PROFILE call_id=29 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=29 t_ns=14143867100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=29 t_ns=14148649900
+BELLMAN_MSM_PROFILE call_id=29 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2297.998 elapsed_ms=4.783
+BELLMAN_MSM_STAGE_PROFILE call_id=30 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=30 t_ns=14151162100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=30 t_ns=14384233600
+BELLMAN_MSM_PROFILE call_id=30 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2303.809 elapsed_ms=233.071
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=30 t_ns=11847353300
+BELLMAN_MSM_TIMELINE event=submit_return call_id=30 t_ns=14386624000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=30 submit_elapsed_ms=2540.050
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=31 t_ns=14387989500
+BELLMAN_MSM_TIMELINE event=submit_return call_id=31 t_ns=14387993700
+BELLMAN_MSM_SUBMIT_PROFILE call_id=31 submit_elapsed_ms=2.991
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=32 t_ns=14391528600
+BELLMAN_MSM_TIMELINE event=submit_return call_id=32 t_ns=14391535400
+BELLMAN_MSM_SUBMIT_PROFILE call_id=32 submit_elapsed_ms=0.838
+G16_TIMELINE event=wait_and_assembly_start proof_id=4 t_ns=14394339800
+BELLMAN_MSM_STAGE_PROFILE call_id=31 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=2016 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=31 t_ns=14388006200
+BELLMAN_MSM_TIMELINE event=inner_end call_id=31 t_ns=14398399400
+BELLMAN_MSM_PROFILE call_id=31 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.017 elapsed_ms=10.393
+BELLMAN_MSM_STAGE_PROFILE call_id=32 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1179360 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=32 t_ns=14400556000
+BELLMAN_MSM_TIMELINE event=inner_end call_id=32 t_ns=15047731900
+BELLMAN_MSM_PROFILE call_id=32 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=9.027 elapsed_ms=647.175
+G16_TIMELINE event=wait_and_assembly_end proof_id=4 t_ns=15050963600
+G16_TIMELINE event=proof_body_end proof_id=4 t_ns=15050963600
+G16_STAGE_PROFILE circuit_synthesis_constraints_ms=107.194 worker_vk_setup_ms=0.004 qap_fft_h_exponent_prep_ms=397.208 h_query_access_dispatch_ms=7.702 assignment_query_prep_dispatch_ms=2557.037 proof_scalar_terms_ms=1.514 wait_and_assembly_ms=656.624 create_proof_body_ms=3727.282
+G16_RANDOMNESS_PROFILE random_scalars_ms=0.000
+G16_TIMELINE event=proof_body_start proof_id=5 t_ns=15058394600
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=33 t_ns=15560738800
+BELLMAN_MSM_TIMELINE event=submit_return call_id=33 t_ns=15560743000
+BELLMAN_MSM_SUBMIT_PROFILE call_id=33 submit_elapsed_ms=3.694
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=34 t_ns=15567601200
+BELLMAN_MSM_TIMELINE event=submit_return call_id=34 t_ns=15567603800
+BELLMAN_MSM_SUBMIT_PROFILE call_id=34 submit_elapsed_ms=3.937
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=35 t_ns=15572202800
+BELLMAN_MSM_TIMELINE event=submit_return call_id=35 t_ns=15572205700
+BELLMAN_MSM_SUBMIT_PROFILE call_id=35 submit_elapsed_ms=1.163
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=36 t_ns=15574055200
+BELLMAN_MSM_TIMELINE event=submit_return call_id=36 t_ns=15574056900
+BELLMAN_MSM_SUBMIT_PROFILE call_id=36 submit_elapsed_ms=0.705
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=37 t_ns=15575224100
+BELLMAN_MSM_TIMELINE event=submit_return call_id=37 t_ns=15575225100
+BELLMAN_MSM_SUBMIT_PROFILE call_id=37 submit_elapsed_ms=0.729
+BELLMAN_WORKER_FALLBACK previous_count=5 max_count=4 rayon_threads=1
+BELLMAN_MSM_STAGE_PROFILE call_id=33 exponent_count=131071 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=33 t_ns=15560807100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=33 t_ns=17162097000
+BELLMAN_MSM_PROFILE call_id=33 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.068 elapsed_ms=1601.290
+BELLMAN_MSM_STAGE_PROFILE call_id=34 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=34 t_ns=17165093000
+BELLMAN_MSM_TIMELINE event=inner_end call_id=34 t_ns=17610340600
+BELLMAN_MSM_PROFILE call_id=34 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=1597.492 elapsed_ms=445.248
+BELLMAN_MSM_STAGE_PROFILE call_id=35 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=35 t_ns=17612355000
+BELLMAN_MSM_TIMELINE event=inner_end call_id=35 t_ns=17616864800
+BELLMAN_MSM_PROFILE call_id=35 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=2040.152 elapsed_ms=4.510
+BELLMAN_MSM_STAGE_PROFILE call_id=36 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=36 t_ns=17618869100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=36 t_ns=17929076000
+BELLMAN_MSM_PROFILE call_id=36 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2044.814 elapsed_ms=310.207
+BELLMAN_MSM_STAGE_PROFILE call_id=37 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1008 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=37 t_ns=17931532700
+BELLMAN_MSM_TIMELINE event=inner_end call_id=37 t_ns=17935586900
+BELLMAN_MSM_PROFILE call_id=37 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=2356.309 elapsed_ms=4.054
+BELLMAN_MSM_STAGE_PROFILE call_id=38 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=144 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=589680 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=38 t_ns=17938042000
+BELLMAN_MSM_TIMELINE event=inner_end call_id=38 t_ns=18169007400
+BELLMAN_MSM_PROFILE call_id=38 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=2361.670 elapsed_ms=230.965
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=38 t_ns=15576372300
+BELLMAN_MSM_TIMELINE event=submit_return call_id=38 t_ns=18171682900
+BELLMAN_MSM_SUBMIT_PROFILE call_id=38 submit_elapsed_ms=2596.163
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=39 t_ns=18173138900
+BELLMAN_MSM_TIMELINE event=submit_return call_id=39 t_ns=18173143300
+BELLMAN_MSM_SUBMIT_PROFILE call_id=39 submit_elapsed_ms=2.841
+BELLMAN_MSM_TIMELINE event=submit_begin call_id=40 t_ns=18176491500
+BELLMAN_MSM_TIMELINE event=submit_return call_id=40 t_ns=18176493800
+BELLMAN_MSM_SUBMIT_PROFILE call_id=40 submit_elapsed_ms=0.739
+G16_TIMELINE event=wait_and_assembly_start proof_id=5 t_ns=18179197700
+BELLMAN_MSM_STAGE_PROFILE call_id=39 exponent_count=8 window=3 bucket_count=7 chunk_count=85 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=2016 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=39 t_ns=18173155900
+BELLMAN_MSM_TIMELINE event=inner_end call_id=39 t_ns=18183386900
+BELLMAN_MSM_PROFILE call_id=39 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.017 elapsed_ms=10.231
+BELLMAN_MSM_STAGE_PROFILE call_id=40 exponent_count=98638 window=12 bucket_count=4095 chunk_count=22 bucket_element_size_bytes=288 exponent_chunk_prep_ms=0.000 chunk_parallel_wall_ms=0.000 bucket_init_sum_ms=0.000 bucket_init_max_ms=0.000 bucket_fill_sum_ms=0.000 bucket_fill_max_ms=0.000 bucket_reduce_sum_ms=0.000 bucket_reduce_max_ms=0.000 max_concurrent_chunk_regions=1 bucket_payload_at_max_concurrency_estimate_bytes=1179360 result_merge_ms=0.000
+BELLMAN_MSM_TIMELINE event=task_start call_id=40 t_ns=18185594100
+BELLMAN_MSM_TIMELINE event=inner_end call_id=40 t_ns=18824483400
+BELLMAN_MSM_PROFILE call_id=40 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=9.103 elapsed_ms=638.889
+G16_TIMELINE event=wait_and_assembly_end proof_id=5 t_ns=18827208200
+G16_TIMELINE event=proof_body_end proof_id=5 t_ns=18827208200
+G16_STAGE_PROFILE circuit_synthesis_constraints_ms=107.392 worker_vk_setup_ms=0.005 qap_fft_h_exponent_prep_ms=394.941 h_query_access_dispatch_ms=4.434 assignment_query_prep_dispatch_ms=2612.517 proof_scalar_terms_ms=1.514 wait_and_assembly_ms=648.011 create_proof_body_ms=3768.814
+G16_RANDOMNESS_PROFILE random_scalars_ms=0.001
