@@ -53,6 +53,24 @@ fn msm_inner_stage_timing_enabled(profile: bool) -> bool {
         })
 }
 
+// Allocation tracking is independent of timing profiling. A diagnostic harness
+// installs a tracking global allocator and enables `SAPLING_MEM_PROBE=1`; the
+// MSM path then reports real live-byte deltas for exponent preparation and
+// bucket-array allocation.
+fn msm_mem_probe_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_MEM_PROBE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+struct MsmMemProbe {
+    bucket_alloc_max_bytes: AtomicUsize,
+}
+
 #[derive(Default)]
 struct MsmStageProfile {
     bucket_init_sum_ns: std::sync::atomic::AtomicU64,
@@ -363,6 +381,15 @@ where
     let stage_profile = profile.then(|| Arc::new(MsmStageProfile::default()));
     let worker_stage_profile = stage_profile.clone();
 
+    // Optional allocation-tracking counters for the memory ledger.
+    let mem_probe = msm_mem_probe_enabled().then(|| {
+        Arc::new(MsmMemProbe {
+            bucket_alloc_max_bytes: AtomicUsize::new(0),
+        })
+    });
+    let worker_mem_probe = mem_probe.clone();
+    let mem_live_start = mem_probe.as_ref().map(|_| crate::mem_probe::live());
+
     // Split the exponents into windows and measure this preprocessing step.
     let exponent_chunk_prep_start = stage_timing.then(Instant::now);
     let chunked_exponents = Arc::new(
@@ -372,6 +399,8 @@ where
             .collect::<Vec<_>>(),
     );
     let exponent_chunk_prep_ns = elapsed_ns(exponent_chunk_prep_start);
+
+    let mem_live_after_exponent_prep = mem_probe.as_ref().map(|_| crate::mem_probe::live());
 
     // Perform one chunk of the multiexponentiation.
     let this = move |bases: S,
@@ -399,7 +428,16 @@ where
 
         // Allocate the bucket array.
         let bucket_init_start = stage_timing.then(Instant::now);
+        let mem_before_bucket = worker_mem_probe
+            .as_ref()
+            .map(|_| crate::mem_probe::live());
         let mut buckets = vec![G::identity(); bucket_count];
+        if let Some(probe) = worker_mem_probe.as_ref() {
+            if let Some(before) = mem_before_bucket {
+                let delta = crate::mem_probe::live().saturating_sub(before);
+                update_atomic_max(&probe.bucket_alloc_max_bytes, delta);
+            }
+        }
         if let (Some(stage), Some(start)) =
             (worker_stage_profile.as_ref(), bucket_init_start)
         {
@@ -621,6 +659,28 @@ where
                 stage.base_skip_elements.load(Ordering::Relaxed),
             );
         }
+    }
+
+    if let Some(probe) = mem_probe.as_ref() {
+        let live_end = crate::mem_probe::live();
+        let live_start = mem_live_start.unwrap_or(0);
+        let live_after_prep = mem_live_after_exponent_prep.unwrap_or(0);
+
+        eprintln!(
+            "BELLMAN_MSM_MEM_PROBE call_id={} exponent_count={} window={} bucket_count={} chunk_count={} bucket_element_size_bytes={} live_start_bytes={} live_after_exponent_prep_bytes={} exponent_prep_live_delta_bytes={} bucket_alloc_max_bytes={} live_end_bytes={} live_end_delta_bytes={}",
+            call_id.unwrap_or(0),
+            exponent_count,
+            c,
+            bucket_count,
+            chunk_count,
+            std::mem::size_of::<G>(),
+            live_start,
+            live_after_prep,
+            live_after_prep.saturating_sub(live_start),
+            probe.bucket_alloc_max_bytes.load(Ordering::Relaxed),
+            live_end,
+            live_end.saturating_sub(live_start),
+        );
     }
 
     final_result

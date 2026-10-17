@@ -9,6 +9,10 @@ param(
     [ValidateSet('enabled', 'disabled')]
     [string]$InnerStageTiming = 'enabled',
     [switch]$ForceAsyncWorker,
+    # Optional processor-affinity mask for the prover process (0 = leave the OS
+    # scheduler free). On hybrid CPUs, leaving it free lets the single-threaded
+    # worker land on a P-core or an E-core, which changes prove time by ~2x.
+    [long]$AffinityMask = 0,
     [ValidatePattern('^[a-z0-9][a-z0-9_-]{0,39}$')]
     [string]$RunDataLabel = 'release',
     [switch]$AllowDirtyWorktree
@@ -292,29 +296,41 @@ try {
         $env:BELLMAN_FORCE_ASYNC_WORKER = '0'
     }
 
-    $process = Start-Process `
-        -FilePath $exe `
-        -WorkingDirectory $RepoRoot `
-        -PassThru `
-        -Wait `
-        -RedirectStandardOutput $stdoutPath `
-        -RedirectStandardError $stderrPath
+    # Use System.Diagnostics.Process directly instead of Start-Process: it lets
+    # us set processor affinity right after launch and still read the exit code
+    # reliably. (Start-Process -PassThru without -Wait does not populate
+    # ExitCode on Windows PowerShell 5.1.)
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $exe
+    $startInfo.WorkingDirectory = $RepoRoot
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
 
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    [void]$process.Start()
+
+    if ($AffinityMask -gt 0) {
+        try {
+            $process.ProcessorAffinity = [IntPtr]$AffinityMask
+        }
+        catch {
+            throw "Failed to set processor affinity mask $AffinityMask on the prover process: $($_.Exception.Message)"
+        }
+    }
+
+    # Drain both pipes concurrently to avoid deadlocking on a full pipe buffer.
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $process.WaitForExit()
+
+    $stdout = $stdoutTask.Result
+    $stderr = $stderrTask.Result
     $exitCode = $process.ExitCode
 
-    $stdout = if (Test-Path -LiteralPath $stdoutPath) {
-        [IO.File]::ReadAllText($stdoutPath)
-    }
-    else {
-        ''
-    }
-
-    $stderr = if (Test-Path -LiteralPath $stderrPath) {
-        [IO.File]::ReadAllText($stderrPath)
-    }
-    else {
-        ''
-    }
+    [IO.File]::WriteAllText($stdoutPath, $stdout, [System.Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($stderrPath, $stderr, [System.Text.UTF8Encoding]::new($false))
 }
 finally {
     if ($null -eq $oldProfile) {
@@ -811,6 +827,7 @@ $report = @"
 - Branch counters: $BranchCounters
 - Fine-grained MSM inner-stage timing: $InnerStageTiming
 - Force async worker: $($ForceAsyncWorker.IsPresent)
+- Processor affinity mask: $AffinityMask
 - Worker fallback records: $($workerFallbackMatches.Count)
 - Forced-async override records: $($workerAsyncOverrideMatches.Count)
 - Run start: $runStarted

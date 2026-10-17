@@ -139,6 +139,7 @@
 
 pub mod domain;
 pub mod gadgets;
+pub mod mem_probe;
 pub mod multicore;
 pub mod multiexp;
 
