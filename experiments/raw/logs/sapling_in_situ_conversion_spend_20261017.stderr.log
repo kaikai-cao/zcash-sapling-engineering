@@ -1,0 +1,3 @@
+G16_IN_SITU_CONVERSION site=h_exponents n=131071 source_elem_size_bytes=32 source_bytes=4194272 converted_bytes=5242840 live_before_bytes=77545726 peak_delta_bytes=5242840 live_after_delta_bytes=1048536
+G16_IN_SITU_CONVERSION site=input_assignment n=8 source_elem_size_bytes=32 source_bytes=256 converted_bytes=320 live_before_bytes=78595222 peak_delta_bytes=320 live_after_delta_bytes=64
+G16_IN_SITU_CONVERSION site=aux_assignment n=98638 source_elem_size_bytes=32 source_bytes=3156416 converted_bytes=3945520 live_before_bytes=78595326 peak_delta_bytes=9361800 live_after_delta_bytes=5167496
