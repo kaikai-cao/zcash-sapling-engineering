@@ -821,7 +821,7 @@ groth16 第 292/309/316 行的 `Vec<Scalar> → Vec<Exponent>`：因 `into_iter`
 
 ## 18. 优化验证协议（2026-10-17 冻结）
 
-完整文档：`experiments/metadata/sapling_optimization_validation_protocol_20261017.md`。**优化目标已选定为候选 e（配置级：线程数/亲和性）**，预声明见 `experiments/metadata/sapling_default_config_experiment_preregistration_20261017.md`，结果见 **§19**。
+完整文档：`experiments/metadata/sapling_optimization_validation_protocol_20261017.md`。**优化目标先选定为候选 e（配置级：线程数/亲和性）**，预声明见 `experiments/metadata/sapling_default_config_experiment_preregistration_20261017.md`，结果见 **§19**；负责人随后选定**候选 b（算法级：H query G1 MSM 时间）**，预注册 `experiments/metadata/sapling_msm_signed_digit_preregistration_20261017.md`（提交 `c507e0e`），结果见 **§20**。其余候选（a 内存主因、c、d）**未做**。
 
 ### 18.1 为什么必须先冻结
 
@@ -846,7 +846,7 @@ groth16 第 292/309/316 行的 `Vec<Scalar> → Vec<Exponent>`：因 `into_iter`
 
 主指标 = Spend 端到端 1t@0x1 暖态中位，相对**同日** before 变化 **≥ X%**（X ≥ 3）；辅助指标 = 4t/8t 中位与目标阶段 ms；内存指标（若涉及）= `prove_peak_abs_bytes` 下降且峰值账闭合；正确性 100% 通过；**且辅助指标无 >1% 的退化**。
 
-### 18.5 候选目标（未选定，需负责人拍板）
+### 18.5 候选目标（**状态更新 2026-10-17：e 与 b 已完成；a/c/d 未做**）
 
 | # | 候选 | 已知证据 | 预期收益 | 风险/成本 |
 |---|---|---|---|---|
