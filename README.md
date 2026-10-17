@@ -148,7 +148,11 @@ The following values are the recorded formal-reference baseline medians. They ar
 
 These values describe the archived batches and their specific configuration; they are not universal latency guarantees. In particular, the instrumentation experiments below have different run conditions and must not be averaged together with the formal baseline.
 
-> **Core-placement caveat (2026-10-17):** the single-thread medians above are the fastest recorded batches. Unconstrained single-thread runs are **bimodal by CPU core placement** — P-core ≈3.4–4.0 s vs E-core ≈5.3–8.9 s for Spend (up to 2.6×), and ≈0.50–0.54 s vs ≈0.89–1.05 s for Output. In the archived 1-thread data, 9/27 Spend batches and 4/30 Output batches fall in the slow (E-core) regime. The affinity-pinned reproducible values are **Spend ≈3.72 s** and **Output ≈0.53 s**. See [smoke re-runs & CPU affinity](experiments/metadata/sapling_smoke_fresh_runs_and_cpu_affinity_20261017.md).
+> **Core-placement caveat (2026-10-17):** the single-thread medians above are the fastest recorded batches. Unconstrained single-thread runs are **bimodal by CPU core placement** — P-core ≈3.4–4.0 s vs E-core ≈5.3–9.1 s for Spend (up to 2.6×), and ≈0.50–0.54 s vs ≈0.87–1.15 s for Output. In the archived 1-thread data, 8/27 Spend batches and 4/30 Output batches fall in the slow (E-core) regime; the unconstrained OS scheduler was even observed migrating *within a single Output process* (intra-batch spread **70%**). See [smoke re-runs & CPU affinity](experiments/metadata/sapling_smoke_fresh_runs_and_cpu_affinity_20261017.md).
+>
+> **Frozen affinity-pinned baseline (2026-10-17, recommended `before` for any optimization):** 1 thread pinned to logical processor 0 (`ProcessorAffinity = 0x1`), 3 batches × 5 proofs, warm median (discarding the cold first batch and each batch's run 1): **Spend 3,685.6 ms**, **Output 558.5 ms**. Same-day pooled medians are 3,711.5 ms / 558.7 ms. See [pinned baseline & thread scaling](experiments/metadata/sapling_pinned_baseline_and_thread_scaling_20261017.md) and [core-regime restatement of the historical baseline](experiments/metadata/sapling_baseline_core_regime_restatement_20261017.md).
+>
+> Stratifying the historical 1-thread data by core regime moves the *median* only +1.60% (Spend) / +0.15% (Output) but inflates the *observed range* by 1.6–1.7× — that inflation is core placement, not measurement noise.
 
 The formal baseline establishes the primary system-level observation: for the recorded workloads, producing a proof costs much more time than verifying it, while the proof remains 192 bytes in the selected serialization.
 
@@ -223,14 +227,32 @@ The source CSV is [`sapling_spend_thread_scaling_20261011_202051.csv`](experimen
 
 *The chart summarizes the six thread settings in this specific batch. Error ranges reflect observed run-to-run minima and maxima, not confidence intervals.*
 
+**Affinity-pinned re-measurement (2026-10-17).** The 2026-10-11 batch above was collected without processor affinity, so its numbers mix P-core and E-core placements. Re-running the same six settings with the process pinned to the 16 P-core logical processors (`AffinityMask = 0xFFFF`, 2 batches each) gives a cleaner curve and resolves the earlier "unexplained non-monotonicity":
+
+| Rayon threads | Prove median | Intra-batch spread | Speedup vs 1t | Parallel efficiency | vs previous step |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 3,842.248 ms | 4.80% | 1.000× | 100.0% | — |
+| 2 | 1,890.879 ms | 5.58% | 2.032× | 101.6% | 2.03× |
+| 4 | 1,064.321 ms | 5.90% | 3.610× | 90.3% | 1.78× |
+| 8 | 816.862 ms | 17.37% | 4.704× | 58.8% | 1.30× |
+| 16 | 785.935 ms | 22.21% | 4.889× | 30.6% | 1.039× |
+| 20 | 808.368 ms | 11.29% | 4.753× | 23.8% | **0.972× (slower)** |
+
+The curve saturates at **8 threads** (58.8% efficiency); going 8→16 threads buys only 3.9%, and 16→20 threads is **2.9% slower**. The 20-thread setting oversubscribes the 16 P-core logical processors (SMT contention) while `bellman`'s `WORKER_SPAWN_MAX_COUNT = 4 × current_num_threads()` also grows the task queue with thread count — extra overhead with no extra parallelism left. **Verdict: saturation + oversubscription, not a scheduling defect.** Practical implication: pin thread counts in the 4–8 range rather than adding threads.
+
+Raw data: [`sapling_spend_prover_runs_thread_scaling_pinned_20261017.csv`](experiments/raw/csv/sapling_spend_prover_runs_thread_scaling_pinned_20261017.csv); derived table: [`sapling_spend_thread_scaling_pinned_20261017.csv`](results/tables/sapling_spend_thread_scaling_pinned_20261017.csv). Runner: [`scripts/run_pinned_prover_campaign.ps1`](scripts/run_pinned_prover_campaign.ps1). Details: [`sapling_pinned_baseline_and_thread_scaling_20261017.md`](experiments/metadata/sapling_pinned_baseline_and_thread_scaling_20261017.md).
+
 ## 8. Source-Level Stage and MSM Profiling
 
 ### 8.1 Instrumentation approach
 
 The repository contains local instrumented dependency trees under `vendor/`. The primary instrumentation points used for the current profiling work include:
 
-- `vendor/groth16/src/prover.rs`: Groth16 proving-stage timing.
-- `vendor/bellman/src/multiexp.rs`: MSM call and worker-related timing.
+- `vendor/groth16/src/prover.rs`: Groth16 proving-stage timing, plus a gated in-situ assignment-conversion memory probe (`SAPLING_IN_SITU_CONVERSION_PROBE=1`).
+- `vendor/bellman/src/multiexp.rs`: MSM call and worker-related timing, plus gated windowed-exponent allocation/census counters (`SAPLING_MEM_PROBE=1`).
+- `vendor/bellman/src/mem_probe.rs`: process-wide allocation counters fed by a tracking `#[global_allocator]` in the diagnostic binaries.
+
+All memory hooks are off by default and cost only a cached flag read when disabled; the diagnostic binaries that enable them are `prove_memory_ledger`, `exponent_conversion_memory` and `in_situ_conversion_probe`.
 
 The experiment captures fields such as exponent count, window parameter, MSM elapsed interval, task-start delay, and worker submission time. The instrumentation is intended for observability, not algorithmic modification, but added timers and trace output can still alter execution overhead and scheduling behavior.
 
@@ -469,6 +491,10 @@ The following are useful entry points into the recorded evidence.
 - [Worker-fallback ablation conclusion (2026-10-17)](experiments/metadata/sapling_spend_worker_fallback_ablation_conclusion_20261017.md) — affinity-pinned A/B result: fallback is timing attribution, not a bottleneck.
 - [Prove-phase memory ledger (2026-10-17)](experiments/metadata/sapling_prove_memory_ledger_20261017.md) — allocator-level Spend/Output peak and transient accounting.
 - [Smoke re-runs & CPU affinity (2026-10-17)](experiments/metadata/sapling_smoke_fresh_runs_and_cpu_affinity_20261017.md) — fresh smoke logs and the P-core/E-core bimodality finding.
+- [Pinned baseline, core-regime references & pinned thread scaling (2026-10-17)](experiments/metadata/sapling_pinned_baseline_and_thread_scaling_20261017.md) — the frozen `before` baseline, why affinity is mandatory, and the resolution of the thread non-monotonicity.
+- [Historical 1-thread baseline restated by core regime (2026-10-17)](experiments/metadata/sapling_baseline_core_regime_restatement_20261017.md) — stratified re-analysis of the archived release data (raw files untouched).
+- [In-situ conversion transients & windowed-exponent density census (2026-10-17)](experiments/metadata/sapling_in_situ_conversion_and_exponent_density_20261017.md) — directly measured conversion peaks and a correction of the earlier inferred density figures.
+- [Optimization validation protocol (2026-10-17)](experiments/metadata/sapling_optimization_validation_protocol_20261017.md) — the frozen measurement protocol and pre-declared acceptance criteria (target still to be chosen).
 
 ### Principal raw datasets
 
@@ -480,12 +506,15 @@ The following are useful entry points into the recorded evidence.
 - [Cache-condition comparisons](experiments/raw/csv/sapling_cache_condition_raw.csv), [process memory data](experiments/raw/csv/sapling_process_memory_raw.csv), and [CPU diagnostic data](experiments/raw/csv/sapling_spend_cpu_diagnostic_20261011_111424_930.csv).
 - [Affinity-pinned fallback ablation runs](experiments/raw/csv/sapling_spend_prover_runs_fallback_ablation_pairs.csv) (with the [preserved pre-fix rows](experiments/raw/csv/sapling_spend_prover_runs_fallback_ablation_pairs_buggy_launcher.csv)), and fresh [Spend](experiments/raw/csv/sapling_spend_prover_runs_pinned_20261017.csv) / [Output](experiments/raw/csv/sapling_output_prover_runs_pinned_20261017.csv) affinity-pinned smoke runs.
 - [Prove-phase memory-ledger rows](experiments/raw/csv/sapling_prove_memory_ledger.csv) and [CPU affinity probe rows](experiments/raw/csv/sapling_spend_prover_runs_affinity_probe.csv).
+- [Pinned baseline rows](experiments/raw/csv/sapling_spend_prover_runs_pinned_baseline_20261017.csv) / [Output](experiments/raw/csv/sapling_output_prover_runs_pinned_baseline_20261017.csv) and [pinned thread-scaling rows](experiments/raw/csv/sapling_spend_prover_runs_thread_scaling_pinned_20261017.csv).
+- [Core-regime reference rows](experiments/raw/csv/sapling_spend_prover_runs_affinity_ecore_1t_20261017.csv), [unbound 1-thread rows](experiments/raw/csv/sapling_spend_prover_runs_unbound_1t_20261017.csv), and the [exponent-density census ledger](experiments/raw/csv/sapling_prove_memory_ledger_exponent_density_20261017.csv).
 
 ### Derived tables and figures
 
 - [Baseline cost-structure comparison](results/tables/baseline_cost_structure_comparison.csv).
 - [Engineering performance summary](results/tables/engineering_performance.csv), [parameters summary](results/tables/engineering_parameters.csv), [scale summary](results/tables/engineering_scale.csv), and [memory summary](results/tables/engineering_memory.csv).
-- [Spend thread scaling summary](results/tables/sapling_spend_thread_scaling_summary_20261011.csv).
+- [Spend thread-scaling summary](results/tables/sapling_spend_thread_scaling_summary_20261011.csv) and the [affinity-pinned thread-scaling table](results/tables/sapling_spend_thread_scaling_pinned_20261017.csv).
+- [Pinned campaign summary](results/tables/sapling_pinned_campaigns_20261017.csv) and the [core-regime batch](results/tables/sapling_baseline_core_regime_batches_20261017.csv) / [core-regime summary](results/tables/sapling_baseline_core_regime_summary_20261017.csv) tables.
 - [Spend / Output proof-time figure](results/figures/sapling_prove_time.png) and [proof-size figure](results/figures/sapling_proof_size.png).
 - [Spend thread-scaling figure](results/figures/sapling_spend_thread_scaling.png), [MSM breakdown](results/figures/sapling_spend_msm_breakdown.png), and [stage breakdown](results/figures/sapling_spend_stage_breakdown.png).
 - [Output proving-time figure](results/figures/sapling_output_prove_ms.png), [verification-time figure](results/figures/sapling_output_verify_ms.png), and [worker task-start-delay figure](results/figures/sapling_output_worker_task_start_delay.png).
@@ -576,7 +605,10 @@ The current evidence supports the following scoped conclusions:
 4. **The single-thread worker-fallback path is a timing-attribution / scheduling effect, not a throughput bottleneck.** A controlled, affinity-pinned A/B ablation (threads held at 1, only the worker scheduling branch varied) shows no significant end-to-end Prove difference (+1.1% mean, p≈0.11, n=10/condition); forcing asynchronous submission merely relabels ~2.5 s from the assignment/query-preparation/dispatch bucket into the wait-and-assembly bucket.
 5. **Parameter loading, working set, and system conditions should be measured separately** from the proving phase. The exploratory cache experiment did not show a large stable pre-read benefit under the tested conditions.
 6. **The project's current output is an engineering baseline and bottleneck hypothesis set.** No new cryptographic algorithm or verified algorithm-level improvement has been introduced.
-7. **Single-thread timings are bimodal in CPU core placement.** Unconstrained single-thread runs land on either a P-core (Spend ≈3.4–4.0 s) or an E-core (Spend ≈5.3–8.9 s), up to 2.6×; affinity-pinned reproducible values are Spend ≈3.72 s and Output ≈0.53 s.
+7. **Single-thread timings are bimodal in CPU core placement.** Unconstrained single-thread runs land on either a P-core (Spend ≈3.4–4.0 s) or an E-core (Spend ≈5.3–9.1 s), up to 2.6×, and the OS can migrate the process *within one invocation* (Output intra-batch spread 70%). The frozen affinity-pinned baseline is **Spend 3,685.6 ms / Output 558.5 ms** (1 thread @ LP0, warm median).
+8. **Thread scaling saturates at 8 threads and 20 threads is slower than 16** under fixed affinity. Pinning to the P-core set, parallel efficiency falls to 58.8% at 8 threads, 8→16 gains only 3.9%, and 16→20 loses 2.9%. The earlier "unexplained non-monotonicity" is therefore resolved as **saturation plus oversubscription**, not a scheduling defect.
+9. **The windowed-exponent buffer for H-query G1 (~26 MB) is effectively fully dense.** A direct census shows 100% of the H exponents take the `Chunks` representation and 99.35% of their chunk slots are non-zero, so the buffer cannot be shrunk by skipping zero chunks; only by not materialising it, changing the representation, or reducing the window size `c`. For L/A/B the low heap usage comes from ~71% of the exponents being exactly 0 or 1 (already short-circuited), not from zero chunks.
+10. **The assignment-conversion transient is a bounded, small peak increase, and its in-situ value differs from the controlled micro-measurement.** In situ, the peak *increase* equals the newly built `Vec<Exponent>` (Spend h: 5.24 MB); the Spend aux window reads higher (9.36 MB) because the H-query MSM is still in flight and shares the window.
 
 ## 17. Limitations and Open Questions
 
@@ -586,12 +618,13 @@ Several limitations remain important to the interpretation of the data:
 - **Instrumentation has overhead.** Logging, timing, and modified worker call paths can change execution overhead or scheduling. An instrumented timing is evidence about that instrumented path, not automatically a pristine upstream timing.
 - **Parallel task intervals overlap.** A sum of MSM task `elapsed_ms` values is not necessarily an exclusive wall-clock decomposition and may exceed the proof-body wall-clock time.
 - **Stage timers are source-region timers.** They may include synchronization, task submission, or fallback work rather than exclusive cost for the stage named.
-- **Thread scaling has variance.** In particular, the eight-thread group showed a broad range and the 20-thread median did not improve on the 16-thread median in the recorded batch. The current sample does not establish a universal optimal thread count.
+- **Thread scaling has variance, but its non-monotonicity is now explained.** Under fixed affinity the curve saturates at 8 threads (58.8% parallel efficiency); 8→16 gains only 3.9% and 16→20 is 2.9% *slower*, consistent with saturation plus SMT oversubscription rather than a scheduling defect. The current sample still does not establish a universal optimal thread count, and no measurement above 20 threads exists.
 - **The worker-fallback mechanism is now isolated at one thread count (2026-10-17).** An affinity-pinned A/B ablation shows no significant end-to-end effect at `RAYON_NUM_THREADS=1`; the large submission interval is queued work executed synchronously during submission, i.e. a timing-attribution artifact. Whether other thread counts or workloads behave differently is untested.
-- **Single-thread timings depend on CPU core placement.** On this hybrid CPU the same binary varies by up to 2.6× (P-core vs E-core) when the process is not affinity-restricted. Measurements should record and fix affinity, and be stratified by core regime rather than pooled.
+- **Single-thread timings depend on CPU core placement.** On this hybrid CPU the same binary varies by up to 2.6× (P-core vs E-core) when the process is not affinity-restricted, and the OS was observed migrating the process *within* a single Output invocation (intra-batch spread 70%). Measurements must record and fix affinity and be stratified by core regime rather than pooled. The frozen affinity-pinned baseline is Spend 3,685.6 ms / Output 558.5 ms (1 thread @ LP0, warm median); stratifying the archived 1-thread data moves the median by only +1.60% (Spend) / +0.15% (Output) but inflates the observed range by 1.6–1.7×.
 - **Cache experiments are small and approximate.** Three pairs per circuit and an attempted Standby List clear do not characterize every cache level or storage state.
 - **System diagnostics are host-specific.** CPU frequency, counter errors, scheduling, and memory measurements help describe selected runs but do not explain all variations by themselves.
-- **No optimization benefit has been measured.** The project has not yet demonstrated a controlled before/after end-to-end improvement from a new algorithm or implementation strategy.
+- **No optimization benefit has been measured yet.** The project has not yet demonstrated a controlled before/after end-to-end improvement from a new algorithm or implementation strategy. A frozen measurement protocol with pre-declared acceptance criteria is now in place ([`sapling_optimization_validation_protocol_20261017.md`](experiments/metadata/sapling_optimization_validation_protocol_20261017.md)); the optimization target itself is still to be chosen. With the current noise floor, end-to-end changes below ~3% at one thread are not resolvable.
+- **One earlier density figure has been corrected.** The windowed-exponent non-zero density was previously *inferred* from allocated bytes (~94% for H-query G1, ~24% for L/A/B). A direct census shows 99.35% of H's chunk slots are non-zero and that L/A/B's low heap usage comes from ~71% of their exponents being exactly 0 or 1 (already short-circuited). The earlier numbers should not be cited; see [`sapling_in_situ_conversion_and_exponent_density_20261017.md`](experiments/metadata/sapling_in_situ_conversion_and_exponent_density_20261017.md).
 
 These caveats are part of the result rather than a defect in presentation. They define what the available evidence can and cannot establish.
 
@@ -601,9 +634,9 @@ Further work should be driven by an explicit testable hypothesis rather than add
 
 Potential directions include:
 
-1. ~~**Controlled worker-fallback experiment.**~~ **Completed 2026-10-17** (affinity-pinned A/B ablation; see §9.1). Remaining related work: vary the fallback/queuing behavior at *multi-thread* settings, and re-test the 8/16/20-thread non-monotonicity (§17) with fixed affinity/power state.
+1. ~~**Controlled worker-fallback experiment.**~~ **Completed 2026-10-17** (affinity-pinned A/B ablation; see §9.1). Remaining related work: vary the fallback/queuing behavior at *multi-thread* settings.
 2. **MSM internal-stage analysis:** examine Pippenger window selection, bucket processing, accumulation, and the relative contributions of G1 and G2 calls.
-3. **Parallel execution analysis:** inspect why the 16- and 20-thread measurements differ and what causes the wider range in the eight-thread group.
+3. ~~**Parallel execution analysis:** inspect why the 16- and 20-thread measurements differ and what causes the wider range in the eight-thread group.~~ **Addressed 2026-10-17** under fixed affinity: saturation + oversubscription (see §7). Remaining: confirm whether the 4–8-thread plateau shifts with a different window size `c`.
 4. **Memory-access hypothesis:** only after the computational and synchronization costs are better isolated, test whether bucket organization, cache locality, or streaming techniques produce a measurable benefit.
 5. **Controlled optimization evaluation:** compare an explicit change against a frozen baseline, preserving correctness checks, source identity, raw records, and repeated measurements.
 
