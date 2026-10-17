@@ -4,10 +4,10 @@ use ff::{FieldBits, PrimeField, PrimeFieldBits};
 use group::prime::{PrimeCurve, PrimeCurveAffine};
 use std::io;
 use std::iter;
-use std::ops::AddAssign;
+use std::ops::{AddAssign, SubAssign};
 use std::sync::Arc;
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
 use std::time::Instant;
 
 #[cfg(feature = "multicore")]
@@ -65,6 +65,141 @@ fn msm_mem_probe_enabled() -> bool {
             .map(|value| value == "1")
             .unwrap_or(false)
     })
+}
+
+// Experimental/optimization knob: override the Pippenger window width `c` that
+// `multiexp` normally derives from the exponent count as `ceil(ln n)`.
+//
+// Why this exists: the archived stage profile for the Spend H-query MSM
+// (n = 131,071 -> c = 12, 4,095 buckets, 22 chunks) attributes ~94% of the call
+// to `bucket_fill`, i.e. the loop that repeatedly adds one base into a
+// pseudo-random bucket. That loop's cost is set by both the number of chunk
+// passes (`n * ceil(255/c)`) and the bucket array's cache footprint
+// (`(2^c - 1) * 144 B`). The textbook `c = ln n` optimum assumes uniform memory
+// cost, so it is worth measuring rather than assuming on this host.
+//
+// `SAPLING_MSM_WINDOW_C` is read once (values outside 1..=24 are ignored), and
+// `set_msm_window_c` exposes the same knob to benchmark binaries. With no
+// override the code below is bit-for-bit the previous behavior.
+const MSM_WINDOW_C_UNSET: i32 = i32::MIN;
+static MSM_WINDOW_C_OVERRIDE: AtomicI32 = AtomicI32::new(MSM_WINDOW_C_UNSET);
+
+fn msm_window_c_override() -> Option<u32> {
+    let mut value = MSM_WINDOW_C_OVERRIDE.load(Ordering::Relaxed);
+    if value == MSM_WINDOW_C_UNSET {
+        let parsed = std::env::var("SAPLING_MSM_WINDOW_C")
+            .ok()
+            .and_then(|raw| raw.trim().parse::<u32>().ok())
+            .filter(|c| (1..=24).contains(c))
+            .map(|c| c as i32)
+            .unwrap_or(-1);
+        let _ = MSM_WINDOW_C_OVERRIDE.compare_exchange(
+            MSM_WINDOW_C_UNSET,
+            parsed,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+        value = MSM_WINDOW_C_OVERRIDE.load(Ordering::Relaxed);
+    }
+
+    if value < 0 {
+        None
+    } else {
+        Some(value as u32)
+    }
+}
+
+/// Programmatic counterpart of `SAPLING_MSM_WINDOW_C` for benchmark binaries.
+/// `None` restores the built-in `ceil(ln n)` rule. Out-of-range values are
+/// treated as "no override".
+pub fn set_msm_window_c(c: Option<u32>) {
+    let value = match c {
+        Some(value) if (1..=24).contains(&value) => value as i32,
+        _ => -1,
+    };
+    MSM_WINDOW_C_OVERRIDE.store(value, Ordering::Relaxed);
+}
+
+// Signed ("balanced") window recoding for the Pippenger bucket fill.
+//
+// Why: the archived stage profile pinpoints `bucket_fill` at ~94% of the Spend
+// H-query MSM, and a micro-benchmark shows the cost is ~470 ns per mixed
+// addition regardless of the bucket array size -- i.e. it is arithmetic-bound
+// (bls12_381's mixed add is 11 `Fp` multiplications), not memory-bound. The
+// only lever left is the *number* of group operations:
+//
+//     total group ops = windows(c) * (n + 2 * buckets(c))
+//
+// where `windows(c)` are the chunk passes and `buckets(c)` the bucket array
+// length. Unsigned `c`-bit digits need `2^c - 1` buckets, and `ceil(ln n)` is
+// already close to optimal, so a pure `c` retune buys at most ~3.7%. Balanced
+// signed digits in
+// `[-2^(c-1), 2^(c-1)]` halve the bucket count needed at the same width, so one
+// extra bit per window becomes affordable at the *same* bucket array size --
+// which matters, because the measured per-add cost rises once the array leaves
+// the ~590 KB regime.
+//
+// Enabled by default; `SAPLING_MSM_SIGNED_DIGITS=0` restores the previous
+// unsigned recoding bit-for-bit (that is the A/B switch, and it is also how the
+// frozen baseline stays reproducible). `set_msm_signed_digits` exposes the same
+// knob to benchmark binaries.
+const MSM_SIGNED_DIGITS_DEFAULT: i32 = 1;
+static MSM_SIGNED_DIGITS_OVERRIDE: AtomicI32 = AtomicI32::new(i32::MIN);
+
+fn msm_signed_digits_enabled() -> bool {
+    let mut value = MSM_SIGNED_DIGITS_OVERRIDE.load(Ordering::Relaxed);
+    if value < 0 {
+        let parsed = match std::env::var("SAPLING_MSM_SIGNED_DIGITS") {
+            Ok(raw) => match raw.trim() {
+                "0" | "false" | "off" | "no" => 0,
+                _ => 1,
+            },
+            Err(_) => MSM_SIGNED_DIGITS_DEFAULT,
+        };
+        let _ = MSM_SIGNED_DIGITS_OVERRIDE.compare_exchange(
+            i32::MIN,
+            parsed,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+        value = MSM_SIGNED_DIGITS_OVERRIDE.load(Ordering::Relaxed);
+    }
+
+    value != 0
+}
+
+/// Programmatic counterpart of `SAPLING_MSM_SIGNED_DIGITS` for benchmarks.
+pub fn set_msm_signed_digits(enabled: bool) {
+    MSM_SIGNED_DIGITS_OVERRIDE.store(if enabled { 1 } else { 0 }, Ordering::Relaxed);
+}
+
+/// Number of balanced-signed digits per scalar (`c` bits per window).
+///
+/// This is one larger than the unsigned `ceil(bits / c)` count of the
+/// historical dispatch. The balanced recoding carries into the window above the
+/// most significant digit, and that carry can be non-zero whenever `c` divides
+/// `bits` (the final window then holds `c` significant bits and can exceed
+/// `2^(c-1)`). Allocating `bits / c + 1` windows absorbs it unconditionally; the
+/// extra window is a zero digit whenever the carry does not materialise.
+fn signed_window_count(bits: usize, c: u32) -> usize {
+    bits / c as usize + 1
+}
+
+/// Picks the window width that minimises the total number of group operations
+/// for the balanced-signed recoding, i.e.
+/// `(bits/c + 1) * (n + 2 * 2^(c-1))` (one bucket add per exponent per window
+/// plus two additions per bucket per window during the reduce).
+fn best_signed_window(bits: usize, exponent_count: usize) -> u32 {
+    let mut best_c = 3u32;
+    let mut best_ops = usize::MAX;
+    for c in 2..=20u32 {
+        let ops = signed_window_count(bits, c) * (exponent_count + 2 * (1usize << (c - 1)));
+        if ops < best_ops {
+            best_ops = ops;
+            best_c = c;
+        }
+    }
+    best_c
 }
 
 struct MsmMemProbe {
@@ -194,6 +329,19 @@ pub trait AddAssignFromSource: PrimeCurve {
         source: &mut S,
     ) -> Result<(), SynthesisError> {
         AddAssign::<&Self::Affine>::add_assign(self, source.next()?);
+        Ok(())
+    }
+
+    /// Subtracts the element parsed from the source, i.e. `self -= source.next()`.
+    /// Used by the signed-digit bucket fill, where roughly half of the window
+    /// digits are negative. `Sub`/`SubAssign` against an affine point is a
+    /// mixed addition of the negated point, so it costs the same as
+    /// `add_assign_from_source`.
+    fn sub_assign_from_source<S: Source<Self::Affine>>(
+        &mut self,
+        source: &mut S,
+    ) -> Result<(), SynthesisError> {
+        SubAssign::<&Self::Affine>::sub_assign(self, source.next()?);
         Ok(())
     }
 }
@@ -362,6 +510,70 @@ impl<F: PrimeFieldBits> Exponent<F> {
             ),
         }
     }
+
+    /// Balanced (signed) window recoding.
+    ///
+    /// Produces digits `d_i in [-2^(c-1), 2^(c-1)]` such that
+    /// `value == sum_i d_i * 2^(c*i)` exactly, where each digit is stored
+    /// *biased* by `+2^(c-1)` so the slot type stays `u64`:
+    ///
+    /// * `slot == 2^(c-1)`      -> zero digit (skip the base),
+    /// * `slot >  2^(c-1)`      -> `d = slot - 2^(c-1) > 0`, add the base,
+    /// * `slot <  2^(c-1)`      -> `d = slot - 2^(c-1) < 0`, subtract the base.
+    ///
+    /// The bucket used is always `|d| - 1`, so `2^(c-1)` buckets suffice
+    /// instead of the unsigned `2^c - 1`. The representation is exact within
+    /// `bits / c + 1` windows: the final carry is absorbed by the extra window
+    /// even when `c` divides `bits` (see `signed_window_count`).
+    fn chunks_signed(&self, c: usize) -> ChunkedExponent {
+        match self {
+            Self::Zero => ChunkedExponent::Zero,
+            Self::One => ChunkedExponent::One,
+            Self::Bits(exp) => {
+                let half = 1u64 << (c - 1);
+                let modulus = 1u64 << c;
+                let windows = signed_window_count(F::NUM_BITS as usize, c as u32);
+                let mut digits = Vec::with_capacity(windows);
+                let mut carry = 0u64;
+
+                for chunk in exp.chunks(c) {
+                    let mut window = carry;
+                    for (i, bit) in chunk.iter().by_vals().enumerate() {
+                        if bit {
+                            window += 1u64 << i;
+                        }
+                    }
+                    // window in [0, 2^c]; a value above half is represented as
+                    // the negative digit and carries one into the next window.
+                    if window > half {
+                        // Two's-complement slot: `window - modulus` is the
+                        // negative digit, `+ half` biases it into `[1, 2^c]`.
+                        digits.push(window.wrapping_sub(modulus).wrapping_add(half));
+                        carry = 1;
+                    } else {
+                        digits.push(window + half);
+                        carry = 0;
+                    }
+                }
+
+                // The dispatch indexes exactly `windows` slots, so normalise the
+                // length: trailing digits hold no significant bits (the carry is
+                // provably zero here), and a short vector is padded with zero
+                // digits.
+                debug_assert!(
+                    digits[windows.min(digits.len())..]
+                        .iter()
+                        .all(|slot| *slot == half),
+                    "signed recoding dropped a non-zero window"
+                );
+                debug_assert_eq!(carry, 0, "signed recoding carry escaped the scalar");
+                digits.truncate(windows);
+                digits.resize(windows, half);
+
+                ChunkedExponent::Chunks(digits)
+            }
+        }
+    }
 }
 
 fn multiexp_inner<Q, D, G, S>(
@@ -369,6 +581,7 @@ fn multiexp_inner<Q, D, G, S>(
     density_map: D,
     exponents: Arc<Vec<Exponent<G::Scalar>>>,
     c: u32,
+    signed: bool,
     profile: bool,
     branch_counts: bool,
     stage_timing: bool,
@@ -382,7 +595,17 @@ where
     S: SourceBuilder<G::Affine>,
 {
     let exponent_count = exponents.len();
-    let bucket_count = (1usize << c) - 1;
+    // Balanced-signed digits in `[-2^(c-1), 2^(c-1)]` are stored biased by
+    // `+2^(c-1)` and indexed by `|d| - 1`, so only `2^(c-1)` buckets are needed;
+    // the unsigned `c`-bit path keeps `2^c - 1` buckets.
+    let bucket_count = if signed {
+        1usize << (c - 1)
+    } else {
+        (1usize << c) - 1
+    };
+    // A signed zero digit is stored as the bias itself. In the unsigned path a
+    // zero digit is literally zero, so one marker covers both.
+    let zero_digit_slot = if signed { 1u64 << (c - 1) } else { 0 };
 
     // Allocate profiling counters only for diagnostic runs.
     let stage_profile = profile.then(|| Arc::new(MsmStageProfile::default()));
@@ -419,7 +642,11 @@ where
         let built = exponents
             .iter()
             .map(|exp| {
-                let chunked = exp.chunks(c as usize);
+                let chunked = if signed {
+                    exp.chunks_signed(c as usize)
+                } else {
+                    exp.chunks(c as usize)
+                };
 
                 match &chunked {
                     ChunkedExponent::Zero => zero_exponents += 1,
@@ -428,7 +655,7 @@ where
                         chunked_exponents += 1;
 
                         for chunk in chunks {
-                            if *chunk == 0 {
+                            if *chunk == zero_digit_slot {
                                 zero_chunk_slots += 1;
                             } else {
                                 nonzero_chunk_slots += 1;
@@ -458,7 +685,13 @@ where
         Arc::new(
             exponents
                 .iter()
-                .map(|exp| exp.chunks(c as usize))
+                .map(|exp| {
+                    if signed {
+                        exp.chunks_signed(c as usize)
+                    } else {
+                        exp.chunks(c as usize)
+                    }
+                })
                 .collect::<Vec<_>>(),
         )
     };
@@ -558,15 +791,26 @@ where
                             chunked_exponent_slot_visits += 1;
                             let digit = chunks[chunk];
 
-                            if digit != 0 {
-                                nonzero_window_digit_visits += 1;
-                                bucket_base_add_calls += 1;
-                                buckets[(digit - 1) as usize].add_assign_from_source(&mut bases)?;
-                            } else {
+                            if digit == zero_digit_slot {
                                 zero_window_digit_visits += 1;
                                 base_skip_calls += 1;
                                 base_skip_elements += 1;
                                 bases.skip(1)?;
+                            } else {
+                                nonzero_window_digit_visits += 1;
+                                bucket_base_add_calls += 1;
+                                if signed {
+                                    if digit > zero_digit_slot {
+                                        buckets[(digit - zero_digit_slot - 1) as usize]
+                                            .add_assign_from_source(&mut bases)?;
+                                    } else {
+                                        buckets[(zero_digit_slot - digit - 1) as usize]
+                                            .sub_assign_from_source(&mut bases)?;
+                                    }
+                                } else {
+                                    buckets[(digit - 1) as usize]
+                                        .add_assign_from_source(&mut bases)?;
+                                }
                             }
                         }
                     }
@@ -588,12 +832,18 @@ where
                             }
                         }
                         ChunkedExponent::Chunks(chunks) => {
-                            let exp = chunks[chunk];
+                            let digit = chunks[chunk];
 
-                            if exp != 0 {
-                                buckets[(exp - 1) as usize].add_assign_from_source(&mut bases)?;
-                            } else {
+                            if digit == zero_digit_slot {
                                 bases.skip(1)?;
+                            } else if !signed {
+                                buckets[(digit - 1) as usize].add_assign_from_source(&mut bases)?;
+                            } else if digit > zero_digit_slot {
+                                buckets[(digit - zero_digit_slot - 1) as usize]
+                                    .add_assign_from_source(&mut bases)?;
+                            } else {
+                                buckets[(zero_digit_slot - digit - 1) as usize]
+                                    .sub_assign_from_source(&mut bases)?;
                             }
                         }
                     }
@@ -651,16 +901,20 @@ where
 
     // This wall-clock measurement includes parallel scheduling and all chunk work.
     let chunk_parallel_start = stage_timing.then(Instant::now);
-    let parts = (0..G::Scalar::NUM_BITS)
+    let window_count = if signed {
+        signed_window_count(G::Scalar::NUM_BITS as usize, c)
+    } else {
+        // Same count as the historical `(0..NUM_BITS).step_by(c)` dispatch.
+        (G::Scalar::NUM_BITS as usize + c as usize - 1) / c as usize
+    };
+    let parts = (0..window_count as u32)
         .into_par_iter()
-        .step_by(c as usize)
-        .enumerate()
-        .map(|(chunk, _)| {
+        .map(|chunk| {
             this(
                 bases.clone(),
                 density_map.clone(),
                 chunked_exponents.clone(),
-                chunk,
+                chunk as usize,
             )
         })
         .collect::<Vec<Result<_, _>>>();
@@ -686,10 +940,11 @@ where
             max_concurrent_chunk_regions * bucket_count * bucket_element_size_bytes;
 
         eprintln!(
-            "BELLMAN_MSM_STAGE_PROFILE call_id={} exponent_count={} window={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_chunk_prep_ms={:.3} chunk_parallel_wall_ms={:.3} bucket_init_sum_ms={:.3} bucket_init_max_ms={:.3} bucket_fill_sum_ms={:.3} bucket_fill_max_ms={:.3} bucket_reduce_sum_ms={:.3} bucket_reduce_max_ms={:.3} max_concurrent_chunk_regions={} bucket_payload_at_max_concurrency_estimate_bytes={} result_merge_ms={:.3}",
+            "BELLMAN_MSM_STAGE_PROFILE call_id={} exponent_count={} window={} signed={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_chunk_prep_ms={:.3} chunk_parallel_wall_ms={:.3} bucket_init_sum_ms={:.3} bucket_init_max_ms={:.3} bucket_fill_sum_ms={:.3} bucket_fill_max_ms={:.3} bucket_reduce_sum_ms={:.3} bucket_reduce_max_ms={:.3} max_concurrent_chunk_regions={} bucket_payload_at_max_concurrency_estimate_bytes={} result_merge_ms={:.3}",
             call_id.unwrap_or(0),
             exponent_count,
             c,
+            signed as u8,
             bucket_count,
             chunk_count,
             bucket_element_size_bytes,
@@ -731,10 +986,11 @@ where
         let live_after_prep = mem_live_after_exponent_prep.unwrap_or(0);
 
         eprintln!(
-            "BELLMAN_MSM_MEM_PROBE call_id={} exponent_count={} window={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_size_bytes={} chunked_exponent_size_bytes={} live_start_bytes={} live_after_exponent_prep_bytes={} exponent_prep_live_delta_bytes={} bucket_alloc_max_bytes={} live_end_bytes={} live_end_delta_bytes={} zero_exponents={} one_exponents={} chunked_exponents={} nonzero_chunk_slots={} zero_chunk_slots={}",
+            "BELLMAN_MSM_MEM_PROBE call_id={} exponent_count={} window={} signed={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_size_bytes={} chunked_exponent_size_bytes={} live_start_bytes={} live_after_exponent_prep_bytes={} exponent_prep_live_delta_bytes={} bucket_alloc_max_bytes={} live_end_bytes={} live_end_delta_bytes={} zero_exponents={} one_exponents={} chunked_exponents={} nonzero_chunk_slots={} zero_chunk_slots={}",
             call_id.unwrap_or(0),
             exponent_count,
             c,
+            signed as u8,
             bucket_count,
             chunk_count,
             std::mem::size_of::<G>(),
@@ -772,11 +1028,19 @@ where
     G::Scalar: PrimeFieldBits,
     S: SourceBuilder<G::Affine>,
 {
-    let c = if exponents.len() < 32 {
-        3u32
-    } else {
-        (f64::from(exponents.len() as u32)).ln().ceil() as u32
-    };
+    let signed = msm_signed_digits_enabled();
+    let c = msm_window_c_override().unwrap_or_else(|| {
+        if signed {
+            // Balanced-signed digits halve the bucket count at the same width,
+            // so the optimal window is one bit wider than the unsigned rule and
+            // is worth recomputing from the operation-count model.
+            best_signed_window(G::Scalar::NUM_BITS as usize, exponents.len())
+        } else if exponents.len() < 32 {
+            3u32
+        } else {
+            (f64::from(exponents.len() as u32)).ln().ceil() as u32
+        }
+    });
 
     if let Some(query_size) = density_map.as_ref().get_query_size() {
         // If the density map has a known query size, it should not be
@@ -813,7 +1077,7 @@ where
         let start = profile.then(Instant::now);
         let task_start_timeline_ns = profile.then(profile_timestamp_ns);
         let result = multiexp_inner(
-            bases, density_map, exponents, c, profile, branch_counts, stage_timing, call_id,
+            bases, density_map, exponents, c, signed, profile, branch_counts, stage_timing, call_id,
         );
         // Read elapsed immediately after the inner call to minimize distortion.
         let elapsed_ms = start.map(|value| value.elapsed().as_secs_f64() * 1000.0);
