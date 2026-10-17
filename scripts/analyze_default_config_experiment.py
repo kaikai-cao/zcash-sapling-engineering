@@ -47,6 +47,9 @@ CONDITIONS = {
     "A_abab2_unbound_default28": ("spend", "abab2_unbound_default_20261017", "none (0)", "default (28)"),
     "B_abab2_pinned_pcore_8t": ("spend", "abab2_pinned8_pcore_20261017", "0xFFFF (P cores)", "8"),
     "C_abab2_pinned_pcore_16t": ("spend", "abab2_pinned16_pcore_20261017", "0xFFFF (P cores)", "16"),
+    "A_quiet_unbound_default28": ("spend", "quiet_abab_unbound_default_20261017", "none (0)", "default (28)"),
+    "B_quiet_pinned_pcore_8t": ("spend", "quiet_abab_pinned8_pcore_20261017", "0xFFFF (P cores)", "8"),
+    "C_quiet_pinned_pcore_16t": ("spend", "quiet_abab_pinned16_pcore_20261017", "0xFFFF (P cores)", "16"),
     "C_pinned_pcore_16t": ("spend", "pinned16_pcore_20261017", "0xFFFF (P cores)", "16"),
     "D_pinned_all28_defaultt": ("spend", "default_threads_all28_20261017", "0xFFFFFFF (all 28 LP)", "default (28)"),
     "E_pinned_all28_8t": ("spend", "pinned8_all28_20261017", "0xFFFFFFF (all 28 LP)", "8"),
@@ -190,6 +193,7 @@ def main() -> None:
     rounds = [
         ("round1 (A,B)", "A_abab_unbound_default28", "B_abab_pinned_pcore_8t", None),
         ("round2 (A,B,C)", "A_abab2_unbound_default28", "B_abab2_pinned_pcore_8t", "C_abab2_pinned_pcore_16t"),
+        ("quiet (A,B,C then C,B,A)", "A_quiet_unbound_default28", "B_quiet_pinned_pcore_8t", "C_quiet_pinned_pcore_16t"),
     ]
     ab_diffs: list[float] = []
     ab_a: list[float] = []
@@ -240,6 +244,23 @@ def main() -> None:
         row = results[alias]
         first, last = row["_batch_median"][0], row["_batch_median"][-1]
         print(f"  drift {alias}: first {first:.1f} -> last {last:.1f}"
+              f" ({100.0 * (last - first) / first:+.1f}%)")
+
+    print("\n== Quiet-host replication only (6 rounds; order A,B,C then C,B,A) ==")
+    quiet_a = results["A_quiet_unbound_default28"]
+    quiet_b = results["B_quiet_pinned_pcore_8t"]
+    quiet_c = results["C_quiet_pinned_pcore_16t"]
+    for label, row in (("A", quiet_a), ("B", quiet_b), ("C", quiet_c)):
+        print(f"  {label}: prove median {row['prove_median_ms']:>8} ms (n={row['proofs']})   "
+              f"params read {row['params_read_median_ms']:>8} ms   per-batch {row['per_batch_median_ms']}")
+    for label, row in (("B", quiet_b), ("C", quiet_c)):
+        change_quiet = 100.0 * (row["prove_median_ms"] - quiet_a["prove_median_ms"]) / quiet_a["prove_median_ms"]
+        u3, p3 = mann_whitney_u(quiet_a["_prove"], row["_prove"])
+        print(f"  {label} vs A in the quiet replication: {change_quiet:+.2f}%"
+              f"   Mann-Whitney U = {u3:.1f}, p = {p3:.4f}")
+    for label, row in (("A", quiet_a), ("B", quiet_b), ("C", quiet_c)):
+        first, last = row["_batch_median"][0], row["_batch_median"][-1]
+        print(f"  quiet drift {label}: first {first:.1f} -> last {last:.1f}"
               f" ({100.0 * (last - first) / first:+.1f}%)")
 
     print("\n== Attribution references ==")
