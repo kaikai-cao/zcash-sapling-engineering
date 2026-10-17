@@ -6,6 +6,9 @@ B_abab_pinned_pcore_8t,spend,abab_pinned8_pcore_20261017,0xFFFF (P cores),8,5,25
 A_abab2_unbound_default28,spend,abab2_unbound_default_20261017,none (0),default (28),5,25,True,54150.0,985.661,903.72,1108.046,965.9 958.3 999.9 1000.6 976.0,59249.9
 B_abab2_pinned_pcore_8t,spend,abab2_pinned8_pcore_20261017,0xFFFF (P cores),8,5,25,True,28029.6,944.914,809.966,1554.66,1261.1 843.7 888.2 1005.4 922.2,33170.1
 C_abab2_pinned_pcore_16t,spend,abab2_pinned16_pcore_20261017,0xFFFF (P cores),16,5,25,True,27949.9,979.683,774.272,1299.844,1135.0 962.6 1089.2 977.4 892.6,33135.2
+A_quiet_unbound_default28,spend,quiet_abab_unbound_default_20261017,none (0),default (28),6,30,True,52148.0,915.757,882.692,1117.264,941.5 905.2 888.4 903.2 927.2 914.5,56918.6
+B_quiet_pinned_pcore_8t,spend,quiet_abab_pinned8_pcore_20261017,0xFFFF (P cores),8,6,30,True,26805.1,824.453,713.92,1222.466,883.3 836.0 757.6 1055.9 929.2 723.3,30916.9
+C_quiet_pinned_pcore_16t,spend,quiet_abab_pinned16_pcore_20261017,0xFFFF (P cores),16,6,30,True,26982.8,823.157,716.398,1236.639,853.3 755.5 849.4 1152.8 822.0 762.9,30964.6
 C_pinned_pcore_16t,spend,pinned16_pcore_20261017,0xFFFF (P cores),16,2,10,True,27052.2,726.543,716.05,797.944,725.5 730.8,30776.7
 D_pinned_all28_defaultt,spend,default_threads_all28_20261017,0xFFFFFFF (all 28 LP),default (28),2,10,True,53621.9,986.957,940.251,1289.119,991.2 982.7,58788.7
 E_pinned_all28_8t,spend,pinned8_all28_20261017,0xFFFFFFF (all 28 LP),8,2,10,True,51832.6,1171.806,969.917,1351.887,1192.2 1163.3,57777.8
