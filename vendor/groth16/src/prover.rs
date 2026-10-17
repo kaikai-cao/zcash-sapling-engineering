@@ -29,6 +29,69 @@ fn g16_profile_enabled() -> bool {
     })
 }
 
+/// Whether the in-situ assignment-conversion memory probe is enabled.
+///
+/// Gated by `SAPLING_IN_SITU_CONVERSION_PROBE=1`. This exists to measure the
+/// `Vec<Scalar> -> Vec<Exponent>` transients *inside a real `create_proof`
+/// call* instead of in a standalone micro-benchmark. It is off by default and
+/// costs one cached `OnceLock` read per conversion when disabled.
+fn g16_in_situ_conversion_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_IN_SITU_CONVERSION_PROBE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+/// Collects a converted assignment vector, optionally reporting the directly
+/// measured allocation transient of the `Scalar -> Exponent` conversion.
+///
+/// The conversion shape is `source.into_iter().map(..).collect()`. The source
+/// `Vec` buffer is only released once `collect` completes, so the transient
+/// window holds `source_bytes + converted_bytes`. Because the source is
+/// consumed here, its length and element size are passed in by the caller.
+///
+/// The probe needs a process that feeds [`bellman::mem_probe`] from a tracking
+/// `#[global_allocator]`; when no harness enables tracking the counters read 0.
+#[inline]
+fn collect_conversion<T>(
+    site: &str,
+    source_len: usize,
+    source_elem_size: usize,
+    iter: impl Iterator<Item = T>,
+) -> Vec<T> {
+    if g16_in_situ_conversion_probe_enabled() {
+        let live_before = bellman::mem_probe::live();
+        bellman::mem_probe::reset_peak();
+
+        let converted: Vec<T> = iter.collect();
+
+        let peak = bellman::mem_probe::peak();
+        let live_after = bellman::mem_probe::live();
+        let converted_bytes = converted.len() * std::mem::size_of::<T>();
+
+        eprintln!(
+            "G16_IN_SITU_CONVERSION site={} n={} source_elem_size_bytes={} \
+source_bytes={} converted_bytes={} live_before_bytes={} peak_delta_bytes={} \
+live_after_delta_bytes={}",
+            site,
+            converted.len(),
+            source_elem_size,
+            source_len * source_elem_size,
+            converted_bytes,
+            live_before,
+            peak.saturating_sub(live_before),
+            live_after.saturating_sub(live_before),
+        );
+
+        converted
+    } else {
+        iter.collect()
+    }
+}
+
 fn eval<S: PrimeField>(
     lc: &LinearCombination<S>,
     mut input_density: Option<&mut DensityTracker>,
@@ -289,7 +352,17 @@ where
         let mut a = a.into_coeffs();
         let a_len = a.len() - 1;
         a.truncate(a_len);
-        Arc::new(a.into_iter().map(|s| s.0.into()).collect::<Vec<_>>())
+        let h_source_len = a.len();
+        let h_source_elem_size = a
+            .first()
+            .map(|element| std::mem::size_of_val(element))
+            .unwrap_or(0);
+        Arc::new(collect_conversion(
+            "h_exponents",
+            h_source_len,
+            h_source_elem_size,
+            a.into_iter().map(|s| s.0.into()),
+        ))
     };
 
     if profile {
@@ -306,20 +379,30 @@ where
     // Assignment conversion, query preparation, and the remaining MSM dispatches.
     // In single-thread mode, a multiexp call may block while doing fallback work.
     // TODO: parallelize if it's even helpful
-    let input_assignment = Arc::new(
-        prover
-            .input_assignment
-            .into_iter()
-            .map(|s| s.into())
-            .collect::<Vec<_>>(),
-    );
-    let aux_assignment = Arc::new(
-        prover
-            .aux_assignment
-            .into_iter()
-            .map(|s| s.into())
-            .collect::<Vec<_>>(),
-    );
+    let input_source_len = prover.input_assignment.len();
+    let input_source_elem_size = prover
+        .input_assignment
+        .first()
+        .map(|element| std::mem::size_of_val(element))
+        .unwrap_or(0);
+    let input_assignment = Arc::new(collect_conversion(
+        "input_assignment",
+        input_source_len,
+        input_source_elem_size,
+        prover.input_assignment.into_iter().map(|s| s.into()),
+    ));
+    let aux_source_len = prover.aux_assignment.len();
+    let aux_source_elem_size = prover
+        .aux_assignment
+        .first()
+        .map(|element| std::mem::size_of_val(element))
+        .unwrap_or(0);
+    let aux_assignment = Arc::new(collect_conversion(
+        "aux_assignment",
+        aux_source_len,
+        aux_source_elem_size,
+        prover.aux_assignment.into_iter().map(|s| s.into()),
+    ));
 
     let l = multiexp(
         &worker,

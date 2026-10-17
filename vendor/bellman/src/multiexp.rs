@@ -69,6 +69,13 @@ fn msm_mem_probe_enabled() -> bool {
 
 struct MsmMemProbe {
     bucket_alloc_max_bytes: AtomicUsize,
+    // Directly measured exponent-shape census (replaces the earlier density
+    // figure that was inferred from the allocated byte count).
+    zero_exponents: AtomicUsize,
+    one_exponents: AtomicUsize,
+    chunked_exponents: AtomicUsize,
+    nonzero_chunk_slots: AtomicUsize,
+    zero_chunk_slots: AtomicUsize,
 }
 
 #[derive(Default)]
@@ -385,19 +392,76 @@ where
     let mem_probe = msm_mem_probe_enabled().then(|| {
         Arc::new(MsmMemProbe {
             bucket_alloc_max_bytes: AtomicUsize::new(0),
+            zero_exponents: AtomicUsize::new(0),
+            one_exponents: AtomicUsize::new(0),
+            chunked_exponents: AtomicUsize::new(0),
+            nonzero_chunk_slots: AtomicUsize::new(0),
+            zero_chunk_slots: AtomicUsize::new(0),
         })
     });
     let worker_mem_probe = mem_probe.clone();
     let mem_live_start = mem_probe.as_ref().map(|_| crate::mem_probe::live());
 
     // Split the exponents into windows and measure this preprocessing step.
+    //
+    // When the memory probe is active we also take a census of the exponent
+    // shapes (Zero / One / Chunks) and of the non-zero chunk slots inside the
+    // chunked exponents. That turns the previously *inferred* density figure
+    // into a directly measured one. The census is off in normal runs.
     let exponent_chunk_prep_start = stage_timing.then(Instant::now);
-    let chunked_exponents = Arc::new(
-        exponents
+    let chunked_exponents = if let Some(probe) = mem_probe.as_ref() {
+        let mut zero_exponents = 0usize;
+        let mut one_exponents = 0usize;
+        let mut chunked_exponents = 0usize;
+        let mut nonzero_chunk_slots = 0usize;
+        let mut zero_chunk_slots = 0usize;
+
+        let built = exponents
             .iter()
-            .map(|exp| exp.chunks(c as usize))
-            .collect::<Vec<_>>(),
-    );
+            .map(|exp| {
+                let chunked = exp.chunks(c as usize);
+
+                match &chunked {
+                    ChunkedExponent::Zero => zero_exponents += 1,
+                    ChunkedExponent::One => one_exponents += 1,
+                    ChunkedExponent::Chunks(chunks) => {
+                        chunked_exponents += 1;
+
+                        for chunk in chunks {
+                            if *chunk == 0 {
+                                zero_chunk_slots += 1;
+                            } else {
+                                nonzero_chunk_slots += 1;
+                            }
+                        }
+                    }
+                }
+
+                chunked
+            })
+            .collect::<Vec<_>>();
+
+        probe.zero_exponents.store(zero_exponents, Ordering::Relaxed);
+        probe.one_exponents.store(one_exponents, Ordering::Relaxed);
+        probe
+            .chunked_exponents
+            .store(chunked_exponents, Ordering::Relaxed);
+        probe
+            .nonzero_chunk_slots
+            .store(nonzero_chunk_slots, Ordering::Relaxed);
+        probe
+            .zero_chunk_slots
+            .store(zero_chunk_slots, Ordering::Relaxed);
+
+        Arc::new(built)
+    } else {
+        Arc::new(
+            exponents
+                .iter()
+                .map(|exp| exp.chunks(c as usize))
+                .collect::<Vec<_>>(),
+        )
+    };
     let exponent_chunk_prep_ns = elapsed_ns(exponent_chunk_prep_start);
 
     let mem_live_after_exponent_prep = mem_probe.as_ref().map(|_| crate::mem_probe::live());
@@ -667,19 +731,26 @@ where
         let live_after_prep = mem_live_after_exponent_prep.unwrap_or(0);
 
         eprintln!(
-            "BELLMAN_MSM_MEM_PROBE call_id={} exponent_count={} window={} bucket_count={} chunk_count={} bucket_element_size_bytes={} live_start_bytes={} live_after_exponent_prep_bytes={} exponent_prep_live_delta_bytes={} bucket_alloc_max_bytes={} live_end_bytes={} live_end_delta_bytes={}",
+            "BELLMAN_MSM_MEM_PROBE call_id={} exponent_count={} window={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_size_bytes={} chunked_exponent_size_bytes={} live_start_bytes={} live_after_exponent_prep_bytes={} exponent_prep_live_delta_bytes={} bucket_alloc_max_bytes={} live_end_bytes={} live_end_delta_bytes={} zero_exponents={} one_exponents={} chunked_exponents={} nonzero_chunk_slots={} zero_chunk_slots={}",
             call_id.unwrap_or(0),
             exponent_count,
             c,
             bucket_count,
             chunk_count,
             std::mem::size_of::<G>(),
+            std::mem::size_of::<Exponent<G::Scalar>>(),
+            std::mem::size_of::<ChunkedExponent>(),
             live_start,
             live_after_prep,
             live_after_prep.saturating_sub(live_start),
             probe.bucket_alloc_max_bytes.load(Ordering::Relaxed),
             live_end,
             live_end.saturating_sub(live_start),
+            probe.zero_exponents.load(Ordering::Relaxed),
+            probe.one_exponents.load(Ordering::Relaxed),
+            probe.chunked_exponents.load(Ordering::Relaxed),
+            probe.nonzero_chunk_slots.load(Ordering::Relaxed),
+            probe.zero_chunk_slots.load(Ordering::Relaxed),
         );
     }
 

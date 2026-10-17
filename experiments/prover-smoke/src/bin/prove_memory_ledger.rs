@@ -216,7 +216,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     // ----- CSV for provenance -----
     let raw_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../experiments/raw/csv");
     create_dir_all(&raw_dir)?;
-    let csv_path = raw_dir.join("sapling_prove_memory_ledger.csv");
+    // Default to the original ledger file; allow an explicit override so a
+    // separate diagnostic run does not append into an already-archived batch.
+    let csv_path = std::env::var_os("SAPLING_PROVER_RUNS_CSV")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| raw_dir.join("sapling_prove_memory_ledger.csv"));
+    if let Some(parent) = csv_path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        create_dir_all(parent)?;
+    }
     let mut csv = OpenOptions::new()
         .create(true)
         .append(true)
