@@ -7,6 +7,8 @@ param(
     [string]$Prover = 'spend',
 
     # Rayon thread counts to test. Each entry is run for every affinity mask.
+    # A value of 0 means "do not set RAYON_NUM_THREADS" (leave the ambient
+    # rayon default, i.e. one worker per logical processor).
     [int[]]$Threads = @(1),
 
     # Processor-affinity mask(s) applied to the prover process. 0 = leave the
@@ -116,6 +118,20 @@ $paramsHash = (Get-FileHash -LiteralPath $ParameterPath -Algorithm SHA256).Hash.
 $gitHead = (& git -C $RepoRoot rev-parse HEAD).Trim()
 $dirtyAtStart = @((& git -C $RepoRoot status --porcelain 2>$null) | Where-Object { $_ -and $_.Trim() }).Count -gt 0
 
+# Reject affinity masks that cannot exist on this machine. PowerShell parses a
+# bare 0xFFFFFFFF as the 32-bit integer -1, which would silently become an
+# all-ones 64-bit mask and then fail inside ProcessorAffinity.
+$logicalProcessors = [Environment]::ProcessorCount
+$maskLimit = 1L -shl $logicalProcessors
+foreach ($mask in $AffinityMasks) {
+    if ($mask -lt 0) {
+        throw ("Affinity mask {0} is negative (a 32-bit literal such as 0xFFFFFFFF overflows to -1). Use the real mask for this {1}-logical-processor machine, e.g. 0x{2:X}." -f $mask, $logicalProcessors, ($maskLimit - 1))
+    }
+    if ($mask -ge $maskLimit) {
+        throw ("Affinity mask 0x{0:X} sets bits beyond the {1} logical processors on this machine (max 0x{2:X})." -f $mask, $logicalProcessors, ($maskLimit - 1))
+    }
+}
+
 $summaryRows = New-Object System.Collections.Generic.List[object]
 $batchCounter = 0
 
@@ -143,18 +159,24 @@ try {
 
     foreach ($mask in $AffinityMasks) {
         foreach ($threadCount in $Threads) {
-            $env:RAYON_NUM_THREADS = "$threadCount"
+            if ($threadCount -gt 0) {
+                $env:RAYON_NUM_THREADS = "$threadCount"
+            }
+            else {
+                Remove-Item Env:RAYON_NUM_THREADS -ErrorAction SilentlyContinue
+            }
+            $threadTag = if ($threadCount -gt 0) { "$threadCount" } else { 'default' }
             $maskTag = '0x{0:X}' -f $mask
 
             Write-Host ('==================================================')
-            Write-Host ("config affinity_mask={0} rayon_threads={1}" -f $maskTag, $threadCount)
+            Write-Host ("config affinity_mask={0} rayon_threads={1}" -f $maskTag, $threadTag)
             Write-Host ('==================================================')
 
             $configRows = New-Object System.Collections.Generic.List[object]
 
             for ($batch = 1; $batch -le $Batches; $batch++) {
                 $batchCounter++
-                $tag = 'sapling_{0}_{1}_t{2}_{3}_b{4}' -f $Prover, $Label, $threadCount, $maskTag, $batch
+                $tag = 'sapling_{0}_{1}_t{2}_{3}_b{4}' -f $Prover, $Label, $threadTag, $maskTag, $batch
                 $stdoutLog = Join-Path $logDir ("$tag.stdout.log")
                 $stderrLog = Join-Path $logDir ("$tag.stderr.log")
 
@@ -231,7 +253,7 @@ try {
                     label            = $Label
                     affinity_mask    = $maskTag
                     affinity_decimal = $mask
-                    rayon_threads    = $threadCount
+                    rayon_threads    = $threadTag
                     batches          = $Batches
                     proofs           = $allProve.Count
                     median_prove_ms  = [Math]::Round($medianProve, 3)
