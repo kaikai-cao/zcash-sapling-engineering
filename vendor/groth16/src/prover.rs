@@ -45,6 +45,65 @@ fn g16_in_situ_conversion_probe_enabled() -> bool {
     })
 }
 
+/// Whether the per-phase prove-peak attribution probe is enabled.
+///
+/// Gated by `SAPLING_G16_MEM_PHASE_PROBE=1`. The overall prove peak is a single
+/// watermark, so it says *that* the phase peak is high but not *where* it is.
+/// This probe reports the live bytes and the peak watermark observed inside
+/// each stage of `create_proof` and then re-arms the watermark, which pinpoints
+/// the stage that owns the peak.
+///
+/// It is off by default and costs one cached `OnceLock` read per stage when
+/// disabled. While enabled it re-arms the watermark at every boundary, so the
+/// enclosing harness's own "peak since reset" figure is only valid outside the
+/// probe; the authoritative composition is the per-phase rows.
+fn g16_mem_phase_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_G16_MEM_PHASE_PROBE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+/// Reports the live bytes and the peak watermark since the previous boundary,
+/// then re-arms the watermark at the current live value.
+///
+/// `phase_peak_abs_bytes` is therefore the highest live value reached during
+/// the stage that just finished, on the same absolute scale as
+/// `BELLMAN_MSM_MEM_PROBE` and the ledger. Because re-arming destroys the
+/// caller's own watermark, `running_max_abs_bytes` carries the maximum over
+/// the phases seen since `pre_body`, i.e. the body-wide peak computed from the
+/// per-phase peaks.
+#[inline]
+fn g16_mem_phase_boundary(phase: &str) {
+    static RUNNING_MAX_ABS_BYTES: std::sync::atomic::AtomicUsize =
+        std::sync::atomic::AtomicUsize::new(0);
+
+    if !g16_mem_phase_probe_enabled() {
+        return;
+    }
+
+    let live = bellman::mem_probe::live();
+    let peak = bellman::mem_probe::peak();
+    if phase == "pre_body" {
+        RUNNING_MAX_ABS_BYTES.store(peak, std::sync::atomic::Ordering::Relaxed);
+    }
+    let running_max = RUNNING_MAX_ABS_BYTES.fetch_max(peak, std::sync::atomic::Ordering::Relaxed);
+    let running_max = running_max.max(peak);
+
+    eprintln!(
+        "G16_MEM_PHASE phase={} live_bytes={} phase_peak_abs_bytes={} phase_peak_delta_bytes={} running_max_abs_bytes={}",
+        phase,
+        live,
+        peak,
+        peak.saturating_sub(live),
+        running_max,
+    );
+    bellman::mem_probe::reset_peak();
+}
+
 /// Collects a converted assignment vector, optionally reporting the directly
 /// measured allocation transient of the `Scalar -> Exponent` conversion.
 ///
@@ -287,6 +346,7 @@ where
     // Marks delimit sequential wall-clock phases. Each boundary is captured once
     // and reused by adjacent phases, avoiding double-counting between phases.
     let mut profile_marks: [Option<std::time::Instant>; 8] = [None; 8];
+    g16_mem_phase_boundary("pre_body");
     if profile {
         profile_marks[0] = Some(std::time::Instant::now());
         eprintln!(
@@ -322,6 +382,7 @@ where
     if profile {
         profile_marks[1] = Some(std::time::Instant::now());
     }
+    g16_mem_phase_boundary("circuit_synthesis");
 
     let worker = Worker::new();
 
@@ -330,6 +391,7 @@ where
     if profile {
         profile_marks[2] = Some(std::time::Instant::now());
     }
+    g16_mem_phase_boundary("worker_vk_setup");
 
     // QAP polynomial transforms and H-query exponent preparation.
     let h_exponents = {
@@ -368,6 +430,7 @@ where
     if profile {
         profile_marks[3] = Some(std::time::Instant::now());
     }
+    g16_mem_phase_boundary("qap_fft_h_exponent_prep");
 
     // This call can include synchronous fallback work inside Worker::compute.
     let h = multiexp(&worker, params.get_h(h_exponents.len())?, FullDensity, h_exponents);
@@ -375,6 +438,7 @@ where
     if profile {
         profile_marks[4] = Some(std::time::Instant::now());
     }
+    g16_mem_phase_boundary("h_query_access_dispatch");
 
     // Assignment conversion, query preparation, and the remaining MSM dispatches.
     // In single-thread mode, a multiexp call may block while doing fallback work.
@@ -464,6 +528,7 @@ where
     if profile {
         profile_marks[5] = Some(std::time::Instant::now());
     }
+    g16_mem_phase_boundary("assignment_query_prep_dispatch");
 
     if bool::from(vk.delta_g1.is_identity() | vk.delta_g2.is_identity()) {
         // If this element is zero, someone is trying to perform a
@@ -492,6 +557,7 @@ where
             proof_id, profile_timestamp_ns(),
         );
     }
+    g16_mem_phase_boundary("proof_scalar_terms");
 
     let mut a_answer = a_inputs.wait()?;
     AddAssign::<&E::G1>::add_assign(&mut a_answer, &a_aux.wait()?);
@@ -515,6 +581,7 @@ where
         b: g_b.to_affine(),
         c: g_c.to_affine(),
     };
+    g16_mem_phase_boundary("wait_and_assembly");
 
     if profile {
         profile_marks[7] = Some(std::time::Instant::now());
