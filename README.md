@@ -321,6 +321,15 @@ Targets a and f each passed/failed on their own thresholds, which split the join
 
 Pre-registration: [`sapling_combo_default_preregistration_20261018.md`](experiments/metadata/sapling_combo_default_preregistration_20261018.md); results: [`sapling_combo_default_results_20261018.md`](experiments/metadata/sapling_combo_default_results_20261018.md); derived tables: [`sapling_combo_default_memory_20261018.csv`](results/tables/sapling_combo_default_memory_20261018.csv), [`sapling_combo_default_abba_20261018.csv`](results/tables/sapling_combo_default_abba_20261018.csv); analysis: [`scripts/analyze_combo_default_experiment.py`](scripts/analyze_combo_default_experiment.py).
 
+### 7.6 Campaign closure: both dimensions at their floors (2026-10-18)
+
+After the default flip, the same methodology (stage decomposition before any threshold) was applied to close the campaign. Two reconnaissance notes, both with a new default-off probe, record that neither dimension has a mechanism-backed target left:
+
+- **Memory — structural floor (86.18 MB).** [`sapling_default_stage_decomposition_20261018.md`](experiments/metadata/sapling_default_stage_decomposition_20261018.md): the global peak is owned by the end of `circuit_synthesis`; the second-highest phase peak (82,870,091 B) bounds the convertible maximum at 3,314,512 B. A new capacity probe (`SAPLING_G16_SYNTH_CAPACITY_PROBE`) shows a/b/c/aux all sit at capacity 131,072 — exactly the QAP domain size, fully consumed by `from_coeffs`, so pre-reserving exact lengths would move realloc transients into the QAP phase and *raise* the peak. The only true slack (aux, 1,037,888 B) is unreleasable at the peak.
+- **Time — arithmetic floor (1-thread prove ~3.4 s).** [`sapling_default_time_profile_20261018.md`](experiments/metadata/sapling_default_time_profile_20261018.md): MSM is ~85% of prove and bucket fill ~78% of MSM at 462 ns per nonzero digit (same-batch measurement, matching the documented ~470 ns mixed-add bound); the op-count model shows window c=13 already optimal for all three large queries. Candidate c (B-G2 aux) has no mechanism; candidate d (assignment conversion parallelization) is below the 3% bar (<1% of prove).
+
+Both notes are reconnaissance records, not target verdicts; the a–g campaign results remain valid. Scope of the closure: this pipeline (vendored bellman + Sapling Spend/Output) under the frozen measurement conventions.
+
 ## 8. Source-Level Stage and MSM Profiling
 
 ### 8.1 Instrumentation approach

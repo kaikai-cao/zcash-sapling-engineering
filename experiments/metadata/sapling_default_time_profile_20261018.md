@@ -15,7 +15,7 @@
 | 二进制 | spend_prover_smoke（翻转后重编译） |
 | 剖析开关 | `SAPLING_PROFILE=1` + `SAPLING_MSM_STAGE_TIMING=1`（分支计数器关） |
 | 线程/亲和 | RAYON_NUM_THREADS=1，亲和 0x1 |
-| 原始数据 | `experiments/raw/logs/sapling_spend_msm_stage_recon_20261018.log`，`experiments/raw/csv/sapling_spend_prover_runs_msm_stage_recon_20261018.csv` |
+| 原始数据 | `experiments/raw/logs/sapling_spend_msm_stage_recon_20261018.log`（阶段墙时间 + MSM 阶段剖面），`experiments/raw/logs/sapling_spend_msm_branch_recon_20261018.log`（同配置 + 分支计数器，取每数字成本的分母），对应 CSV 两个 |
 
 **口径警告**：剖析本身有开销，绝对值不可直接与无剖析战役比较（本批 body 中位
 3,625.2 ms vs 目标 g 无剖析臂集中位 ≈3,429 ms）。本文只用**阶段间比例**与
@@ -50,10 +50,16 @@
 | IC（8 指数） | G1/G2 | 3 | 2.5 | — | — | — | — |
 
 - fill 合计 2,448.1 ms/证明，reduce 合计 681.7 ms/证明。
-- H query 每非零数字 **≈494 ns**（1,415.2 ms / 2,864,709 个非零窗口数字），与源码注释
-  记录的 ~470 ns/次混合加一致 ⇒ **算术受限**（bls12_381 混合加 = 11 个 Fp 乘），
-  非内存受限（桶阵列 589,824 B，在 L2 内，成本与阵列大小无关——注释中的微基准结论成立）。
+- **每非零数字成本（同批次核算）**：第二批（同配置 + 分支计数器）实测 H query 非零窗口数字
+  **2,620,825/证明**（5 次运行逐字节确定，无 Zero/One 指数——稠密），以同批 fill 中位
+  1,211.7 ms 计 = **462 ns/非零数字**，与源码注释记录的 ~470 ns 混合加一致
+  ⇒ **算术受限**（bls12_381 混合加 = 11 个 Fp 乘），非内存受限（桶阵列 589,824 B，
+  在 L2 内，成本与阵列大小无关——注释中的微基准结论成立）。
 - G2 每数字成本 ≈ G1 的 2.6×（Fp2 乘 = 3 个 Fp 乘），与分支×阶段合并分析（F2）一致。
+- 分支计数还显示 lazy recoding 的作用面：aux 类查询的指数中 Zero/One 占多数
+  （G1 aux 组每证明约 372 万 Zero/One 槽位 vs 约 107 万非零数字；G2 aux 每证明
+  约 104 万 Zero/One 槽位 vs 约 18 万非零数字），这些槽位走 skip/直加路径——
+  目标 a/g 的收益正来自于此，且已落库。
 
 ## 3. 候选机制逐一核查
 
@@ -92,9 +98,9 @@
 
 ## 4. 结论：时间线到达算术地板
 
-1. prove 时间 ≈85% 是 MSM；MSM 的 78% 是 bucket fill；fill 是每数字 ~470–495 ns 的
-   混合加，操作数由 Pippenger 算法固定（`windows × (n + 2×buckets)`），
-   窗口 c=13 对全部三大 query 已验证最优。
+1. prove 时间 ≈85% 是 MSM；MSM 的 78% 是 bucket fill；fill 为每非零数字 462 ns
+   （同批次实测，与 ~470 ns 混合加一致）的算术受限成本，操作数由 Pippenger
+   算法固定（`windows × (n + 2×buckets)`），窗口 c=13 对全部三大 query 已验证最优。
 2. 两轮 recoding 收益（目标 b 有符号数字、目标 a/g lazy recoding）均已落库；
    窗口重调上限 ≤3.7%（源码注释的既有结论），本次按 query 核算同样无净获益。
 3. 候选 c 无机制、候选 d 低于 bar。**不再设立时间优化目标。**

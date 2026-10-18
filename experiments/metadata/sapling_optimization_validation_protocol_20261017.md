@@ -134,6 +134,11 @@ experiments/metadata/<label>_<yyyymmdd>.md                                # 结�
 >
 > **状态更新（2026-10-18，目标 f 完成后追加）：** 候选 f 已完成（**通过**，六项全过，`sapling_qap_fft_scratch_results_20261018.md`），随后**目标 g（组合验收 + 默认值切换授权）亦已完成并通过**：预注册 `sapling_combo_default_preregistration_20261018.md`（`9e7ee2e`，先于任何目标 g 测量），结果 `sapling_combo_default_results_20261018.md`。判定：组合 prove 峰值 103.06 → 86.18 MB（−16,878,888 B / −16.38% ≥ 冻结的 15,000,000 B 门槛，即目标 a 单独未达到的门槛）、正确性 100%、三臂集时间全部非退化且更快、翻转后复验三项全过。**`SAPLING_MSM_LAZY_RECODING` 与 `SAPLING_FFT_SERIAL_SINGLE_THREAD` 的默认值已于 `d4ed1df` 切换为 `1`**（环境变量仍可双向覆盖），shipped default 的 prove 峰值由 103.06 MB 降至 86.18 MB。候选 a/c/d 中 a 已完成（未通过），**c/d 仍未做**；本节上表的证据与预期保持原样，不改动。
 
+**状态更新（2026-10-18，侦察结项后追加）：** 默认值切换后，按方法论先做阶段分解再决定是否立项，两个维度均到达地板，**优化战役 a–g 完结**：
+
+- **内存线结项**（`sapling_default_stage_decomposition_20261018.md`）：全局峰值 86,184,603 B 归属 `circuit_synthesis` 末端；第二高阶段峰值 82,870,091 B ⇒ 物理可转化上限 3,314,512 B。新增容量探针实测：a/b/c/aux 容量均为 131,072（= QAP 域大小，被 `from_coeffs` 的 resize 整体消费，预留下精确长度反而把重分配瞬态移进 QAP 阶段、抬高峰值）；唯一真余量是 aux 的 1,037,888 B，峰值点不可释放（shrink 瞬态 +3.16 MB；预知见证数无干净机制）。⇒ **无机制可达上限，不再设立内存目标。**
+- **时间线结项**（`sapling_default_time_profile_20261018.md`）：MSM 占 prove ≈85%，fill 占 MSM 78%，fill 为每数字 ~470–495 ns 的混合加（算术受限），操作数模型核算 c=13 对三大 query 均已最优。**候选 c 无机制**（fill 与 H query 同一循环；reduce 为 O(chunks×buckets) 倍加；窗口重调无任何 query 净获益）；**候选 d 低于 bar**（转换占 prove <1%）。⇒ **不再设立时间目标。**
+
 ---
 
 ## 8. 与本轮其它文档的关系
