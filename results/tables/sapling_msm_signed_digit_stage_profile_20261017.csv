@@ -1,0 +1,4 @@
+exponent_count,off_window,off_signed,off_chunk_count,off_bucket_count,off_samples,off_bucket_fill_sum_ms,off_bucket_reduce_sum_ms,off_exponent_chunk_prep_ms,on_window,on_signed,on_chunk_count,on_bucket_count,on_samples,on_bucket_fill_sum_ms,on_bucket_reduce_sum_ms,on_exponent_chunk_prep_ms,fill_rel_pct,reduce_rel_pct
+131071,12,0,22,4095,5,1561.052,102.489,44.591,13,1,20,4096,5,1359.315,88.709,50.342,-12.92,-13.45
+98638,12,0,22,4095,20,292.361,101.349,9.474,13,1,20,4096,20,258.647,89.713,11.0,-11.53,-11.48
+8,3,0,85,7,15,0.009,0.729,0.006,3,1,86,4,15,0.009,0.395,0.008,0.0,-45.82

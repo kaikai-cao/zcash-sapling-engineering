@@ -42,9 +42,7 @@ fn measure_output_load_validate(path: &Path) -> f64 {
 
 /// 使用流式读取计算 SHA-256 和 BLAKE2b-512，
 /// 避免一次性将整个参数文件载入额外的内存。
-fn calculate_hashes(
-    path: &Path,
-) -> Result<(u64, String, String), Box<dyn Error>> {
+fn calculate_hashes(path: &Path) -> Result<(u64, String, String), Box<dyn Error>> {
     let metadata = fs::metadata(path)?;
     let file_bytes = metadata.len();
 
@@ -52,9 +50,7 @@ fn calculate_hashes(
     let mut reader = BufReader::new(file);
 
     let mut sha256 = Sha256::new();
-    let mut blake2b = Blake2bParams::new()
-        .hash_length(64)
-        .to_state();
+    let mut blake2b = Blake2bParams::new().hash_length(64).to_state();
 
     let mut buffer = [0u8; 1024 * 1024];
 
@@ -103,27 +99,21 @@ fn build_csv_row(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let spend_path =
-        PathBuf::from(PARAMS_DIR).join("sapling-spend.params");
+    let spend_path = PathBuf::from(PARAMS_DIR).join("sapling-spend.params");
 
-    let output_path =
-        PathBuf::from(PARAMS_DIR).join("sapling-output.params");
+    let output_path = PathBuf::from(PARAMS_DIR).join("sapling-output.params");
 
     // 每次运行生成一个批次编号，两条记录共用该编号。
-    let batch_id = SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
-        .as_millis();
+    let batch_id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
 
     // 第一步：分别读取并验证参数，独立计时。
     println!("正在读取并验证 Spend 参数……");
-    let spend_load_validate_ms =
-        measure_spend_load_validate(&spend_path);
+    let spend_load_validate_ms = measure_spend_load_validate(&spend_path);
 
     println!("Spend load_validate_ms={spend_load_validate_ms:.3}");
 
     println!("正在读取并验证 Output 参数……");
-    let output_load_validate_ms =
-        measure_output_load_validate(&output_path);
+    let output_load_validate_ms = measure_output_load_validate(&output_path);
 
     println!("Output load_validate_ms={output_load_validate_ms:.3}");
 
@@ -147,13 +137,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
 
     // 第三步：把原始数据追加到 experiments/raw/csv。
-    let output_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../experiments/raw/csv");
+    let output_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../experiments/raw/csv");
 
     fs::create_dir_all(&output_dir)?;
 
-    let csv_path =
-        output_dir.join("sapling_parameter_metadata_raw.csv");
+    let csv_path = output_dir.join("sapling_parameter_metadata_raw.csv");
 
     let mut csv_file = OpenOptions::new()
         .create(true)

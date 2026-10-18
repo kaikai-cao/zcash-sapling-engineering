@@ -1,6 +1,4 @@
-use bellman::{
-    Circuit, ConstraintSystem, Index, LinearCombination, SynthesisError, Variable,
-};
+use bellman::{Circuit, ConstraintSystem, Index, LinearCombination, SynthesisError, Variable};
 use bls12_381::Scalar;
 use sapling_crypto::circuit::{Output, Spend};
 use std::{error::Error, fs, path::PathBuf};
@@ -30,11 +28,7 @@ impl ConstraintSystem<Scalar> for Counts {
         Variable::new_unchecked(Index::Input(0))
     }
 
-    fn alloc<F, A, AR>(
-        &mut self,
-        _annotation: A,
-        _f: F,
-    ) -> Result<Variable, SynthesisError>
+    fn alloc<F, A, AR>(&mut self, _annotation: A, _f: F) -> Result<Variable, SynthesisError>
     where
         F: FnOnce() -> Result<Scalar, SynthesisError>,
         A: FnOnce() -> AR,
@@ -46,11 +40,7 @@ impl ConstraintSystem<Scalar> for Counts {
         Ok(Variable::new_unchecked(Index::Aux(index)))
     }
 
-    fn alloc_input<F, A, AR>(
-        &mut self,
-        _annotation: A,
-        _f: F,
-    ) -> Result<Variable, SynthesisError>
+    fn alloc_input<F, A, AR>(&mut self, _annotation: A, _f: F) -> Result<Variable, SynthesisError>
     where
         F: FnOnce() -> Result<Scalar, SynthesisError>,
         A: FnOnce() -> AR,
@@ -62,25 +52,13 @@ impl ConstraintSystem<Scalar> for Counts {
         Ok(Variable::new_unchecked(Index::Input(index)))
     }
 
-    fn enforce<A, AR, LA, LB, LC>(
-        &mut self,
-        _annotation: A,
-        _a: LA,
-        _b: LB,
-        _c: LC,
-    )
+    fn enforce<A, AR, LA, LB, LC>(&mut self, _annotation: A, _a: LA, _b: LB, _c: LC)
     where
         A: FnOnce() -> AR,
         AR: Into<String>,
-        LA: FnOnce(
-            LinearCombination<Scalar>,
-        ) -> LinearCombination<Scalar>,
-        LB: FnOnce(
-            LinearCombination<Scalar>,
-        ) -> LinearCombination<Scalar>,
-        LC: FnOnce(
-            LinearCombination<Scalar>,
-        ) -> LinearCombination<Scalar>,
+        LA: FnOnce(LinearCombination<Scalar>) -> LinearCombination<Scalar>,
+        LB: FnOnce(LinearCombination<Scalar>) -> LinearCombination<Scalar>,
+        LC: FnOnce(LinearCombination<Scalar>) -> LinearCombination<Scalar>,
     {
         self.constraints += 1;
     }
@@ -143,10 +121,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         esk: None,
     };
 
-    let stats = [
-        measure("Spend", spend)?,
-        measure("Output", output)?,
-    ];
+    let stats = [measure("Spend", spend)?, measure("Output", output)?];
 
     let mut csv = String::from(
         "circuit,constraints,auxiliary_variables,\
@@ -167,13 +142,11 @@ domain_size_estimate\n",
     }
 
     // 原始测量数据统一写入 experiments/raw/csv。
-    let output_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../experiments/raw/csv");
+    let output_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../experiments/raw/csv");
 
     fs::create_dir_all(&output_dir)?;
 
-    let output_path =
-        output_dir.join("sapling_circuit_scale_raw.csv");
+    let output_path = output_dir.join("sapling_circuit_scale_raw.csv");
 
     fs::write(&output_path, &csv)?;
 

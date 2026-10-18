@@ -1,0 +1,11 @@
+prover,regime,batches,proofs,median_prove_ms,min_prove_ms,max_prove_ms,share_of_proofs_pct
+spend,p_core_regime,19,95,3460.746,3377.138,7728.332,70.37
+spend,e_core_regime,8,40,7131.116,4499.504,8559.108,29.63
+spend,pooled_undivided,27,135,3515.936,3377.138,8559.108,100.0
+spend,p_core_cluster_proof,21,94,3460.476,3377.138,5357.525,69.63
+spend,e_core_cluster_proof,11,41,7136.841,5492.1,8559.108,30.37
+output,p_core_regime,26,130,519.33,498.33,747.464,86.67
+output,e_core_regime,4,20,973.212,507.648,1148.469,13.33
+output,pooled_undivided,30,150,521.83,498.33,1148.469,100.0
+output,p_core_cluster_proof,30,136,521.04,498.33,747.464,90.67
+output,e_core_cluster_proof,4,14,989.183,868.88,1148.469,9.33

@@ -1,0 +1,33 @@
+# exploratory: build-flag probe (both)
+# exe: C:\Users\dell\AppData\Local\Temp\opencode\zse-flagprobe-exes\msm_both.exe
+# sha256: 
+b242119bc6616b0eadcc8c339734998323178710677b9bdd35f417e364dde374
+# affinity: 0x1 (LP0), RAYON_NUM_THREADS=1, n=131071, reps=3
+# git_head: 
+c507e0e0fc95e73e789c023c256d31d4ff004254
+
+bench=msm_window n=131071 reps=3 rayon_threads=1 windows=[8, 10, 12, 13, 14, 16]
+fixture bases=131071 exponents=131071 build_ms=3188.7 base_bytes=13631384 exponent_bytes=5242840
+probe=add_single_acc n=131071 median_ms=59.840 ns_per_add=456.5
+probe=add_rand_bucket c=8 buckets=255 bucket_array_bytes=36720 median_ms=61.359 ns_per_add=468.1
+probe=add_rand_bucket c=10 buckets=1023 bucket_array_bytes=147312 median_ms=60.683 ns_per_add=463.0
+probe=add_rand_bucket c=12 buckets=4095 bucket_array_bytes=589680 median_ms=62.813 ns_per_add=479.2
+correctness=naive_prefix c=1 ok
+correctness=naive_prefix c=3 ok
+correctness=naive_prefix c=5 ok
+correctness=naive_prefix c=8 ok
+probe=msm c=8 chunks=32 buckets=255 fill_ops=4194272 median_ms=2232.827 ns_per_fill_op=532.4
+probe=msm c=10 chunks=26 buckets=1023 fill_ops=3407846 median_ms=1859.151 ns_per_fill_op=545.6
+correctness=c10_equals_c8 ok
+probe=msm c=12 chunks=22 buckets=4095 fill_ops=2883562 median_ms=1531.457 ns_per_fill_op=531.1
+correctness=c12_equals_c8 ok
+probe=msm c=13 chunks=20 buckets=8191 fill_ops=2621420 median_ms=1503.718 ns_per_fill_op=573.6
+correctness=c13_equals_c8 ok
+probe=msm c=14 chunks=19 buckets=16383 fill_ops=2490349 median_ms=1657.529 ns_per_fill_op=665.6
+correctness=c14_equals_c8 ok
+probe=msm c=16 chunks=16 buckets=65535 fill_ops=2097136 median_ms=2805.604 ns_per_fill_op=1337.8
+correctness=c16_equals_c8 ok
+correctness=builtin_equals_c8 ok
+MSM_WINDOW_BENCH=DONE
+
+--- stderr ---

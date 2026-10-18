@@ -1,0 +1,34 @@
+# exe_sha256=cd257acdf87e45a6b4e29c0eb7afe36ed76f8e84039dea093243054e42aedb54
+# affinity=0x1 rayon_threads=1 n=131071 reps=3
+# MSM_WINDOW_BENCH_SIGNED=1 MSM_WINDOW_BENCH_C=11,12,13,14
+# exit=0
+bench=msm_window n=131071 reps=3 rayon_threads=1 windows=[11, 12, 13, 14] sweep_signed=1
+fixture bases=131071 exponents=131071 build_ms=2714.8 base_bytes=13631384 exponent_bytes=5242840
+probe=add_single_acc n=131071 median_ms=62.014 ns_per_add=473.1
+probe=add_rand_bucket c=8 buckets=255 bucket_array_bytes=36720 median_ms=60.911 ns_per_add=464.7
+probe=add_rand_bucket c=10 buckets=1023 bucket_array_bytes=147312 median_ms=62.349 ns_per_add=475.7
+probe=add_rand_bucket c=12 buckets=4095 bucket_array_bytes=589680 median_ms=62.914 ns_per_add=480.0
+correctness=naive_prefix c=1 signed=1 ok
+correctness=naive_prefix c=3 signed=1 ok
+correctness=naive_prefix c=5 signed=1 ok
+correctness=naive_prefix c=8 signed=1 ok
+correctness=naive_prefix c=1 signed=0 ok
+correctness=naive_prefix c=3 signed=0 ok
+correctness=naive_prefix c=5 signed=0 ok
+correctness=naive_prefix c=8 signed=0 ok
+correctness=naive_n8 signed=1 ok
+correctness=naive_n8 signed=0 ok
+probe=msm c=11 signed=1 chunks=24 buckets=1024 modelled_ops=3194856 bucket_array_bytes=147456 median_ms=1714.810 ns_per_modelled_op=536.7
+correctness=cross_recoding c=11 ok
+probe=msm c=12 signed=1 chunks=22 buckets=2048 modelled_ops=2973674 bucket_array_bytes=294912 median_ms=1594.573 ns_per_modelled_op=536.2
+correctness=c12s1_equals_c11strue ok
+correctness=cross_recoding c=12 ok
+probe=msm c=13 signed=1 chunks=20 buckets=4096 modelled_ops=2785260 bucket_array_bytes=589824 median_ms=1478.206 ns_per_modelled_op=530.7
+correctness=c13s1_equals_c11strue ok
+correctness=cross_recoding c=13 ok
+probe=msm c=14 signed=1 chunks=19 buckets=8192 modelled_ops=2801645 bucket_array_bytes=1179648 median_ms=1497.878 ns_per_modelled_op=534.6
+correctness=c14s1_equals_c11strue ok
+correctness=cross_recoding c=14 ok
+correctness=builtin_equals_c11strue signed=1 ok
+correctness=builtin_equals_c11strue signed=0 ok
+MSM_WINDOW_BENCH=DONE

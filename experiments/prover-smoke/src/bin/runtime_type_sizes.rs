@@ -1,11 +1,5 @@
 use bellman::multiexp::Exponent;
-use bls12_381::{
-    G1Affine,
-    G1Projective,
-    G2Affine,
-    G2Projective,
-    Scalar,
-};
+use bls12_381::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
 use std::mem::{align_of, size_of};
 use std::sync::Arc;
 

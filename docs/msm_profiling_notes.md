@@ -6,6 +6,12 @@
 
 本文中的相对路径均以仓库根目录为基准。不同插桩强度、批次和线程配置的数据不可随意混算。
 
+> **更新 2026-10-17（后附）：** 本文是探究阶段的记录，其中"尚未实施或验证算法优化"的说法**已过期**。
+> 后续已完成两项受控优化验证：目标 e（配置级：线程数/亲和性）与目标 b（算法级：H query G1 MSM 的有符号窗口重编码，
+> Spend 1t@`0x1` 端到端 −6.6%）。见
+> [`sapling_proving_parameter_and_bottleneck_breakdown_zh.md`](sapling_proving_parameter_and_bottleneck_breakdown_zh.md) §19–§20、
+> `experiments/metadata/sapling_msm_signed_digit_results_20261017.md`。本文其余内容保持原样，不改动既有测量记录。
+
 ## 1. Sapling Output：调用级 MSM profile
 
 两份较低开销的单线程 profile 日志显示，排除每份日志的首轮后，八次 MSM 调用 elapsed 的合计约占整次 Prove 的 93.2%–93.4%。它支持“MSM 主导当前测得 Output 单线程路径”的范围有限结论，不应推广到 Spend 或所有 Groth16 电路。

@@ -1,0 +1,20 @@
+alias,prover,label,affinity,threads,batches,proofs,all_verified,params_read_median_ms,prove_median_ms,prove_min_ms,prove_max_ms,per_batch_median_ms,batch_total_median_ms
+A_unbound_default28,spend,default_threads_unbound_20261017,none (0),default (28),4,20,True,55158.7,1029.023,905.891,1183.566,929.5 978.7 1052.6 1038.0,60581.6
+B_pinned_pcore_8t,spend,pinned8_pcore_20261017,0xFFFF (P cores),8,4,20,True,29164.7,1272.698,813.338,1668.436,834.2 1016.0 1350.0 1346.4,35490.3
+A_abab_unbound_default28,spend,abab_unbound_default_20261017,none (0),default (28),5,25,True,53123.9,965.237,581.112,1171.683,1096.8 593.8 930.3 952.0 1038.3,58476.4
+B_abab_pinned_pcore_8t,spend,abab_pinned8_pcore_20261017,0xFFFF (P cores),8,5,25,True,28337.1,789.795,729.072,1467.161,1415.9 798.8 743.4 755.7 785.2,32321.6
+A_abab2_unbound_default28,spend,abab2_unbound_default_20261017,none (0),default (28),5,25,True,54150.0,985.661,903.72,1108.046,965.9 958.3 999.9 1000.6 976.0,59249.9
+B_abab2_pinned_pcore_8t,spend,abab2_pinned8_pcore_20261017,0xFFFF (P cores),8,5,25,True,28029.6,944.914,809.966,1554.66,1261.1 843.7 888.2 1005.4 922.2,33170.1
+C_abab2_pinned_pcore_16t,spend,abab2_pinned16_pcore_20261017,0xFFFF (P cores),16,5,25,True,27949.9,979.683,774.272,1299.844,1135.0 962.6 1089.2 977.4 892.6,33135.2
+A_quiet_unbound_default28,spend,quiet_abab_unbound_default_20261017,none (0),default (28),6,30,True,52148.0,915.757,882.692,1117.264,941.5 905.2 888.4 903.2 927.2 914.5,56918.6
+B_quiet_pinned_pcore_8t,spend,quiet_abab_pinned8_pcore_20261017,0xFFFF (P cores),8,6,30,True,26805.1,824.453,713.92,1222.466,883.3 836.0 757.6 1055.9 929.2 723.3,30916.9
+C_quiet_pinned_pcore_16t,spend,quiet_abab_pinned16_pcore_20261017,0xFFFF (P cores),16,6,30,True,26982.8,823.157,716.398,1236.639,853.3 755.5 849.4 1152.8 822.0 762.9,30964.6
+C_pinned_pcore_16t,spend,pinned16_pcore_20261017,0xFFFF (P cores),16,2,10,True,27052.2,726.543,716.05,797.944,725.5 730.8,30776.7
+D_pinned_all28_defaultt,spend,default_threads_all28_20261017,0xFFFFFFF (all 28 LP),default (28),2,10,True,53621.9,986.957,940.251,1289.119,991.2 982.7,58788.7
+E_pinned_all28_8t,spend,pinned8_all28_20261017,0xFFFFFFF (all 28 LP),8,2,10,True,51832.6,1171.806,969.917,1351.887,1192.2 1163.3,57777.8
+Output_A_unbound_default28,output,default_threads_unbound_20261017,none (0),default (28),2,10,True,1818.8,80.615,79.942,125.626,80.9 80.3,2296.2
+Output_B_pinned_pcore_8t,output,pinned8_pcore_20261017,0xFFFF (P cores),8,2,10,True,1820.8,98.163,93.153,146.159,97.0 100.0,2376.2
+Output_C_pinned_pcore_16t,output,pinned16_pcore_20261017,0xFFFF (P cores),16,2,10,True,1858.0,102.541,98.753,148.776,102.9 102.2,2436.9
+Output_D_pinned_all28_defaultt,output,default_threads_all28_20261017,0xFFFFFFF (all 28 LP),default (28),2,10,True,1863.8,83.44,80.358,132.407,83.3 83.6,2350.3
+Output_E_pinned_all28_8t,output,pinned8_all28_20261017,0xFFFFFFF (all 28 LP),8,2,10,True,1854.7,103.884,99.016,152.505,104.4 102.2,2446.6
+Rebuild_control_1t_lp0,spend,rebuild_control_1t_lp0_20261017,0x1 (LP0),1,2,10,True,26042.2,3785.7,3744.87,3887.414,3788.5 3782.9,45115.6

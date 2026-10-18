@@ -150,7 +150,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     create_dir_all(&raw_dir)?;
 
-    let csv_path = raw_dir.join("sapling_spend_prover_runs_release.csv");
+    let csv_path = std::env::var_os("SAPLING_PROVER_RUNS_CSV")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| raw_dir.join("sapling_spend_prover_runs_release.csv"));
+
+    if let Some(parent) = csv_path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        create_dir_all(parent)?;
+    }
 
     let mut csv = OpenOptions::new()
         .create(true)
@@ -200,7 +206,7 @@ proof_bytes,verified,rayon_threads,build_profile"
             &nullifier.0,
             rk,
             &sighash,
-            spend_auth_sig.clone(),
+            spend_auth_sig,
             proof,
             &prepared_vk,
         );

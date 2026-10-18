@@ -101,16 +101,23 @@ fn main() {
 
     println!("input_prep_ms={input_prep_ms:.3}");
 
-    // 4. 准备 CSV 文件。
-    let csv_dir = "experiments/raw/csv";
-    create_dir_all(csv_dir).expect("无法创建 CSV 目录");
+    // 4. 准备 CSV 文件。默认写入正式基线，可用 SAPLING_PROVER_RUNS_CSV 指定
+    //    独立文件，以便不同来源（例如绑核批次）互不混淆。此约定与 Spend smoke 一致。
+    let raw_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../experiments/raw/csv");
+    create_dir_all(&raw_dir).expect("无法创建 CSV 目录");
 
-    let csv_path = "experiments/raw/csv/sapling_output_prover_runs_release.csv";
+    let csv_path = std::env::var_os("SAPLING_PROVER_RUNS_CSV")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| raw_dir.join("sapling_output_prover_runs_release.csv"));
+
+    if let Some(parent) = csv_path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        create_dir_all(parent).expect("无法创建 CSV 目录");
+    }
 
     let mut csv = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(csv_path)
+        .open(&csv_path)
         .expect("无法打开 CSV 文件");
 
     if csv.metadata().expect("无法读取 CSV 文件信息").len() == 0 {
@@ -153,7 +160,7 @@ proof_bytes,verified,rayon_threads,build_profile"
         let mut context = SaplingVerificationContext::new();
 
         let start = Instant::now();
-        let verified = context.check_output(&cv, cmu.clone(), epk.clone(), proof, &prepared_vk);
+        let verified = context.check_output(&cv, cmu, epk, proof, &prepared_vk);
         let verify_ms = start.elapsed().as_secs_f64() * 1000.0;
 
         writeln!(
@@ -184,6 +191,6 @@ verified={verified}"
         assert!(verified, "第 {run} 份 Output 证明验证失败");
     }
 
-    println!("CSV_PATH={csv_path}");
+    println!("CSV_PATH={}", csv_path.display());
     println!("OUTPUT_PROOF_EXPERIMENT=PASS");
 }

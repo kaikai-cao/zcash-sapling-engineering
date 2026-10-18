@@ -1,0 +1,116 @@
+name: ci
+
+# Parameter-free CI for the Sapling proving engineering study.
+#
+# Scope notes:
+#   * Real Sapling proofs need external parameter files (~51 MB, not in-repo);
+#     nothing here downloads or stores them. End-to-end proof reproduction is a
+#     separate, documented procedure (docs/reproduction.md).
+#   * Vendored crates (vendor/bellman, vendor/groth16) are upstream mirrors plus
+#     this study's instrumentation: they are compile-checked and test-gated, but
+#     not lint-gated (rustfmt/clippy -D warnings apply to the study's own crate,
+#     experiments/prover-smoke, only).
+#   * The two default-on optimization switches are guarded by the gates job:
+#     the FFT path gate must produce identical digests whether
+#     SAPLING_FFT_SERIAL_SINGLE_THREAD is unset (flipped default) or explicitly
+#     =0 (legacy four-step path), and the MSM bench cross-checks signed/unsigned
+#     recoding and lazy/materialised exponents on every run.
+
+on:
+  push:
+    branches: [main, "experiment/**", "analysis/**", "profiling/**"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  lint:
+    name: fmt + clippy (study crate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: rustfmt
+        run: cargo fmt --check --manifest-path experiments/prover-smoke/Cargo.toml
+      - name: clippy (deny warnings)
+        run: >
+          cargo clippy --locked --all-targets
+          --manifest-path experiments/prover-smoke/Cargo.toml
+          -- -D warnings
+
+  check-vendor:
+    name: vendored crates compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo check bellman
+        run: cargo check --locked --manifest-path vendor/bellman/Cargo.toml
+      - name: cargo check groth16
+        run: cargo check --locked --manifest-path vendor/groth16/Cargo.toml
+
+  test-libs:
+    name: library tests (bellman + groth16)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: bellman tests (multiexp / recoding / FFT paths)
+        # --lib --tests: the vendored crate-level doctest needs dev-dependencies
+        # the mirror does not declare (upstream artifact, not our code); the 49
+        # unit tests plus integration tests are the meaningful gate.
+        run: cargo test --locked --lib --tests --manifest-path vendor/bellman/Cargo.toml
+      - name: groth16 tests
+        run: cargo test --locked --lib --tests --manifest-path vendor/groth16/Cargo.toml
+
+  build:
+    name: experiment binaries build (release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo build --release
+        run: cargo build --release --locked --manifest-path experiments/prover-smoke/Cargo.toml
+
+  gates:
+    name: deterministic correctness gates (no params needed)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: build gates (release)
+        run: cargo build --release --locked --manifest-path experiments/prover-smoke/Cargo.toml
+      - name: FFT path gate - digests identical across switch states
+        run: |
+          set -euo pipefail
+          export RAYON_NUM_THREADS=1
+          BIN=experiments/prover-smoke/target/release/fft_path_gate
+          digests() { "$@" | grep -o 'blake2b=[0-9a-f]*' ; }
+          digests "$BIN" > gate_default.txt
+          digests env SAPLING_FFT_SERIAL_SINGLE_THREAD=0 "$BIN" > gate_legacy.txt
+          digests env SAPLING_MSM_LAZY_RECODING=0 "$BIN" > gate_lazy0.txt
+          echo "--- digests: flipped default vs legacy four-step (=0) ---"
+          diff -u gate_legacy.txt gate_default.txt
+          echo "--- digests: flipped default vs lazy=0 ---"
+          diff -u gate_lazy0.txt gate_default.txt
+          count=$(grep -c . gate_default.txt)
+          echo "FFT path gate: $count digests identical across all switch states"
+          "$BIN" | grep -q "FFT_PATH_GATE_DONE"
+      - name: MSM gate - signed/unsigned recoding and lazy/materialised exponents agree
+        env:
+          RAYON_NUM_THREADS: 1
+          MSM_WINDOW_BENCH_N: 16384
+          MSM_WINDOW_BENCH_C: 13
+          MSM_WINDOW_BENCH_REPS: 1
+        run: |
+          set -euo pipefail
+          experiments/prover-smoke/target/release/msm_window_bench \
+            | tee msm_gate.txt
+          grep -q "correctness=cross_recoding c=13 ok" msm_gate.txt
+          grep -q "MSM_WINDOW_BENCH=DONE" msm_gate.txt
+          echo "MSM gate: cross-recoding equality verified (exit code asserts the rest)"

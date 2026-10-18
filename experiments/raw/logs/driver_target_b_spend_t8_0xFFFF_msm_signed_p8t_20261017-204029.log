@@ -1,0 +1,14 @@
+# target b (signed-digit MSM) ABBA driver
+prover=spend threads=8 affinity=0xFFFF rounds=2 orders=ABBA/BAAB label_prefix=msm_signed_p8t
+git_head=d3851b7d36aef6bcf9eda45c6da46d7e532eaf4b
+host=DESKTOP-GMELEIR logical_processors=28
+round=1 order=ABBA
+round=1 pos=1 arm=off signed_digits=0 label=msm_signed_p8t_off start=2026-10-17T20:40:32 host_cpu_load_pct=4.9
+round=1 pos=2 arm=on signed_digits=1 label=msm_signed_p8t_on start=2026-10-17T20:41:07 host_cpu_load_pct=7.2
+round=1 pos=3 arm=on signed_digits=1 label=msm_signed_p8t_on start=2026-10-17T20:41:43 host_cpu_load_pct=6.7
+round=1 pos=4 arm=off signed_digits=0 label=msm_signed_p8t_off start=2026-10-17T20:42:18 host_cpu_load_pct=3.5
+round=2 order=BAAB
+round=2 pos=1 arm=on signed_digits=1 label=msm_signed_p8t_on start=2026-10-17T20:42:56 host_cpu_load_pct=8
+round=2 pos=2 arm=off signed_digits=0 label=msm_signed_p8t_off start=2026-10-17T20:43:33 host_cpu_load_pct=6.7
+round=2 pos=3 arm=off signed_digits=0 label=msm_signed_p8t_off start=2026-10-17T20:44:12 host_cpu_load_pct=21.4
+round=2 pos=4 arm=on signed_digits=1 label=msm_signed_p8t_on start=2026-10-17T20:44:49 host_cpu_load_pct=12.1

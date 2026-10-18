@@ -1,0 +1,21 @@
+circuit=Spend
+params_path=D:\Research\zcash-params\sapling-spend.params
+rayon_threads=1
+build_profile=release
+params_read_validate_ms=26439.589
+live_baseline_bytes=1073
+load_peak_delta_bytes=60818440
+live_after_load_delta_bytes=60818440
+prepare_vk_ms=1.041
+prepare_vk_peak_delta_bytes=40000
+live_before_prove_bytes=68729865
+batch_id=1792293985748
+run=1 prove_ms=3533.325 prove_peak_delta_bytes=17441136 prove_peak_abs_bytes=86172527 prove_live_end_delta_bytes=394576 verify_ms=3.284 proof_bytes=192 verified=true
+run=2 prove_ms=3394.987 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184607 prove_live_end_delta_bytes=0 verify_ms=3.127 proof_bytes=192 verified=true
+run=3 prove_ms=3382.316 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184607 prove_live_end_delta_bytes=0 verify_ms=3.369 proof_bytes=192 verified=true
+run=4 prove_ms=3462.574 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184607 prove_live_end_delta_bytes=0 verify_ms=3.402 proof_bytes=192 verified=true
+run=5 prove_ms=3409.091 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184607 prove_live_end_delta_bytes=0 verify_ms=3.107 proof_bytes=192 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_prove_memory_ledger_combo_default_lazy1fix1_20261018.csv
+PROVE_MEMORY_LEDGER=PASS
+
+--- stderr ---

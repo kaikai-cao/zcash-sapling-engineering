@@ -1,0 +1,19 @@
+# ABBA driver switch=SAPLING_FFT_SERIAL_SINGLE_THREAD
+prover=spend threads=1 affinity=0x1 rounds=3 orders=ABBA/ABBA/BAAB label_prefix=qap_fft_fix_spend_1t
+git_head=997016a919cb1396cd7276e363a9aeecdae29199
+host=DESKTOP-GMELEIR logical_processors=28
+round=1 order=ABBA
+round=1 pos=1 arm=off SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=qap_fft_fix_spend_1t_off start=2026-10-18T09:56:02 host_cpu_load_pct=0
+round=1 pos=2 arm=on SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=qap_fft_fix_spend_1t_on start=2026-10-18T09:56:47 host_cpu_load_pct=20.4
+round=1 pos=3 arm=on SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=qap_fft_fix_spend_1t_on start=2026-10-18T09:57:31 host_cpu_load_pct=18
+round=1 pos=4 arm=off SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=qap_fft_fix_spend_1t_off start=2026-10-18T09:58:14 host_cpu_load_pct=10
+round=2 order=ABBA
+round=2 pos=1 arm=off SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=qap_fft_fix_spend_1t_off start=2026-10-18T09:58:59 host_cpu_load_pct=19.8
+round=2 pos=2 arm=on SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=qap_fft_fix_spend_1t_on start=2026-10-18T09:59:44 host_cpu_load_pct=1.9
+round=2 pos=3 arm=on SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=qap_fft_fix_spend_1t_on start=2026-10-18T10:00:29 host_cpu_load_pct=29.5
+round=2 pos=4 arm=off SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=qap_fft_fix_spend_1t_off start=2026-10-18T10:01:13 host_cpu_load_pct=10.4
+round=3 order=BAAB
+round=3 pos=1 arm=on SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=qap_fft_fix_spend_1t_on start=2026-10-18T10:01:57 host_cpu_load_pct=19.6
+round=3 pos=2 arm=off SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=qap_fft_fix_spend_1t_off start=2026-10-18T10:02:41 host_cpu_load_pct=16.5
+round=3 pos=3 arm=off SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=qap_fft_fix_spend_1t_off start=2026-10-18T10:03:25 host_cpu_load_pct=16.7
+round=3 pos=4 arm=on SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=qap_fft_fix_spend_1t_on start=2026-10-18T10:04:09 host_cpu_load_pct=14.7

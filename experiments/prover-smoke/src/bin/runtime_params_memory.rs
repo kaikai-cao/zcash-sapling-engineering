@@ -1,13 +1,6 @@
 use bls12_381::{Bls12, G1Affine, G2Affine};
 use groth16::Parameters;
-use std::{
-    env,
-    error::Error,
-    fs::File,
-    mem::size_of,
-    path::Path,
-    time::Instant,
-};
+use std::{env, error::Error, fs::File, mem::size_of, path::Path, time::Instant};
 
 fn report_vec<T>(name: &str, values: &Vec<T>) -> (usize, usize) {
     let element_size = size_of::<T>();
@@ -40,12 +33,9 @@ fn report_params(path: &Path) -> Result<(), Box<dyn Error>> {
     println!("groth16_body_read_validate_ms={read_ms:.3}");
 
     // VK 中的六个固定点：三个 G1、三个 G2。
-    let vk_fixed_bytes =
-        3 * size_of::<G1Affine>() + 3 * size_of::<G2Affine>();
+    let vk_fixed_bytes = 3 * size_of::<G1Affine>() + 3 * size_of::<G2Affine>();
 
-    println!(
-        "vk_fixed_points=6 vk_fixed_object_bytes={vk_fixed_bytes}"
-    );
+    println!("vk_fixed_points=6 vk_fixed_object_bytes={vk_fixed_bytes}");
 
     let mut len_total = vk_fixed_bytes;
     let mut capacity_total = vk_fixed_bytes;
@@ -103,9 +93,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let paths: Vec<String> = env::args().skip(1).collect();
 
     if paths.is_empty() {
-        eprintln!(
-            "Usage: runtime_params_memory <spend.params> [output.params]"
-        );
+        eprintln!("Usage: runtime_params_memory <spend.params> [output.params]");
         std::process::exit(2);
     }
 

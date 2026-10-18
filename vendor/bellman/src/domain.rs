@@ -258,10 +258,30 @@ impl<S: PrimeField> Group<S> for Scalar<S> {
     }
 }
 
+/// Whether a single-threaded worker should run the in-place serial FFT.
+///
+/// Gated by `SAPLING_FFT_SERIAL_SINGLE_THREAD` (default `1` since the target-g
+/// default flip, 2026-10-18; set it to `0` to force the four-step path).
+/// `parallel_fft` splits the transform into `2^log_cpus` sub-transforms over a
+/// scratch buffer whose total size is one full domain regardless of the thread
+/// count. When `log_cpus` is 0 that split degenerates to the identity
+/// permutation plus two extra full passes, so routing through it only costs a
+/// full domain-sized scratch. On by default, and free when on (one cached
+/// `OnceLock` read per transform).
+fn fft_serial_single_thread_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_FFT_SERIAL_SINGLE_THREAD")
+            .map(|value| value.trim() == "1")
+            .unwrap_or(true)
+    })
+}
+
 fn best_fft<S: PrimeField, T: Group<S>>(a: &mut [T], worker: &Worker, omega: &S, log_n: u32) {
     let log_cpus = worker.log_num_threads();
 
-    if log_n <= log_cpus {
+    if log_n <= log_cpus || (log_cpus == 0 && fft_serial_single_thread_enabled()) {
         serial_fft(a, omega, log_n);
     } else {
         parallel_fft(a, worker, omega, log_n, log_cpus);
@@ -495,4 +515,54 @@ fn parallel_fft_consistency() {
     let rng = &mut rand::rng();
 
     test_consistency::<Fr, _>(rng);
+}
+
+// `best_fft` skips the four-step `parallel_fft` when the worker has a single
+// thread, which is only sound because that path degenerates to `serial_fft` at
+// `log_cpus == 0`: the shuffle collapses to a copy (`omega_step = omega^(0 <<
+// log_new_n) = 1`, `omega_j = 1`) and the copy-back is the identity permutation.
+// `parallel_fft_consistency` only reaches `log_cpus == 0` at domain size 1, so
+// assert the degenerate case directly at the sizes the circuits use
+// (Output 2^13, Spend 2^17).
+#[cfg(feature = "pairing")]
+#[test]
+fn parallel_fft_single_thread_equals_serial() {
+    use bls12_381::Scalar as Fr;
+    use rand_core::Rng;
+
+    fn test_gate<S: PrimeField, R: Rng>(mut rng: &mut R) {
+        let worker = Worker::new();
+
+        for log_d in [10, 13, 17] {
+            let d = 1usize << log_d;
+
+            let coeffs = (0..d)
+                .map(|_| Scalar::<S>(S::random(&mut rng)))
+                .collect::<Vec<_>>();
+
+            let mut serial = EvaluationDomain::from_coeffs(coeffs.clone()).unwrap();
+            let mut four_step = EvaluationDomain::from_coeffs(coeffs).unwrap();
+
+            parallel_fft(&mut four_step.coeffs, &worker, &four_step.omega, log_d, 0);
+            serial_fft(&mut serial.coeffs, &serial.omega, log_d);
+            assert!(four_step.coeffs == serial.coeffs, "fft mismatch at log_d={log_d}");
+
+            parallel_fft(
+                &mut four_step.coeffs,
+                &worker,
+                &four_step.omegainv,
+                log_d,
+                0,
+            );
+            serial_fft(&mut serial.coeffs, &serial.omegainv, log_d);
+            assert!(
+                four_step.coeffs == serial.coeffs,
+                "ifft mismatch at log_d={log_d}"
+            );
+        }
+    }
+
+    let rng = &mut rand::rng();
+
+    test_gate::<Fr, _>(rng);
 }
