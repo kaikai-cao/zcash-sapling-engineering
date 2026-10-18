@@ -1,6 +1,7 @@
 use super::multicore::{Waiter, Worker};
+use bitvec::field::BitField;
 use bitvec::vec::BitVec;
-use ff::{FieldBits, PrimeField, PrimeFieldBits};
+use ff::{BitViewSized, FieldBits, PrimeField, PrimeFieldBits};
 use group::prime::{PrimeCurve, PrimeCurveAffine};
 use std::io;
 use std::iter;
@@ -171,6 +172,161 @@ fn msm_signed_digits_enabled() -> bool {
 /// Programmatic counterpart of `SAPLING_MSM_SIGNED_DIGITS` for benchmarks.
 pub fn set_msm_signed_digits(enabled: bool) {
     MSM_SIGNED_DIGITS_OVERRIDE.store(if enabled { 1 } else { 0 }, Ordering::Relaxed);
+}
+
+// Whether the balanced-signed recoding is *materialised* as a
+// `Vec<ChunkedExponent>` (the historical shape) or only its **carry bits** are
+// precomputed and each window's digit is folded inside the fill loop.
+//
+// The materialised representation costs `n * size_of::<ChunkedExponent>()` for
+// the outer vector plus `n * windows * 8 B` for the digit vectors. For the
+// Spend H query (`n = 131,071`, `c = 13`, 20 windows) that is 3,145,704 B +
+// 20,971,360 B = 24.1 MB, and it is the single largest allocation of the
+// prove phase. The carry chain is a pure function of the scalar's bits, so the
+// digits can be recomputed on demand; only the carry (one bit per window per
+// exponent, ~0.33 MB) has to be shared, because the fill runs one task per
+// window and those tasks execute concurrently, out of order.
+//
+// `SAPLING_MSM_LAZY_RECODING=1` selects the carry-bit variant. The default
+// stays `0` (materialised) until the pre-registered measurement decides.
+const MSM_LAZY_RECODING_DEFAULT: i32 = 0;
+static MSM_LAZY_RECODING_OVERRIDE: AtomicI32 = AtomicI32::new(i32::MIN);
+
+fn msm_lazy_recoding_enabled() -> bool {
+    let mut value = MSM_LAZY_RECODING_OVERRIDE.load(Ordering::Relaxed);
+    if value < 0 {
+        let parsed = match std::env::var("SAPLING_MSM_LAZY_RECODING") {
+            Ok(raw) => match raw.trim() {
+                "1" | "true" | "on" | "yes" => 1,
+                _ => 0,
+            },
+            Err(_) => MSM_LAZY_RECODING_DEFAULT,
+        };
+        let _ = MSM_LAZY_RECODING_OVERRIDE.compare_exchange(
+            i32::MIN,
+            parsed,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+        value = MSM_LAZY_RECODING_OVERRIDE.load(Ordering::Relaxed);
+    }
+
+    value != 0
+}
+
+/// Programmatic counterpart of `SAPLING_MSM_LAZY_RECODING` for benchmarks.
+pub fn set_msm_lazy_recoding(enabled: bool) {
+    MSM_LAZY_RECODING_OVERRIDE.store(if enabled { 1 } else { 0 }, Ordering::Relaxed);
+}
+
+/// Reads the `c`-bit window `window` of a little-endian bit representation.
+///
+/// `BitArray` is word aligned and `BitField::load_le` only walks the live head /
+/// body / tail words of the requested range, so this is O(1) rather than O(c).
+/// The final window may run past the end of the representation (`c` divides
+/// `bits` and the dispatch adds one carry window); the range is clamped, and
+/// the missing high bits are zero, which is exactly what the materialised
+/// recoding produces for that window.
+#[inline(always)]
+fn window_bits<B: BitViewSized>(bits: &FieldBits<B>, c: usize, window: usize) -> u64 {
+    let lo = c * window;
+    let hi = (lo + c).min(bits.len());
+    bits[lo..hi].load_le::<u64>()
+}
+
+/// Folds a raw `c`-bit window plus its incoming carry into the biased slot.
+///
+/// Identical arithmetic to `Exponent::chunks_signed`; kept as a free function so
+/// the fill loop and the recoding cannot drift apart.
+#[inline(always)]
+fn signed_slot(window: u64, carry: u64, half: u64, modulus: u64) -> u64 {
+    let value = window + carry;
+    if value > half {
+        value.wrapping_sub(modulus).wrapping_add(half)
+    } else {
+        value + half
+    }
+}
+
+/// The balanced recoding input of one MSM call: either the materialised digits,
+/// or the shared carry bits that let the fill fold them itself.
+#[derive(Clone)]
+enum Recoding {
+    Materialized(Arc<Vec<ChunkedExponent>>),
+    /// Bit `window * n + exponent` is the carry into that window. `Zero` and
+    /// `One` exponents never carry (their raw windows are 0 and 1), so their
+    /// bits stay clear.
+    CarryBits(Arc<Vec<u64>>),
+}
+
+/// Walks the balanced-recoding carry chain once per exponent and records only
+/// *where* a carry occurs, packed window-major as bit `window * n + exponent`.
+///
+/// Window-major packing is what makes the lazy fill cheap: the tasks that read
+/// one window walk a contiguous bit range. `Zero` / `One` exponents have an
+/// all-zero carry chain and are skipped, which is why the fill's 0/1 shortcut
+/// needs no extra bookkeeping.
+fn build_carry_bits<F: PrimeFieldBits>(
+    exponents: &[Exponent<F>],
+    c: usize,
+    windows: usize,
+) -> Vec<u64> {
+    let n = exponents.len();
+    let mut out = vec![0u64; (n * windows).div_ceil(64)];
+    let half = 1u64 << (c - 1);
+
+    for (index, exp) in exponents.iter().enumerate() {
+        if let Exponent::Bits(bits) = exp {
+            let mut carry = 0u64;
+            for window in 0..windows {
+                if carry == 1 {
+                    let at = window * n + index;
+                    out[at >> 6] |= 1u64 << (at & 63);
+                }
+                carry = u64::from(window_bits(bits, c, window) + carry > half);
+            }
+        }
+    }
+
+    out
+}
+
+/// Resolves one exponent's contribution under the active recoding.
+///
+/// Returns `(is_zero, is_one, slot)`. `slot` is only meaningful when neither
+/// flag is set, and equals exactly the biased value the materialised recoding
+/// would have stored — `signed_slot` is the same arithmetic `chunks_signed`
+/// uses, so the two representations cannot drift apart.
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn resolve_slot<F: PrimeFieldBits>(
+    recoding: &Recoding,
+    source: &[Exponent<F>],
+    index: usize,
+    chunk: usize,
+    c: usize,
+    exponent_count: usize,
+    half: u64,
+    modulus: u64,
+) -> (bool, bool, u64) {
+    match recoding {
+        Recoding::Materialized(chunked) => match &chunked[index] {
+            ChunkedExponent::Zero => (true, false, 0),
+            ChunkedExponent::One => (false, true, 0),
+            ChunkedExponent::Chunks(chunks) => (false, false, chunks[chunk]),
+        },
+        // Reached only when the recoding is signed (the switch requires it).
+        Recoding::CarryBits(carry) => match &source[index] {
+            Exponent::Zero => (true, false, 0),
+            Exponent::One => (false, true, 0),
+            Exponent::Bits(bits) => {
+                let raw = window_bits(bits, c, chunk);
+                let at = chunk * exponent_count + index;
+                let carry_bit = (carry[at >> 6] >> (at & 63)) & 1;
+                (false, false, signed_slot(raw, carry_bit, half, modulus))
+            }
+        },
+    }
 }
 
 /// Number of balanced-signed digits per scalar (`c` bits per window).
@@ -631,8 +787,45 @@ where
     // shapes (Zero / One / Chunks) and of the non-zero chunk slots inside the
     // chunked exponents. That turns the previously *inferred* density figure
     // into a directly measured one. The census is off in normal runs.
+    // Number of windows drives both the dispatch and the carry-bit layout.
+    let window_count = if signed {
+        signed_window_count(G::Scalar::NUM_BITS as usize, c)
+    } else {
+        // Same count as the historical `(0..NUM_BITS).step_by(c)` dispatch.
+        (G::Scalar::NUM_BITS as usize + c as usize - 1) / c as usize
+    };
+
     let exponent_chunk_prep_start = stage_timing.then(Instant::now);
-    let chunked_exponents = if let Some(probe) = mem_probe.as_ref() {
+    // The carry-bit variant only applies to the signed path, and the slot
+    // arithmetic needs the raw window to fit a u64.
+    let lazy_recoding = msm_lazy_recoding_enabled() && signed && c <= 63;
+    let carry_bits = if lazy_recoding {
+        Some(Arc::new(build_carry_bits(&exponents, c as usize, window_count)))
+    } else {
+        None
+    };
+    let chunked_exponents = if lazy_recoding {
+        // The digit vectors are deliberately not built here. The exponent-shape
+        // census stays meaningful (it counts the source exponents, not the
+        // recoding), so keep recording it when the probe is on; the chunk-slot
+        // counters do not apply and are left at zero.
+        if let Some(probe) = mem_probe.as_ref() {
+            let mut zero_exponents = 0usize;
+            let mut one_exponents = 0usize;
+            let mut chunked_exponents = 0usize;
+            for exp in exponents.iter() {
+                match exp {
+                    Exponent::Zero => zero_exponents += 1,
+                    Exponent::One => one_exponents += 1,
+                    Exponent::Bits(_) => chunked_exponents += 1,
+                }
+            }
+            probe.zero_exponents.store(zero_exponents, Ordering::Relaxed);
+            probe.one_exponents.store(one_exponents, Ordering::Relaxed);
+            probe.chunked_exponents.store(chunked_exponents, Ordering::Relaxed);
+        }
+        Arc::new(Vec::new())
+    } else if let Some(probe) = mem_probe.as_ref() {
         let mut zero_exponents = 0usize;
         let mut one_exponents = 0usize;
         let mut chunked_exponents = 0usize;
@@ -702,11 +895,16 @@ where
     // Perform one chunk of the multiexponentiation.
     let this = move |bases: S,
                      density_map: D,
-                     exponents: Arc<Vec<ChunkedExponent>>,
+                     source: Arc<Vec<Exponent<G::Scalar>>>,
+                     recoding: Recoding,
                      chunk: usize|
           -> Result<G, SynthesisError> {
         let mut acc = G::identity();
         let mut bases = bases.build();
+        // Fold parameters for the carry-bit recoding (unused when the digits are
+        // materialised, where the slot is read straight from the vector).
+        let half: u64 = 1u64 << (c - 1);
+        let modulus: u64 = 1u64 << c;
 
         // Track overlapping chunk regions for this single MSM call. The guard
         // is dropped even if a checked source operation returns an error.
@@ -766,51 +964,64 @@ where
         if branch_counts {
             // Diagnostic branch: count source-level operations with local
             // counters. This adds overhead to bucket-fill timing in this batch.
-            for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
+            //
+            // The density map is *not* truncated by its own length: `FullDensity`
+            // yields `iter::repeat(true)`, so the original `exponents.iter().zip(..)`
+            // was what bounded the loop. Take the exponent count explicitly.
+            for (index, density) in density_map
+                .as_ref()
+                .iter()
+                .enumerate()
+                .take(exponent_count)
+            {
                 if density {
                     density_true_slot_visits += 1;
-                    match exp {
-                        ChunkedExponent::Zero => {
-                            zero_exponent_slot_visits += 1;
+                    let (is_zero, is_one, digit) = resolve_slot(
+                        &recoding,
+                        &source,
+                        index,
+                        chunk,
+                        c as usize,
+                        exponent_count,
+                        half,
+                        modulus,
+                    );
+                    if is_zero {
+                        zero_exponent_slot_visits += 1;
+                        base_skip_calls += 1;
+                        base_skip_elements += 1;
+                        bases.skip(1)?;
+                    } else if is_one {
+                        one_exponent_slot_visits += 1;
+                        if handle_trivial {
+                            direct_one_add_calls += 1;
+                            acc.add_assign_from_source(&mut bases)?;
+                        } else {
                             base_skip_calls += 1;
                             base_skip_elements += 1;
                             bases.skip(1)?;
                         }
-                        ChunkedExponent::One => {
-                            one_exponent_slot_visits += 1;
-                            if handle_trivial {
-                                direct_one_add_calls += 1;
-                                acc.add_assign_from_source(&mut bases)?;
-                            } else {
-                                base_skip_calls += 1;
-                                base_skip_elements += 1;
-                                bases.skip(1)?;
-                            }
-                        }
-                        ChunkedExponent::Chunks(chunks) => {
-                            chunked_exponent_slot_visits += 1;
-                            let digit = chunks[chunk];
-
-                            if digit == zero_digit_slot {
-                                zero_window_digit_visits += 1;
-                                base_skip_calls += 1;
-                                base_skip_elements += 1;
-                                bases.skip(1)?;
-                            } else {
-                                nonzero_window_digit_visits += 1;
-                                bucket_base_add_calls += 1;
-                                if signed {
-                                    if digit > zero_digit_slot {
-                                        buckets[(digit - zero_digit_slot - 1) as usize]
-                                            .add_assign_from_source(&mut bases)?;
-                                    } else {
-                                        buckets[(zero_digit_slot - digit - 1) as usize]
-                                            .sub_assign_from_source(&mut bases)?;
-                                    }
-                                } else {
-                                    buckets[(digit - 1) as usize]
+                    } else {
+                        chunked_exponent_slot_visits += 1;
+                        if digit == zero_digit_slot {
+                            zero_window_digit_visits += 1;
+                            base_skip_calls += 1;
+                            base_skip_elements += 1;
+                            bases.skip(1)?;
+                        } else {
+                            nonzero_window_digit_visits += 1;
+                            bucket_base_add_calls += 1;
+                            if signed {
+                                if digit > zero_digit_slot {
+                                    buckets[(digit - zero_digit_slot - 1) as usize]
                                         .add_assign_from_source(&mut bases)?;
+                                } else {
+                                    buckets[(zero_digit_slot - digit - 1) as usize]
+                                        .sub_assign_from_source(&mut bases)?;
                                 }
+                            } else {
+                                buckets[(digit - 1) as usize]
+                                    .add_assign_from_source(&mut bases)?;
                             }
                         }
                     }
@@ -820,32 +1031,42 @@ where
             }
         } else {
             // Production path preserves the original loop without branch counters.
-            for (exp, density) in exponents.iter().zip(density_map.as_ref().iter()) {
+            // Bounded by the exponent count, not by the density map: see above.
+            for (index, density) in density_map
+                .as_ref()
+                .iter()
+                .enumerate()
+                .take(exponent_count)
+            {
                 if density {
-                    match exp {
-                        ChunkedExponent::Zero => bases.skip(1)?,
-                        ChunkedExponent::One => {
-                            if handle_trivial {
-                                acc.add_assign_from_source(&mut bases)?;
-                            } else {
-                                bases.skip(1)?;
-                            }
+                    let (is_zero, is_one, digit) = resolve_slot(
+                        &recoding,
+                        &source,
+                        index,
+                        chunk,
+                        c as usize,
+                        exponent_count,
+                        half,
+                        modulus,
+                    );
+                    if is_zero {
+                        bases.skip(1)?;
+                    } else if is_one {
+                        if handle_trivial {
+                            acc.add_assign_from_source(&mut bases)?;
+                        } else {
+                            bases.skip(1)?;
                         }
-                        ChunkedExponent::Chunks(chunks) => {
-                            let digit = chunks[chunk];
-
-                            if digit == zero_digit_slot {
-                                bases.skip(1)?;
-                            } else if !signed {
-                                buckets[(digit - 1) as usize].add_assign_from_source(&mut bases)?;
-                            } else if digit > zero_digit_slot {
-                                buckets[(digit - zero_digit_slot - 1) as usize]
-                                    .add_assign_from_source(&mut bases)?;
-                            } else {
-                                buckets[(zero_digit_slot - digit - 1) as usize]
-                                    .sub_assign_from_source(&mut bases)?;
-                            }
-                        }
+                    } else if digit == zero_digit_slot {
+                        bases.skip(1)?;
+                    } else if !signed {
+                        buckets[(digit - 1) as usize].add_assign_from_source(&mut bases)?;
+                    } else if digit > zero_digit_slot {
+                        buckets[(digit - zero_digit_slot - 1) as usize]
+                            .add_assign_from_source(&mut bases)?;
+                    } else {
+                        buckets[(zero_digit_slot - digit - 1) as usize]
+                            .sub_assign_from_source(&mut bases)?;
                     }
                 }
             }
@@ -901,11 +1122,12 @@ where
 
     // This wall-clock measurement includes parallel scheduling and all chunk work.
     let chunk_parallel_start = stage_timing.then(Instant::now);
-    let window_count = if signed {
-        signed_window_count(G::Scalar::NUM_BITS as usize, c)
-    } else {
-        // Same count as the historical `(0..NUM_BITS).step_by(c)` dispatch.
-        (G::Scalar::NUM_BITS as usize + c as usize - 1) / c as usize
+    // The fill resolves each window's digit through `Recoding`. The carry-bit
+    // variant shares the source exponents and a ~0.33 MB carry array instead of
+    // the 24.1 MB materialised digits.
+    let recoding = match carry_bits.as_ref() {
+        Some(bits) => Recoding::CarryBits(Arc::clone(bits)),
+        None => Recoding::Materialized(Arc::clone(&chunked_exponents)),
     };
     let parts = (0..window_count as u32)
         .into_par_iter()
@@ -913,7 +1135,8 @@ where
             this(
                 bases.clone(),
                 density_map.clone(),
-                chunked_exponents.clone(),
+                exponents.clone(),
+                recoding.clone(),
                 chunk as usize,
             )
         })
@@ -986,7 +1209,7 @@ where
         let live_after_prep = mem_live_after_exponent_prep.unwrap_or(0);
 
         eprintln!(
-            "BELLMAN_MSM_MEM_PROBE call_id={} exponent_count={} window={} signed={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_size_bytes={} chunked_exponent_size_bytes={} live_start_bytes={} live_after_exponent_prep_bytes={} exponent_prep_live_delta_bytes={} bucket_alloc_max_bytes={} live_end_bytes={} live_end_delta_bytes={} zero_exponents={} one_exponents={} chunked_exponents={} nonzero_chunk_slots={} zero_chunk_slots={}",
+            "BELLMAN_MSM_MEM_PROBE call_id={} exponent_count={} window={} signed={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_size_bytes={} chunked_exponent_size_bytes={} live_start_bytes={} live_after_exponent_prep_bytes={} exponent_prep_live_delta_bytes={} bucket_alloc_max_bytes={} live_end_bytes={} live_end_delta_bytes={} zero_exponents={} one_exponents={} chunked_exponents={} nonzero_chunk_slots={} zero_chunk_slots={} lazy_recoding={} carry_bitset_bytes={}",
             call_id.unwrap_or(0),
             exponent_count,
             c,
@@ -1007,6 +1230,10 @@ where
             probe.chunked_exponents.load(Ordering::Relaxed),
             probe.nonzero_chunk_slots.load(Ordering::Relaxed),
             probe.zero_chunk_slots.load(Ordering::Relaxed),
+            lazy_recoding as u8,
+            carry_bits
+                .as_ref()
+                .map_or(0, |bits| bits.len() * std::mem::size_of::<u64>()),
         );
     }
 

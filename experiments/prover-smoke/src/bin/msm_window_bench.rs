@@ -15,6 +15,8 @@
 //! Correctness gates (all of them must hold):
 //!   * every window width and *both* recodings (unsigned and balanced-signed)
 //!     must return the identical group element -- MSM is deterministic;
+//!   * the balanced-signed digits, both materialised and recomputed from the
+//!     carry bits inside the fill, must agree bit-for-bit at c = 2..=20;
 //!   * a 64-term prefix must match a plain double-and-add;
 //!   * the built-in window rule must match the explicit sweep;
 //!   * the small-query path in `multiexp()` (n < 32 -> c = 3) is covered by an
@@ -28,7 +30,7 @@
 
 use bellman::multicore::Worker;
 use bellman::multiexp::{
-    multiexp, set_msm_signed_digits, set_msm_window_c, Exponent, FullDensity,
+    multiexp, set_msm_lazy_recoding, set_msm_signed_digits, set_msm_window_c, Exponent, FullDensity,
 };
 use bls12_381::{G1Affine, G1Projective, Scalar};
 use std::hint::black_box;
@@ -227,16 +229,23 @@ fn main() {
     }
     for signed_case in [true, false] {
         for c in [1u32, 3, 5, 8] {
-            set_msm_signed_digits(signed_case);
-            set_msm_window_c(Some(c));
-            let got = run_msm(&worker, &prefix_bases, &prefix_exponents);
-            assert_eq!(
-                got, naive,
-                "prefix MSM disagrees with naive at window {c} signed={signed_case}"
-            );
-            println!("correctness=naive_prefix c={c} signed={} ok", signed_case as u8);
+            for lazy in [false, true] {
+                set_msm_signed_digits(signed_case);
+                set_msm_window_c(Some(c));
+                set_msm_lazy_recoding(lazy);
+                let got = run_msm(&worker, &prefix_bases, &prefix_exponents);
+                assert_eq!(
+                    got, naive,
+                    "prefix MSM disagrees with naive at window {c} signed={signed_case} lazy={lazy}"
+                );
+                println!(
+                    "correctness=naive_prefix c={c} signed={} lazy={} ok",
+                    signed_case as u8, lazy as u8
+                );
+            }
         }
     }
+    set_msm_lazy_recoding(false);
 
     // --- Correctness gate 2: the n < 32 special case and n = 8 --------------
     let tiny_bases: Arc<Vec<G1Affine>> = Arc::new(bases[..8].to_vec());
@@ -247,18 +256,25 @@ fn main() {
         tiny_naive += &(G1Projective::from(*base) * scalar);
     }
     for signed_case in [true, false] {
-        set_msm_signed_digits(signed_case);
-        let got = run_msm(&worker, &tiny_bases, &tiny_exponents);
-        assert_eq!(
-            got, tiny_naive,
-            "n=8 MSM disagrees with naive signed={signed_case}"
-        );
-        println!("correctness=naive_n8 signed={} ok", signed_case as u8);
+        for lazy in [false, true] {
+            set_msm_signed_digits(signed_case);
+            set_msm_lazy_recoding(lazy);
+            let got = run_msm(&worker, &tiny_bases, &tiny_exponents);
+            assert_eq!(
+                got, tiny_naive,
+                "n=8 MSM disagrees with naive signed={signed_case} lazy={lazy}"
+            );
+            println!(
+                "correctness=naive_n8 signed={} lazy={} ok",
+                signed_case as u8, lazy as u8
+            );
+        }
     }
+    set_msm_lazy_recoding(false);
 
     // --- Timed sweep in the selected recoding -------------------------------
     let mut reference: Option<(u32, bool, G1Projective)> = None;
-    for c in windows {
+    for c in windows.iter().copied() {
         set_msm_signed_digits(signed);
         set_msm_window_c(Some(c));
         let mut samples = Vec::with_capacity(reps);
@@ -317,6 +333,49 @@ fn main() {
             signed_case as u8
         );
     }
+
+    // --- Correctness gate 5: carry-bit recoding vs materialised, full size ----
+    // The carry-bit variant must reproduce the materialised digits bit-for-bit
+    // at *every* width the dispatch can select (c = 2..=20), not only at the
+    // sampled sweep widths. MSM is deterministic, so equality here is exact.
+    for c in 2u32..=20 {
+        set_msm_signed_digits(true);
+        set_msm_window_c(Some(c));
+
+        set_msm_lazy_recoding(false);
+        let materialised = run_msm(&worker, &bases, &exponents);
+
+        set_msm_lazy_recoding(true);
+        let lazy = run_msm(&worker, &bases, &exponents);
+
+        assert_eq!(
+            materialised, lazy,
+            "carry-bit recoding disagrees with the materialised digits at window {c}"
+        );
+        println!("correctness=lazy_equals_materialised c={c} ok");
+    }
+
+    // --- Timed comparison of the two recodings at the sweep widths -----------
+    // Supplementary evidence only; the pre-registered time guard is end to end.
+    for c in windows.iter().copied() {
+        set_msm_signed_digits(true);
+        set_msm_window_c(Some(c));
+        for lazy in [false, true] {
+            set_msm_lazy_recoding(lazy);
+            let mut samples = Vec::with_capacity(reps);
+            for _ in 0..reps {
+                let start = Instant::now();
+                black_box(run_msm(&worker, &bases, &exponents));
+                samples.push(start.elapsed().as_secs_f64() * 1000.0);
+            }
+            println!(
+                "probe=msm_lazy c={c} lazy={} median_ms={:.3}",
+                lazy as u8,
+                median(&mut samples)
+            );
+        }
+    }
+    set_msm_lazy_recoding(false);
 
     println!("MSM_WINDOW_BENCH=DONE");
 }
