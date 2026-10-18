@@ -260,19 +260,21 @@ impl<S: PrimeField> Group<S> for Scalar<S> {
 
 /// Whether a single-threaded worker should run the in-place serial FFT.
 ///
-/// Gated by `SAPLING_FFT_SERIAL_SINGLE_THREAD=1`. `parallel_fft` splits the
-/// transform into `2^log_cpus` sub-transforms over a scratch buffer whose total
-/// size is one full domain regardless of the thread count. When `log_cpus` is 0
-/// that split degenerates to the identity permutation plus two extra full
-/// passes, so routing through it only costs a full domain-sized scratch. Off by
-/// default, and free when off (one cached `OnceLock` read per transform).
+/// Gated by `SAPLING_FFT_SERIAL_SINGLE_THREAD` (default `1` since the target-g
+/// default flip, 2026-10-18; set it to `0` to force the four-step path).
+/// `parallel_fft` splits the transform into `2^log_cpus` sub-transforms over a
+/// scratch buffer whose total size is one full domain regardless of the thread
+/// count. When `log_cpus` is 0 that split degenerates to the identity
+/// permutation plus two extra full passes, so routing through it only costs a
+/// full domain-sized scratch. On by default, and free when on (one cached
+/// `OnceLock` read per transform).
 fn fft_serial_single_thread_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
     *ENABLED.get_or_init(|| {
         std::env::var("SAPLING_FFT_SERIAL_SINGLE_THREAD")
             .map(|value| value.trim() == "1")
-            .unwrap_or(false)
+            .unwrap_or(true)
     })
 }
 

@@ -187,9 +187,12 @@ pub fn set_msm_signed_digits(enabled: bool) {
 // exponent, ~0.33 MB) has to be shared, because the fill runs one task per
 // window and those tasks execute concurrently, out of order.
 //
-// `SAPLING_MSM_LAZY_RECODING=1` selects the carry-bit variant. The default
-// stays `0` (materialised) until the pre-registered measurement decides.
-const MSM_LAZY_RECODING_DEFAULT: i32 = 0;
+// `SAPLING_MSM_LAZY_RECODING` selects the carry-bit variant (`1`) or the
+// materialised window digits (`0`). The default flipped to `1` on 2026-10-18
+// when the target-g combination (this switch plus the single-thread FFT serial
+// routing) passed its pre-registered acceptance table: prove peak 103.06 ->
+// 86.18 MB (-16.4%), correctness and time gates all green.
+const MSM_LAZY_RECODING_DEFAULT: i32 = 1;
 static MSM_LAZY_RECODING_OVERRIDE: AtomicI32 = AtomicI32::new(i32::MIN);
 
 fn msm_lazy_recoding_enabled() -> bool {
