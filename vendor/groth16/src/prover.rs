@@ -398,22 +398,28 @@ where
         let mut a = EvaluationDomain::from_coeffs(prover.a)?;
         let mut b = EvaluationDomain::from_coeffs(prover.b)?;
         let mut c = EvaluationDomain::from_coeffs(prover.c)?;
+        g16_mem_phase_boundary("qap_domains_built");
         a.ifft(&worker);
         a.coset_fft(&worker);
         b.ifft(&worker);
         b.coset_fft(&worker);
         c.ifft(&worker);
         c.coset_fft(&worker);
+        g16_mem_phase_boundary("qap_ffts_done");
 
         a.mul_assign(&worker, &b);
         drop(b);
+        g16_mem_phase_boundary("qap_mul_ab_done");
         a.sub_assign(&worker, &c);
         drop(c);
+        g16_mem_phase_boundary("qap_sub_c_done");
         a.divide_by_z_on_coset(&worker);
         a.icoset_fft(&worker);
+        g16_mem_phase_boundary("qap_divide_icoset_done");
         let mut a = a.into_coeffs();
         let a_len = a.len() - 1;
         a.truncate(a_len);
+        g16_mem_phase_boundary("qap_into_coeffs_done");
         let h_source_len = a.len();
         let h_source_elem_size = a
             .first()
