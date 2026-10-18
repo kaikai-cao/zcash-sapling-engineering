@@ -37,10 +37,11 @@ Protocol: [`sapling_optimization_validation_protocol_20261017.md`](sapling_optim
 | Memory ledger & phase decomposition | `sapling_prove_memory_ledger_20261017.md`, `sapling_runtime_memory_measurements_20261016.md`, `sapling_default_stage_decomposition_20261018.md` | `experiments/raw/csv/sapling_prove_memory_ledger_*` | peak 86.18 MB post-flip, owned by `circuit_synthesis`; structural floor |
 | Branch counters × inner-stage join | `sapling_spend_msm_branch_stage_analysis_20261018.md` | `experiments/raw/csv/sapling_spend_msm_{branch,inner_stage}_*`, `results/tables/sapling_spend_msm_branch_stage_join_*.csv` | H/L fill gap explained by exponent distributions; G2 ≈ 2.6× G1 per-digit cost |
 | Provenance & data integrity | `sapling_experiment_provenance_audit_20261011_151156.md`, `sapling_provenance_audit_closure_20261011.md` | `experiments/metadata/*.csv` (audit manifests) | source identity, dependency revision, parameter hashes recorded per batch |
+| Reproduction & CI verification | `sapling_independent_reproduction_20261018.md`, `sapling_cross_config_reproduction_20261018.md`, [`docs/reproduction.md`](../../docs/reproduction.md) | `experiments/raw/{csv,logs}/repro_independent_*` | parameter-free layer green on Windows (local CI-equivalent) and Ubuntu (GitHub CI, merged `main`); FFT digests identical across three instruction-set builds; real-proof cross-host reproduction still open |
 
 ## Reproducing
 
-- **Parameter-free checks (CI):** `.github/workflows/ci.yml` — fmt/clippy on the study crate, vendored-crate compile + library tests, release build, and the two deterministic gates (FFT path digests across switch states; MSM signed/unsigned + lazy/materialised equality).
+- **Parameter-free checks (CI):** `.github/workflows/ci.yml` — fmt/clippy on the study crate, vendored-crate compile + library tests, release build, and the two deterministic gates (FFT path digests across switch states; MSM signed/unsigned + lazy/materialised equality). Status 2026-10-18: green on the merged `main` (Ubuntu runners) and re-verified locally on Windows; the gates job prints the certified digest set for cross-platform comparison.
 - **Real-proof reproduction (needs ~51 MB Sapling parameter files, not in-repo):** [`docs/reproduction.md`](../../docs/reproduction.md).
 - **Analysis scripts:** `scripts/analyze_*.py` (per-target statistics, byte-identical to the committed derived tables) and `scripts/run_*.ps1` (campaign drivers). `scripts/README.md` records which scripts are historical one-offs.
 

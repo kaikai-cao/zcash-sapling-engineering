@@ -505,3 +505,43 @@ MSM 跨重编码 / lazy 等价）。所有门禁命令均在提交前于本地�
 
 > 一句话：本轮不新增任何实验结论，而是把已有结论接到可维护代码与可独立复现的链路上——CI 守护
 > 两个默认-on 开关，索引提供单一入口，同主机复现确认默认配置在干净 checkout 上逐字节成立。
+
+## 19. PR #2 合并、CI 首次转绿与跨配置复现（2026-10-18）
+
+### 19.1 PR #2 评审就绪并合并
+
+- 通过 GitHub API 直接把 PR #2 的标题/正文替换为评审包内容（标题：*Complete Sapling
+  proving optimization campaign and certify combined defaults*；正文含 diff 导读、战役表、
+  默认值切换与回滚、复现步骤、适用范围）。原始数据一个字节未动，698 个文件全部保留。
+- 以 **merge commit** 方式合并（合并提交 `765dc8b`），刻意不 squash：冻结协议要求的
+  「预注册 → 脚本 → 原始数据 → 代码 → 文档」提交链必须保持可审计。54 个提交的历史完整进入 `main`。
+- 合并后本地 `main` 快进到 `765dc8b`，工作树干净；三个开关默认值在代码中复核为 `1`。
+
+### 19.2 参数无关层在两个操作系统上转绿
+
+- **GitHub CI（Ubuntu 运行器）**：合并推送首次触发 `.github/workflows/ci.yml`，5 个 job
+  全部 success（fmt/clippy、vendored 编译、bellman 49 + groth16 4/3 个库测试、release 构建、
+  两个确定性门禁）。日志实证：`12 digests identical across all switch states`、
+  `correctness=cross_recoding c=13 ok`、`MSM_WINDOW_BENCH=DONE`。
+- **本地 Windows 复跑**（同一批命令，3 min 52 s）：逐项全过，与 CI job 一一对应。
+- CI 改进：FFT 门禁现在把 12 个认证摘要**打印到日志**，任何平台的后续运行都可以只凭日志
+  做逐字节比对，无需下载 artifact。
+
+### 19.3 跨配置复现：三档指令集摘要一致，线程数不敏感
+
+- 同一提交分别以默认（`x86-64`）、`-C target-cpu=x86-64-v2`、`-C target-cpu=native`
+  （本机 AVX-512）构建 FFT 门禁：**12/12 摘要逐字节一致**——目标 f/g 依赖的路径等价不是
+  SIMD 宽度的产物。
+- MSM 门禁在 `RAYON_NUM_THREADS=1`（CI）与默认线程池（本机 20 LP）下均通过。
+- **跨 OS 摘要比对（新增 CI 打印能力的首个运行即验证）**：PR #3 的 CI 运行 39116177753
+  （Ubuntu）日志打印的 12 个摘要与 Windows 本机捕获**逐字节一致且顺序相同**——认证摘要集
+  现在跨三档指令集 + 两个操作系统/工具链验证一致。提取方法：对 job 日志
+  `grep -o 'blake2b=[0-9a-f]\{64\}'`。
+- WSL 跨 OS 尝试被环境命令安全策略阻止（`wsl.exe` 黑名单，未尝试任何绕过）；OS 轴由
+  Ubuntu CI 覆盖，是比 WSL 更干净的数据点。
+- 详见 `experiments/metadata/sapling_cross_config_reproduction_20261018.md`；
+  `docs/reproduction.md` §4 同步更新（已覆盖 / 仍开放两部分）。**真正换一台物理机器的
+  复现（尤其真实证明内存台账）仍然开放**，已在文档中如实登记。
+
+> 一句话：PR #2 以完整历史合入 `main`，参数无关层从此在 Ubuntu CI 与 Windows 本机双 OS
+> 守护，且 FFT 等价性跨三档指令集复核一致；剩下的唯一开放项是换硬件的真实证明复现。
