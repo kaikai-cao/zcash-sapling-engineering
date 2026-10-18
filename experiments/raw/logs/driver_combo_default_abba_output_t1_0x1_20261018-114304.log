@@ -1,0 +1,19 @@
+# ABBA driver target=g combination (SAPLING_MSM_LAZY_RECODING + SAPLING_FFT_SERIAL_SINGLE_THREAD)
+prover=output threads=1 affinity=0x1 rounds=3 orders=ABBA/ABBA/BAAB label_prefix=combo_default_output_1t
+git_head=593999bd39a142478f095c6e315572d59223cb02
+host=DESKTOP-GMELEIR logical_processors=28
+round=1 order=ABBA
+round=1 pos=1 arm=off SAPLING_MSM_LAZY_RECODING=0 SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=combo_default_output_1t_off start=2026-10-18T11:43:06 host_cpu_load_pct=10.1
+round=1 pos=2 arm=on SAPLING_MSM_LAZY_RECODING=1 SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=combo_default_output_1t_on start=2026-10-18T11:43:13 host_cpu_load_pct=11.4
+round=1 pos=3 arm=on SAPLING_MSM_LAZY_RECODING=1 SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=combo_default_output_1t_on start=2026-10-18T11:43:21 host_cpu_load_pct=22
+round=1 pos=4 arm=off SAPLING_MSM_LAZY_RECODING=0 SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=combo_default_output_1t_off start=2026-10-18T11:43:29 host_cpu_load_pct=0
+round=2 order=ABBA
+round=2 pos=1 arm=off SAPLING_MSM_LAZY_RECODING=0 SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=combo_default_output_1t_off start=2026-10-18T11:43:36 host_cpu_load_pct=0
+round=2 pos=2 arm=on SAPLING_MSM_LAZY_RECODING=1 SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=combo_default_output_1t_on start=2026-10-18T11:43:42 host_cpu_load_pct=11.1
+round=2 pos=3 arm=on SAPLING_MSM_LAZY_RECODING=1 SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=combo_default_output_1t_on start=2026-10-18T11:43:49 host_cpu_load_pct=4.9
+round=2 pos=4 arm=off SAPLING_MSM_LAZY_RECODING=0 SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=combo_default_output_1t_off start=2026-10-18T11:43:56 host_cpu_load_pct=0
+round=3 order=BAAB
+round=3 pos=1 arm=on SAPLING_MSM_LAZY_RECODING=1 SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=combo_default_output_1t_on start=2026-10-18T11:44:03 host_cpu_load_pct=16.4
+round=3 pos=2 arm=off SAPLING_MSM_LAZY_RECODING=0 SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=combo_default_output_1t_off start=2026-10-18T11:44:09 host_cpu_load_pct=5
+round=3 pos=3 arm=off SAPLING_MSM_LAZY_RECODING=0 SAPLING_FFT_SERIAL_SINGLE_THREAD=0 label=combo_default_output_1t_off start=2026-10-18T11:44:16 host_cpu_load_pct=0
+round=3 pos=4 arm=on SAPLING_MSM_LAZY_RECODING=1 SAPLING_FFT_SERIAL_SINGLE_THREAD=1 label=combo_default_output_1t_on start=2026-10-18T11:44:23 host_cpu_load_pct=10.6
