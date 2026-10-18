@@ -15,6 +15,10 @@
 | 线程/亲和性 | `RAYON_NUM_THREADS=1`，进程绑核 LP0（P-core） |
 | 参数 | `D:\Research\zcash-params`（两个 .params 的 SHA-256 与复现文档表格一致） |
 
+> 注：表中 `analysis/msm-branch-stage-join` 及当时在用的 `experiment/fallback-ablation-20261016`
+> 均已合入 `main`，远程引用于 2026-10-18 收尾时删除（提交均可在 `main` 历史中到达）。
+> 此后的复现请直接检出 `main`，流程见 `docs/reproduction.md` §1。
+
 ## 2. 无参数门禁（参数无关，平台独立）
 
 | 门禁 | 结果 |

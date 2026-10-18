@@ -570,3 +570,28 @@ MSM 跨重编码 / lazy 等价）。所有门禁命令均在提交前于本地�
 - 换物理机器的真实证明复现（规程见 docs/reproduction.md §4）：内存/正确性数字预期可移植，
   计时不可移植；记录实际偏差。无第二台机器，不停滞项目。
 - 已合并分支的归档/改名待用户确认后再动远程 ref。
+
+## 21. 仓库管理收尾：删除 5 个已合并远程分支，只保留 main（2026-10-18）
+
+### 21.1 决策与依据（用户确认）
+
+用户核对 GitHub 分支关系后决定：删除 5 个已合入 main 的远程分支引用，不创建 archive 分支。
+理由：①5 个分支的提交均已包含在 main 历史中，删除引用不丢失任何提交、PR 或研究文档；
+②archive 分支只是额外指向历史提交的引用，不增加实验数据或复现证据，成果追溯已由最终
+报告、实验索引、原始数据与复现文档承担；③远程只留 main 作为正式入口，避免误以为旧分支
+仍在开发。明确不动：标签、提交、PR、实验文件、研究文档。
+
+### 21.2 执行与安全核验
+
+- 核验：5 个分支（`experiment/fallback-ablation-20261016`、`analysis/msm-branch-stage-join`、
+  `docs/cross-config-reproduction-20261018`、`docs/final-report-20261018`、
+  `profiling/spend-stage-timers`）相对 `origin/main` 全部 `ahead=0`，头均为 main 祖先；
+  标签 `sapling-engineering-baseline-v1` 指向的提交在 main 可达范围内。删除不会孤立任何提交。
+- 执行：一条 `git push origin --delete`（直连）删除 5 个远程引用。删除后 `git fetch --prune`
+  确认远程仅剩 `main`（origin/HEAD → origin/main）。
+- 历史出处记录（experiments/metadata 下各批次日志中的分支名）保持原样——那是一手证据；
+  仅在两处前瞻文档加了指针说明：`docs/sapling_proving_parameter_and_bottleneck_breakdown_zh.md`
+  基线行、`experiments/metadata/sapling_independent_reproduction_20261018.md` 复现设置表
+  （均说明分支已合入 main、远程引用已删除、提交可从 main 到达、此后复现检出 main）。
+- 本地同名分支与另一工作树的 `experiment/spend-msm-profile`（仅本地存在）未动；本次仅涉及
+  远程引用。
