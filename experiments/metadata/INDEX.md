@@ -4,6 +4,9 @@
 > evidence lives, and what the current verdict is. Generated 2026-10-18 for the
 > closed optimization campaign (targets a–g) and the measurement programme.
 >
+> **Advisor-facing synthesis:** [`docs/sapling_proving_optimization_final_report_zh.md`](../../docs/sapling_proving_optimization_final_report_zh.md)
+> (2026-10-18) — the mainline report over the material indexed here.
+>
 > **File classes in this repository** — do not merge these roles:
 >
 > | Class | Location | Rule |
