@@ -67,6 +67,23 @@ fn g16_mem_phase_probe_enabled() -> bool {
     })
 }
 
+/// Whether the synthesis capacity probe is enabled.
+///
+/// Gated by `SAPLING_G16_SYNTH_CAPACITY_PROBE=1`. The `a`/`b`/`c` and witness
+/// vectors grow by `push`, so their final capacity can overshoot the length.
+/// This probe reports `len`/`capacity` at the end of synthesis, separating the
+/// mathematically necessary bytes from `Vec` growth slack. Off by default and
+/// costs one cached `OnceLock` read per proof when disabled.
+fn g16_synth_capacity_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_G16_SYNTH_CAPACITY_PROBE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
 /// Reports the live bytes and the peak watermark since the previous boundary,
 /// then re-arms the watermark at the current live value.
 ///
@@ -383,6 +400,34 @@ where
         profile_marks[1] = Some(std::time::Instant::now());
     }
     g16_mem_phase_boundary("circuit_synthesis");
+
+    if g16_synth_capacity_probe_enabled() {
+        let scalar_bytes = std::mem::size_of::<Scalar<E::Fr>>();
+        let field_bytes = std::mem::size_of::<E::Fr>();
+        let abc_capacity_bytes = (prover.a.capacity() + prover.b.capacity()
+            + prover.c.capacity())
+            * scalar_bytes;
+        let witness_capacity_bytes = (prover.input_assignment.capacity()
+            + prover.aux_assignment.capacity())
+            * field_bytes;
+        eprintln!(
+            "G16_SYNTH_CAPACITY a_len={} a_cap={} b_len={} b_cap={} c_len={} c_cap={} input_len={} input_cap={} aux_len={} aux_cap={} scalar_bytes={} abc_capacity_bytes={} witness_capacity_bytes={} live_bytes={}",
+            prover.a.len(),
+            prover.a.capacity(),
+            prover.b.len(),
+            prover.b.capacity(),
+            prover.c.len(),
+            prover.c.capacity(),
+            prover.input_assignment.len(),
+            prover.input_assignment.capacity(),
+            prover.aux_assignment.len(),
+            prover.aux_assignment.capacity(),
+            scalar_bytes,
+            abc_capacity_bytes,
+            witness_capacity_bytes,
+            bellman::mem_probe::live(),
+        );
+    }
 
     let worker = Worker::new();
 

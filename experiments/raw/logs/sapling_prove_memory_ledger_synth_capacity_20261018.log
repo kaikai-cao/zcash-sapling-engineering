@@ -1,0 +1,26 @@
+circuit=Spend
+params_path=D:\Research\zcash-params\sapling-spend.params
+rayon_threads=1
+build_profile=release
+params_read_validate_ms=26303.172
+live_baseline_bytes=1073
+load_peak_delta_bytes=60818440
+live_after_load_delta_bytes=60818440
+prepare_vk_ms=1.024
+prepare_vk_peak_delta_bytes=40000
+live_before_prove_bytes=68729865
+batch_id=1792305256344
+run=1 prove_ms=3476.320 prove_peak_delta_bytes=17441136 prove_peak_abs_bytes=86172518 prove_live_end_delta_bytes=394576 verify_ms=2.947 proof_bytes=192 verified=true
+run=2 prove_ms=3412.419 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184598 prove_live_end_delta_bytes=0 verify_ms=3.736 proof_bytes=192 verified=true
+run=3 prove_ms=3386.978 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184598 prove_live_end_delta_bytes=0 verify_ms=2.881 proof_bytes=192 verified=true
+run=4 prove_ms=3407.370 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184598 prove_live_end_delta_bytes=0 verify_ms=2.985 proof_bytes=192 verified=true
+run=5 prove_ms=3415.307 prove_peak_delta_bytes=17058528 prove_peak_abs_bytes=86184598 prove_live_end_delta_bytes=0 verify_ms=3.355 proof_bytes=192 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_prove_memory_ledger_synth_capacity_20261018.csv
+PROVE_MEMORY_LEDGER=PASS
+
+--- stderr ---
+G16_SYNTH_CAPACITY a_len=98785 a_cap=131072 b_len=98785 b_cap=131072 c_len=98785 c_cap=131072 input_len=8 input_cap=8 aux_len=98638 aux_cap=131072 scalar_bytes=32 abc_capacity_bytes=12582912 witness_capacity_bytes=4194560 live_bytes=85922982
+G16_SYNTH_CAPACITY a_len=98785 a_cap=131072 b_len=98785 b_cap=131072 c_len=98785 c_cap=131072 input_len=8 input_cap=8 aux_len=98638 aux_cap=131072 scalar_bytes=32 abc_capacity_bytes=12582912 witness_capacity_bytes=4194560 live_bytes=85935062
+G16_SYNTH_CAPACITY a_len=98785 a_cap=131072 b_len=98785 b_cap=131072 c_len=98785 c_cap=131072 input_len=8 input_cap=8 aux_len=98638 aux_cap=131072 scalar_bytes=32 abc_capacity_bytes=12582912 witness_capacity_bytes=4194560 live_bytes=85935062
+G16_SYNTH_CAPACITY a_len=98785 a_cap=131072 b_len=98785 b_cap=131072 c_len=98785 c_cap=131072 input_len=8 input_cap=8 aux_len=98638 aux_cap=131072 scalar_bytes=32 abc_capacity_bytes=12582912 witness_capacity_bytes=4194560 live_bytes=85935062
+G16_SYNTH_CAPACITY a_len=98785 a_cap=131072 b_len=98785 b_cap=131072 c_len=98785 c_cap=131072 input_len=8 input_cap=8 aux_len=98638 aux_cap=131072 scalar_bytes=32 abc_capacity_bytes=12582912 witness_capacity_bytes=4194560 live_bytes=85935062
