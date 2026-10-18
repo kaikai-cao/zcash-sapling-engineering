@@ -2,7 +2,7 @@
 
 **文档类型：** 工程细化报告（把每个阶段、每个参数、每个椭圆曲线点、每块内存、每种算法都拆开写清楚）
 **生成日期：** 2026-10-17
-**代码与数据基线：** 仓库 `experiment/fallback-ablation-20261016` 分支；测试代码 `sapling-crypto 0.9.0`（commit `88a7946b…`）；本地 `vendor/bellman 0.15.0`、`vendor/groth16 0.2.0`
+**代码与数据基线：** 仓库 `experiment/fallback-ablation-20261016` 分支（该分支已合入 `main`，远程引用于 2026-10-18 收尾时按约定删除；其全部提交均可从 `main` 历史到达，复现请按 `docs/reproduction.md` §1 检出 `main`）；测试代码 `sapling-crypto 0.9.0`（commit `88a7946b…`）；本地 `vendor/bellman 0.15.0`、`vendor/groth16 0.2.0`
 **环境：** Windows 11、Intel Core i7-14700、31.7 GiB RAM、Rust 1.98.1、Release、Groth16 + BLS12-381
 
 > 说明：本文把 `docs/`、`experiments/`、`results/` 中已有的原始测量与源码固定版本汇总成一份“参数总账”，所有数字都标注口径与来源文件。诊断批次与正式基线不混用。
