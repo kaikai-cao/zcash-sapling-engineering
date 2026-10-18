@@ -160,7 +160,7 @@ proof_bytes,verified,rayon_threads,build_profile"
         let mut context = SaplingVerificationContext::new();
 
         let start = Instant::now();
-        let verified = context.check_output(&cv, cmu.clone(), epk.clone(), proof, &prepared_vk);
+        let verified = context.check_output(&cv, cmu, epk, proof, &prepared_vk);
         let verify_ms = start.elapsed().as_secs_f64() * 1000.0;
 
         writeln!(

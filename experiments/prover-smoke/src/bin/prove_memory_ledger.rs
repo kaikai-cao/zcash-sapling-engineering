@@ -268,7 +268,7 @@ prove_live_end_delta_bytes,verify_ms,proof_bytes,verified"
             &nullifier.0,
             rk,
             &sighash,
-            spend_auth_sig.clone(),
+            spend_auth_sig,
             proof,
             &prepared_vk,
         );
@@ -276,9 +276,8 @@ prove_live_end_delta_bytes,verify_ms,proof_bytes,verified"
 
         writeln!(
             csv,
-            "{},{},{},{},{},{:.3},{},{},{},{:.3},{},{},{},{:.3},{},{}",
+            "{},Spend,{},{},{},{:.3},{},{},{},{:.3},{},{},{},{:.3},{},{}",
             batch_id,
-            "Spend",
             rayon_threads,
             build_profile,
             run,

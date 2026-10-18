@@ -62,7 +62,8 @@ fn digest(values: &[GroupScalar<Fr>]) -> String {
 }
 
 fn main() {
-    let switch = std::env::var("SAPLING_FFT_SERIAL_SINGLE_THREAD").unwrap_or_else(|_| "unset".to_string());
+    let switch =
+        std::env::var("SAPLING_FFT_SERIAL_SINGLE_THREAD").unwrap_or_else(|_| "unset".to_string());
     let worker = Worker::new();
     let log_cpus = worker.log_num_threads();
 

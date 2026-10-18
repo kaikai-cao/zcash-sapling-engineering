@@ -206,7 +206,7 @@ proof_bytes,verified,rayon_threads,build_profile"
             &nullifier.0,
             rk,
             &sighash,
-            spend_auth_sig.clone(),
+            spend_auth_sig,
             proof,
             &prepared_vk,
         );

@@ -15,7 +15,7 @@
 //!   * `source_bytes`      : the `Vec<Scalar>` buffer still alive at that point
 //!   * `converted_bytes`   : the `Vec<Exponent>` being built
 //!   * `peak_delta_bytes`  : directly measured live-byte peak above the
-//!                           pre-conversion live value (should be ~= the sum)
+//!     pre-conversion live value (should be ~= the sum)
 //!   * `live_after_delta_bytes` : retained bytes once the source is dropped
 //!
 //! Select the circuit with `SAPLING_IN_SITU_CIRCUIT=spend|output` (default
@@ -212,15 +212,16 @@ fn prove_output() -> Result<(), Box<dyn Error>> {
 
     let encryptor = sapling_note_encryption(None, note, [0u8; 512], &mut rng);
     let epk_bytes = <SaplingDomain as Domain>::epk_bytes(encryptor.epk());
-    let epk = Option::<jubjub::ExtendedPoint>::from(jubjub::ExtendedPoint::from_bytes(&epk_bytes.0))
-        .expect("无法解析 epk");
+    let epk =
+        Option::<jubjub::ExtendedPoint>::from(jubjub::ExtendedPoint::from_bytes(&epk_bytes.0))
+            .expect("无法解析 epk");
 
     let circuit = OutputParameters::prepare_circuit(&esk, payment_address, rcm, value, rcv);
 
     let proof = params.create_proof(circuit, &mut rng);
 
     let mut context = SaplingVerificationContext::new();
-    let verified = context.check_output(&cv, cmu.clone(), epk, proof, &prepared_vk);
+    let verified = context.check_output(&cv, cmu, epk, proof, &prepared_vk);
 
     println!("verified={verified}");
     assert!(verified, "Output 证明验证失败");

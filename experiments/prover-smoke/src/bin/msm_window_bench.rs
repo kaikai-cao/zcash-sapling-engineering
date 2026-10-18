@@ -160,7 +160,7 @@ fn modelled_ops(n: usize, c: u32, signed: bool) -> (usize, usize, usize) {
     let chunks = if signed {
         255 / c as usize + 1
     } else {
-        (255 + c as usize - 1) / c as usize
+        255_usize.div_ceil(c as usize)
     };
     let buckets = if signed {
         1usize << (c - 1)
@@ -207,8 +207,7 @@ fn main() {
 
     for c in [8u32, 10, 12] {
         let buckets = (1usize << c) - 1;
-        let elapsed =
-            probe_random_bucket(&bases, buckets, 0xDEAD_BEEF_0000_0000 + c as u64, reps);
+        let elapsed = probe_random_bucket(&bases, buckets, 0xDEAD_BEEF_0000_0000 + c as u64, reps);
         println!(
             "probe=add_rand_bucket c={c} buckets={buckets} bucket_array_bytes={} median_ms={elapsed:.3} ns_per_add={:.1}",
             buckets * std::mem::size_of::<G1Projective>(),
