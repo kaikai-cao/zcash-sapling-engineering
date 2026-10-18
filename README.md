@@ -584,6 +584,7 @@ The following are useful entry points into the recorded evidence.
 
 ### Research summaries
 
+- [**Final research report (Chinese, 2026-10-18)**](docs/sapling_proving_optimization_final_report_zh.md) — the advisor-facing synthesis: baseline cost structure, bottleneck localization, the seven-target campaign with its archived negative result, the certified −16.38% combination, floors and boundaries, and reproduction status. Start here.
 - [Sapling Spend Prover bottleneck final report](experiments/metadata/sapling_spend_prover_bottleneck_final_report_20261011.md) — consolidated baseline, stage, MSM, thread-scaling, and worker-fallback findings.
 - [Spend stage-research summary](experiments/metadata/sapling_spend_stage_research_summary.md) — detailed stage-by-stage comparison of single-thread and 20-thread diagnostic batches.
 - [Spend MSM branch-counter vs inner-stage join](experiments/metadata/sapling_spend_msm_branch_stage_analysis_20261018.md) — cross-batch join of deterministic branch counters with inner-stage timings; explains the H/L fill gap by exponent distributions and isolates the G2-vs-G1 group-add cost difference.
