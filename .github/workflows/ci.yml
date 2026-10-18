@@ -15,6 +15,10 @@ name: ci
 #     SAPLING_FFT_SERIAL_SINGLE_THREAD is unset (flipped default) or explicitly
 #     =0 (legacy four-step path), and the MSM bench cross-checks signed/unsigned
 #     recoding and lazy/materialised exponents on every run.
+#   * The gates job prints the certified digest set to the log so that runs on
+#     different platforms (this Ubuntu runner vs the Windows measurement host)
+#     can be compared bit-for-bit from the logs alone; see docs/reproduction.md
+#     section 4.
 
 on:
   push:
@@ -100,6 +104,8 @@ jobs:
           diff -u gate_lazy0.txt gate_default.txt
           count=$(grep -c . gate_default.txt)
           echo "FFT path gate: $count digests identical across all switch states"
+          echo "--- certified digest set (compare bit-for-bit across platforms) ---"
+          cat gate_default.txt
           "$BIN" | grep -q "FFT_PATH_GATE_DONE"
       - name: MSM gate - signed/unsigned recoding and lazy/materialised exponents agree
         env:

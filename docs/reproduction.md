@@ -25,7 +25,10 @@ cargo --version
 ## 1. Clean checkout
 
 ```powershell
-git clone -b experiment/fallback-ablation-20261016 https://github.com/kaikai-cao/zcash-sapling-engineering.git
+# The campaign branch was merged into main on 2026-10-18 (merge commit 765dc8b);
+# clone main. To reproduce a specific historical batch, check out the commit
+# recorded in that batch's provenance header instead.
+git clone -b main https://github.com/kaikai-cao/zcash-sapling-engineering.git
 cd zcash-sapling-engineering
 git log --oneline -1        # record the commit under test
 git status --short          # must be empty
@@ -88,7 +91,7 @@ Reference values for the certified configuration (same host, LP0-pinned):
 prove peak **86,184,607 B** median (target g arm B), Spend 1 t prove
 **≈3.2–3.3 s** after the flip (was ≈3.6–3.7 s before), Output ≈0.53 s.
 
-## 4. Cross-hardware reproduction (not yet performed)
+## 4. Cross-hardware reproduction (partly covered; physical cross-host still open)
 
 The certified numbers come from one host. Before any external claim, repeat
 §2 (always) and §3 (at least the memory ledger) on a different CPU / OS, and
@@ -101,11 +104,29 @@ compare:
 
 Record machine, OS, toolchain and affinity in the batch provenance headers.
 
-**Status 2026-10-18:** a same-host independent reproduction (clean checkout,
-fresh build, no switches set) has been performed and passed — see
-[`sapling_independent_reproduction_20261018.md`](experiments/metadata/sapling_independent_reproduction_20261018.md)
-(prove peak 86,184,600 B vs the certified 86,184,607 B, −7 B; gates identical).
-Cross-hardware/OS reproduction remains open.
+### 4.1 What has been verified (status 2026-10-18)
+
+| Layer | Where | Result |
+|---|---|---|
+| Same-host independent reproduction (clean checkout, fresh build, no switches set) | this host, Windows | passed — [`sapling_independent_reproduction_20261018.md`](experiments/metadata/sapling_independent_reproduction_20261018.md): prove peak 86,184,600 B vs certified 86,184,607 B (−7 B); gates identical |
+| Parameter-free CI, all five jobs | GitHub Actions, Ubuntu runners, merged `main` (`765dc8b`) | [run 39115163051](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/39115163051) — success (also green on the PR head `f28f379`) |
+| Same checks re-run locally | this host, Windows | all pass; bellman 49 + groth16 4/3 library tests green |
+| FFT gate digests across three instruction-set builds (`x86-64`, `x86-64-v2`, `native`) | this host, Windows | 12/12 digests bit-identical |
+| MSM gate at `RAYON_NUM_THREADS=1` vs default pool | CI (1 thread) + this host (default) | both pass |
+
+Details: [`sapling_cross_config_reproduction_20261018.md`](experiments/metadata/sapling_cross_config_reproduction_20261018.md).
+The CI gates job now prints the certified digest set to its log, so any future
+platform's run can be compared bit-for-bit from the log alone.
+
+### 4.2 What remains open
+
+A reproduction on a **different physical machine** (different CPU
+microarchitecture, and ideally a non-Windows host for the real-proof ledger)
+has not been performed. The automation environment cannot provide one: it runs
+on the measurement host itself, and `wsl.exe` is blocked by the environment's
+command security policy (no workaround attempted). The checklist above is
+unchanged; the Ubuntu CI runs already cover the OS axis for the parameter-free
+layer.
 
 ## 5. What "reproduced" means here
 
