@@ -561,6 +561,7 @@ The following are useful entry points into the recorded evidence.
 
 - [Sapling Spend Prover bottleneck final report](experiments/metadata/sapling_spend_prover_bottleneck_final_report_20261011.md) — consolidated baseline, stage, MSM, thread-scaling, and worker-fallback findings.
 - [Spend stage-research summary](experiments/metadata/sapling_spend_stage_research_summary.md) — detailed stage-by-stage comparison of single-thread and 20-thread diagnostic batches.
+- [Spend MSM branch-counter vs inner-stage join](experiments/metadata/sapling_spend_msm_branch_stage_analysis_20261018.md) — cross-batch join of deterministic branch counters with inner-stage timings; explains the H/L fill gap by exponent distributions and isolates the G2-vs-G1 group-add cost difference.
 - [Spend thread-profile comparison](experiments/metadata/sapling_spend_thread_profile_comparison_1791801666809_vs_1791802391142.md) — full provenance-linked comparison, stage timings, MSM calls, and caveats.
 - [Same-source Spend / Output MSM comparison](experiments/metadata/sapling_same_source_msm_comparison_20261011.md) — per-run MSM measurements for both circuits.
 - [Parameter-size report](experiments/metadata/sapling_parameter_size_breakdown_20261011_142729.md) — serialized parameter layout and byte counts.
