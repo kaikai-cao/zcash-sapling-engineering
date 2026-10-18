@@ -112,6 +112,7 @@ Record machine, OS, toolchain and affinity in the batch provenance headers.
 | Parameter-free CI, all five jobs | GitHub Actions, Ubuntu runners, merged `main` (`765dc8b`) | [run 39115163051](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/39115163051) — success (also green on the PR head `f28f379`) |
 | Same checks re-run locally | this host, Windows | all pass; bellman 49 + groth16 4/3 library tests green |
 | FFT gate digests across three instruction-set builds (`x86-64`, `x86-64-v2`, `native`) | this host, Windows | 12/12 digests bit-identical |
+| FFT gate digests across operating systems (Windows capture vs Ubuntu CI log, run [39116177753](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/39116177753)) | this host + GitHub CI | 12/12 digests bit-identical, same order |
 | MSM gate at `RAYON_NUM_THREADS=1` vs default pool | CI (1 thread) + this host (default) | both pass |
 
 Details: [`sapling_cross_config_reproduction_20261018.md`](experiments/metadata/sapling_cross_config_reproduction_20261018.md).

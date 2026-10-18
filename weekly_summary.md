@@ -533,6 +533,10 @@ MSM 跨重编码 / lazy 等价）。所有门禁命令均在提交前于本地�
   （本机 AVX-512）构建 FFT 门禁：**12/12 摘要逐字节一致**——目标 f/g 依赖的路径等价不是
   SIMD 宽度的产物。
 - MSM 门禁在 `RAYON_NUM_THREADS=1`（CI）与默认线程池（本机 20 LP）下均通过。
+- **跨 OS 摘要比对（新增 CI 打印能力的首个运行即验证）**：PR #3 的 CI 运行 39116177753
+  （Ubuntu）日志打印的 12 个摘要与 Windows 本机捕获**逐字节一致且顺序相同**——认证摘要集
+  现在跨三档指令集 + 两个操作系统/工具链验证一致。提取方法：对 job 日志
+  `grep -o 'blake2b=[0-9a-f]\{64\}'`。
 - WSL 跨 OS 尝试被环境命令安全策略阻止（`wsl.exe` 黑名单，未尝试任何绕过）；OS 轴由
   Ubuntu CI 覆盖，是比 WSL 更干净的数据点。
 - 详见 `experiments/metadata/sapling_cross_config_reproduction_20261018.md`；

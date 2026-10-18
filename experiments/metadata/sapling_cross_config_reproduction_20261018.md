@@ -97,6 +97,26 @@ Interpretation: the FFT-path equivalence that target f/g rely on is **not an
 artifact of the local CPU's SIMD width or of any particular codegen baseline**.
 Digest identity holds from SSE2-only through AVX-512-capable builds.
 
+### 4.1 Cross-OS digest comparison (first log-based, 2026-10-18)
+
+The digest-printing CI change took effect on the next push: CI run
+[39116177753](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/39116177753)
+(PR #3 head `12e6897`, Ubuntu runners, rustc stable) printed the digest set to
+the job log. Those 12 digests are **bit-identical to the Windows local capture
+above, in the same order** — verified by direct file comparison of the log
+extraction against the local `gate_default.txt`.
+
+The certified digest set is therefore now verified identical across:
+
+- three instruction-set baselines on Windows (§4), and
+- two operating systems and two toolchains (Windows 11 + rustc 1.98.1 vs
+  Ubuntu + GitHub stable rustc).
+
+Digest identity is a *correctness* property (pure field arithmetic hashed with
+BLAKE2b), so it is expected to hold everywhere; what this adds is the empirical
+cross-platform confirmation with actual hex values, which the previous
+within-run-only assertion could not provide.
+
 ## 5. MSM gate thread-count insensitivity
 
 CI runs the MSM gate with `RAYON_NUM_THREADS=1`; it was additionally run on the
@@ -122,6 +142,7 @@ than WSL would have been (clean container, stable toolchain, no host noise).
   parameter-free gates everywhere, plus the memory ledger where parameter files
   are available, and compare digests (must be identical), prove peak (expect
   identical byte counts) and timings (like-for-like only).
-- The digest-printing CI change takes effect on the next push; the first
-  post-change run will be the reference for log-based cross-platform digest
-  comparison.
+- The digest-printing CI change is live and its first run (39116177753, PR #3
+  head) confirmed the cross-OS digest identity in §4.1. Future platform runs
+  can be compared from logs alone using the same extraction
+  (`grep -o 'blake2b=[0-9a-f]\{64\}'` on the job log).
