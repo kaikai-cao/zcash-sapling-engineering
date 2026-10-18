@@ -10,7 +10,10 @@ name: ci
 #     this study's instrumentation: they are compile-checked and test-gated, but
 #     not lint-gated (rustfmt/clippy -D warnings apply to the study's own crate,
 #     experiments/prover-smoke, only).
-#   * The two default-on optimization switches are guarded by the gates job:
+#   * The default-on optimization switches are guarded by the gates job — three
+#     as of 2026-10-18: SAPLING_MSM_SIGNED_DIGITS (adopted by target b) plus the
+#     two flipped by target g (SAPLING_MSM_LAZY_RECODING,
+#     SAPLING_FFT_SERIAL_SINGLE_THREAD):
 #     the FFT path gate must produce identical digests whether
 #     SAPLING_FFT_SERIAL_SINGLE_THREAD is unset (flipped default) or explicitly
 #     =0 (legacy four-step path), and the MSM bench cross-checks signed/unsigned
