@@ -1,0 +1,9 @@
+﻿query,group,exponent_count,window,bucket_count,chunk_count,reduction_iterations,median_bucket_fill_sum_ms,median_bucket_reduce_sum_ms,nonzero_window_digit_visits,bucket_base_add_calls,direct_one_add_calls,zero_exponent_slot_visits,one_exponent_slot_visits,density_true_slot_visits,base_skip_calls,fill_us_per_nonzero_digit_ratio_of_medians,fill_us_per_nonzero_digit_median_of_ratios,reduce_us_per_reduction_iteration_ratio_of_medians,reduce_us_per_reduction_iteration_median_of_ratios,fill_us_per_active_slot
+H_query_G1,G1,131071,12,4095,22,90090,2622.717,170.739,2864709,2864709,0,0,0,2883562,18853,0.9155,0.9155,1.8952,1.8952,0.9095
+L_query_G1,G1,98638,12,4095,22,90090,614.164,179.595,624833,624833,32648,822998,718256,2170036,1512555,0.9829,0.9829,1.9935,1.9935,0.283
+A_input_G1,G1,8,3,7,85,595,0.376,0.986,458,458,2,0,170,680,220,0.821,0.821,1.6571,1.6571,0.5529
+A_aux_G1,G1,98638,12,4095,22,90090,375.959,189.726,346654,346654,32479,815012,714538,1878404,1499271,1.0845,1.0845,2.106,2.106,0.2001
+B_G1_input,G1,8,3,7,85,595,0.024,1.157,0,0,1,0,85,85,84,,,1.9445,1.9445,0.2824
+B_G1_aux,G1,98638,12,4095,22,90090,227.295,179.393,202141,202141,25617,581592,563574,1348578,1120820,1.1244,1.1244,1.9913,1.9913,0.1685
+B_G2_input,G2,8,3,7,85,595,0.018,3.226,0,0,1,0,85,85,84,,,5.4218,5.4218,0.2118
+B_G2_aux,G2,98638,12,4095,22,90090,599.776,436.9,202141,202141,25617,581592,563574,1348578,1120820,2.9671,2.9671,4.8496,4.8496,0.4447
