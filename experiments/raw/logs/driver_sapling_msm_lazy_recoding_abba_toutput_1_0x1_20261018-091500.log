@@ -1,0 +1,19 @@
+# ABBA driver switch=SAPLING_MSM_LAZY_RECODING
+prover=output threads=1 affinity=0x1 rounds=3 orders=ABBA/ABBA/BAAB label_prefix=msm_lazy_recoding_output
+git_head=d1b1d996a360ddf558a263f9de981f223606c3b5
+host=DESKTOP-GMELEIR logical_processors=28
+round=1 order=ABBA
+round=1 pos=1 arm=off SAPLING_MSM_LAZY_RECODING=0 label=msm_lazy_recoding_output_off start=2026-10-18T09:15:02 host_cpu_load_pct=2
+round=1 pos=2 arm=on SAPLING_MSM_LAZY_RECODING=1 label=msm_lazy_recoding_output_on start=2026-10-18T09:15:10 host_cpu_load_pct=21
+round=1 pos=3 arm=on SAPLING_MSM_LAZY_RECODING=1 label=msm_lazy_recoding_output_on start=2026-10-18T09:15:17 host_cpu_load_pct=6.8
+round=1 pos=4 arm=off SAPLING_MSM_LAZY_RECODING=0 label=msm_lazy_recoding_output_off start=2026-10-18T09:15:24 host_cpu_load_pct=4.3
+round=2 order=ABBA
+round=2 pos=1 arm=off SAPLING_MSM_LAZY_RECODING=0 label=msm_lazy_recoding_output_off start=2026-10-18T09:15:30 host_cpu_load_pct=5.3
+round=2 pos=2 arm=on SAPLING_MSM_LAZY_RECODING=1 label=msm_lazy_recoding_output_on start=2026-10-18T09:15:38 host_cpu_load_pct=3
+round=2 pos=3 arm=on SAPLING_MSM_LAZY_RECODING=1 label=msm_lazy_recoding_output_on start=2026-10-18T09:15:45 host_cpu_load_pct=3.4
+round=2 pos=4 arm=off SAPLING_MSM_LAZY_RECODING=0 label=msm_lazy_recoding_output_off start=2026-10-18T09:15:51 host_cpu_load_pct=13.8
+round=3 order=BAAB
+round=3 pos=1 arm=on SAPLING_MSM_LAZY_RECODING=1 label=msm_lazy_recoding_output_on start=2026-10-18T09:15:58 host_cpu_load_pct=12.7
+round=3 pos=2 arm=off SAPLING_MSM_LAZY_RECODING=0 label=msm_lazy_recoding_output_off start=2026-10-18T09:16:04 host_cpu_load_pct=17.2
+round=3 pos=3 arm=off SAPLING_MSM_LAZY_RECODING=0 label=msm_lazy_recoding_output_off start=2026-10-18T09:16:11 host_cpu_load_pct=5
+round=3 pos=4 arm=on SAPLING_MSM_LAZY_RECODING=1 label=msm_lazy_recoding_output_on start=2026-10-18T09:16:17 host_cpu_load_pct=19.6

@@ -1,0 +1,6 @@
+batch_id,circuit,rayon_threads,build_profile,run,params_read_validate_ms,load_peak_delta_bytes,live_after_load_delta_bytes,live_before_prove_bytes,prove_ms,prove_peak_delta_bytes,prove_peak_abs_bytes,prove_live_end_delta_bytes,verify_ms,proof_bytes,verified
+1792286510320,Spend,1,release,1,26781.057,60818440,60818440,68729865,3908.553,394240,69125641,393408,2.945,192,true
+1792286510320,Spend,1,release,2,26781.057,60818440,60818440,68729865,3673.962,0,69125641,0,2.969,192,true
+1792286510320,Spend,1,release,3,26781.057,60818440,60818440,68729865,3719.513,0,69125641,0,2.863,192,true
+1792286510320,Spend,1,release,4,26781.057,60818440,60818440,68729865,3706.851,0,69125641,0,2.848,192,true
+1792286510320,Spend,1,release,5,26781.057,60818440,60818440,68729865,3686.288,0,69125641,0,2.873,192,true
