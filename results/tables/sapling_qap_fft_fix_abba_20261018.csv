@@ -1,0 +1,4 @@
+arm_set,role,prover,threads,affinity,rounds,paired_count,paired_median_rel_pct,paired_b_faster,paired_sign_test_p,pooled_batch_median_a_ms,pooled_batch_median_b_ms,pooled_batch_rel_pct,pooled_proof_median_a_ms,pooled_proof_median_b_ms,pooled_proof_rel_pct,mwu_two_sided_p,proofs_a,proofs_b,all_verified,drift_a_rel_pct,drift_b_rel_pct,sensitivity_pairs,sensitivity_paired_median_rel_pct,sensitivity_b_faster,sensitivity_sign_test_p
+primary_spend_1t_lp0,primary time guard (frozen),spend,1,0x1,3,5,-3.162,5,0.0625,3317.5,3207.8,-3.308,3319.8,3236.1,-2.52,0.001,20,20,True,-2.26,-2.21,6,-3.354,6,0.0312
+aux_spend_8t_pcores,auxiliary non-regression arm (multi-thread FFT path unchanged),spend,8,0xFFFF,3,5,1.114,2,1.0,717.6,694.9,-3.172,707.4,721.2,1.945,0.4652,20,20,True,-2.05,-13.13,6,-0.316,3,1.0
+aux_output_1t_lp0,auxiliary non-regression arm,output,1,0x1,3,5,-0.61,3,1.0,473.3,472.4,-0.195,474.0,473.3,-0.143,0.372,20,20,True,-0.65,-0.16,6,-0.331,4,0.6875
