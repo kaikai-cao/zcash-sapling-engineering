@@ -117,6 +117,20 @@ experiments/metadata/<label>_<yyyymmdd>.md                                # 结�
 > `sapling_default_config_experiment_results_20261017.md`（配置级：P 核绑定阶段收益认证、prove 配对显著性不足、反对降线程），
 > b 见 `sapling_msm_signed_digit_results_20261017.md`（算法级：有符号窗口重编码，Spend 1t@`0x1` **−6.63%** 已认证、内存 −2.00 MB）。
 > 候选 **a / c / d 仍未做**。本节上表的证据与预期收益保持原样，不改动。
+>
+> **状态更新（2026-10-18）：** 负责人第三个选定 **a**（内存级）并已完成：见
+> `sapling_msm_lazy_recoding_results_20261018.md`（只预存进位位；H 缓冲 24.1 MB → 0.33 MB、现场瞬态 −23.79 MB、
+> 端到端 1t −4.60% / 8t −8.52% / Output −1.90%，但 prove 峰值只降 **12.93 MB** < 预注册的 15 MB ⇒ **未通过、归档、默认保持 `0`**）。
+> 该目标的副产品是一个**默认关闭的阶段峰值归因探针**（`SAPLING_G16_MEM_PHASE_PROBE`）和一条更新后的内存主因：
+> **`qap_fft_h_exponent_prep` 阶段的 90.13 MB 绝对天花板**（与重编码开关无关，两臂逐字节相同）。
+> **所有者决定（2026-10-18）：保持 a 的默认值 `0`，并新增候选 f 作为下一目标。** 候选 a/c/d 中 a 已完成（未通过），c/d 仍未做。
+>
+> | # | 候选 | 已知证据 | 预期收益 | 风险/成本 |
+> |---|---|---|---|---|
+> | f | **单线程 FFT 的 four-step scratch**（`vendor/bellman/src/domain.rs::best_fft`） | 阶段探针（`results/tables/sapling_qap_fft_subphase_peak_20261018.csv`）：`qap_fft_h_exponent_prep` 峰值 = 进入该阶段的 live（85.94 MB）+ 一个整域 scratch（**+4,194,424 B**）；`from_coeffs` 零净增、h 转换（+5.24 MB）**不是**峰值；`log_cpus == 0` 时四步法恒等却仍分配整域缓冲 + 两趟全量遍历 | 阶段峰值 −4.19 MB；`lazy=1` 全局峰值 −3.95 MB（可转化上限 = 90,130,325 − 86,184,605）；**组合**（`lazy=1` + 本改动）103.06 → 86.18 MB = **−16.88 MB** | 只对单线程生效（多线程路径逐字节不变，且其 scratch 总量已是理论最小值）；数值逐位等价，有门禁兜底 |
+>
+> 候选 f 的预注册（阈值按"阶段分解 + min(可移除量, 峰值−次高阶段)"设定，不重复目标 a 的阈值错误）见
+> `sapling_qap_fft_scratch_preregistration_20261018.md`。
 
 ---
 
