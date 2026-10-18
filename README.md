@@ -528,10 +528,13 @@ The tree below intentionally lists **directories only**. Individual files are om
 
 ```text
 zcash-sapling-engineering/
+├── .github/
+│   └── workflows/          # parameter-free CI (fmt, clippy, lib tests, gates)
 ├── docs/
 ├── experiments/
 │   ├── metadata/
-│   │   └── source_patches/
+│   │   ├── source_patches/
+│   │   └── INDEX.md        # one-table entry point to all research threads
 │   ├── prover-smoke/
 │   │   └── src/
 │   │       └── bin/
