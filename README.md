@@ -311,6 +311,16 @@ The QAP/FFT stage became the binding prove peak after target a, and its stage de
 
 Pre-registration: [`sapling_qap_fft_scratch_preregistration_20261018.md`](experiments/metadata/sapling_qap_fft_scratch_preregistration_20261018.md); results: [`sapling_qap_fft_scratch_results_20261018.md`](experiments/metadata/sapling_qap_fft_scratch_results_20261018.md); derived tables: [`sapling_qap_fft_fix_memory_20261018.csv`](results/tables/sapling_qap_fft_fix_memory_20261018.csv), [`sapling_qap_fft_fix_abba_20261018.csv`](results/tables/sapling_qap_fft_fix_abba_20261018.csv); analysis: [`scripts/analyze_qap_fft_fix_experiment.py`](scripts/analyze_qap_fft_fix_experiment.py).
 
+### 7.5 Combination acceptance and default flip (target g, 2026-10-18)
+
+Targets a and f each passed/failed on their own thresholds, which split the joint gain: a alone reached only 12.93 MB of its 15 MB bar, and f only lowered the ceiling on the `lazy=1` configuration. Target g accepted the **combination** (`lazy=1` + the FFT scratch removal) under a pre-registration frozen before any target-g measurement, as the only authorised path to flipping the defaults.
+
+**Verdict: pass — all frozen criteria met, defaults flipped.** Primary: prove peak from the current default arm (`SAPLING_MSM_LAZY_RECODING=0`, `SAPLING_FFT_SERIAL_SINGLE_THREAD=0`) to the proposed default arm (both `1`) drops **103,063,495 → 86,184,607 B (−16,878,888 B, −16.38%)** against a ≥ 15,000,000 B threshold — the 15 MB bar target a alone missed. Correctness: 10/10 ledger + 360/360 campaign + 5/5 post-flip proofs verified, 192 B. Time (auxiliary, non-regression ≤ 1%): all three arm sets faster with paired 5/5 and sensitivity 6/6 (spend 1t **−5.81%**, spend 8t **−3.95%**, output 1t **−2.35%** pooled batch medians; the time gain is recorded as supporting evidence, not a certified primary). Post-flip re-verification with no switches set: gate digests identical (12/12), ledger peak within +7 B, batch 5/5.
+
+**Both switch defaults are now `1`** (commit `d4ed1df`): the shipped default's prove peak is **103.06 → 86.18 MB (−16.4%)**. The env vars still override the default in either direction.
+
+Pre-registration: [`sapling_combo_default_preregistration_20261018.md`](experiments/metadata/sapling_combo_default_preregistration_20261018.md); results: [`sapling_combo_default_results_20261018.md`](experiments/metadata/sapling_combo_default_results_20261018.md); derived tables: [`sapling_combo_default_memory_20261018.csv`](results/tables/sapling_combo_default_memory_20261018.csv), [`sapling_combo_default_abba_20261018.csv`](results/tables/sapling_combo_default_abba_20261018.csv); analysis: [`scripts/analyze_combo_default_experiment.py`](scripts/analyze_combo_default_experiment.py).
+
 ## 8. Source-Level Stage and MSM Profiling
 
 ### 8.1 Instrumentation approach

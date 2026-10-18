@@ -131,6 +131,8 @@ experiments/metadata/<label>_<yyyymmdd>.md                                # 结�
 >
 > 候选 f 的预注册（阈值按"阶段分解 + min(可移除量, 峰值−次高阶段)"设定，不重复目标 a 的阈值错误）见
 > `sapling_qap_fft_scratch_preregistration_20261018.md`。
+>
+> **状态更新（2026-10-18，目标 f 完成后追加）：** 候选 f 已完成（**通过**，六项全过，`sapling_qap_fft_scratch_results_20261018.md`），随后**目标 g（组合验收 + 默认值切换授权）亦已完成并通过**：预注册 `sapling_combo_default_preregistration_20261018.md`（`9e7ee2e`，先于任何目标 g 测量），结果 `sapling_combo_default_results_20261018.md`。判定：组合 prove 峰值 103.06 → 86.18 MB（−16,878,888 B / −16.38% ≥ 冻结的 15,000,000 B 门槛，即目标 a 单独未达到的门槛）、正确性 100%、三臂集时间全部非退化且更快、翻转后复验三项全过。**`SAPLING_MSM_LAZY_RECODING` 与 `SAPLING_FFT_SERIAL_SINGLE_THREAD` 的默认值已于 `d4ed1df` 切换为 `1`**（环境变量仍可双向覆盖），shipped default 的 prove 峰值由 103.06 MB 降至 86.18 MB。候选 a/c/d 中 a 已完成（未通过），**c/d 仍未做**；本节上表的证据与预期保持原样，不改动。
 
 ---
 
