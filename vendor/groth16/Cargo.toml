@@ -93,3 +93,12 @@ default-features = false
 
 [dev-dependencies.subtle]
 version = "2.3"
+
+# This vendored mirror carries the study's instrumentation, which uses
+# bellman-internal symbols (bellman::mem_probe, multiexp::profile_timestamp_ns).
+# Point the bellman dependency at the sibling vendored bellman so the crate is
+# self-contained when built or tested standalone. (When consumed through
+# experiments/prover-smoke, that manifest's own [patch.crates-io] takes
+# precedence and resolves to the same path.)
+[patch.crates-io]
+bellman = { path = "../bellman" }
