@@ -458,3 +458,50 @@ A 臂复现冻结基线 103,062,954 B（+771 B 分配器粒度）⇒ 物料化�
 结项只覆盖本管线（vendored bellman + Sapling Spend/Output + 既定开关体系）与既定
 口径（1 线程主守门）。战役产物（b/e/f/g 的收益与默认值切换）继续有效。后续若出现
 新机制（按 query 选窗、新桶元素布局、新 recoding），先用同款侦察再决定是否立项。
+
+## 18. 仓库整备：评审驱动的四项收尾（2026-10-18）
+
+外部评审指出：实验数据已充足，缺的是“从实验结果到可维护代码、从本机验证到独立复现的最后一段链路”。按建议顺序完成四项，均遵循非破坏式原则（无文件删除；历史章节只补 superseded 指向）。
+
+### 18.1 README 当前状态统一（P0）
+
+修复前后矛盾的“当前状态”表述，历史章节保留原样：
+
+- 开头状态块更新至 2026-10-18：战役 a–g 完结、两个开关默认 `1`（加此前的 `SAPLING_MSM_SIGNED_DIGITS` 共三个）、shipped default 峰值 103.06 → 86.18 MB；
+- Results at a Glance 增加战役成果表（目标 e/b/a/f/g + 结项侦察）；
+- §16 补第 15–17 条（目标 f、目标 g、两条线结项及范围限定）；§14 补“当日被 f/g 取代”指向；
+- §17 删去过时的“默认保持 0、下一步优化 QAP/FFT 天花板”，改为：默认-on 开关的回退路径（三个 `=0` 逐一说明）、单主机复现范围；
+- §18 把候选 c/d 记为“已核查关闭”，新增战役后方向（通用 SNARK 内存模型 / MSM 代价模型 / 跨硬件复现），不再把已完成候选项列作待办。
+
+### 18.2 PR #2 审查包（P0）
+
+PR #2 原标题 "update test"、正文为空。本环境无 gh CLI/token，无法程序化改 PR；已将建议标题
+（`Complete Sapling proving optimization campaign and certify combined defaults`）与完整正文
+写入 `experiments/metadata/pull_request_2_review_packet.md`（含审查入口顺序、各目标判定表、
+默认切换依据、复现命令、范围边界），需用户在 GitHub UI 手动粘贴。
+
+### 18.3 自动化 CI（P1）
+
+新增 `.github/workflows/ci.yml`（**不依赖外部参数文件**）：fmt + clippy `-D warnings`（仅限
+本研究 crate）、vendored crate 编译检查与库测试（`--lib --tests`，跳过上游镜像自带的坏
+doctest）、release 构建、两个守护默认-on 开关的确定性门禁（FFT 12 digest 跨开关态一致；
+MSM 跨重编码 / lazy 等价）。所有门禁命令均在提交前于本地实测通过。为此完成两项修复：
+
+- prover-smoke 一次性 `cargo fmt` + 修净全部 clippy warning（单独提交）；
+- **发现并修复一个既有缺陷**：vendored groth16 的 manifest 把 bellman 解析到 crates.io，
+  而插桩引用 vendored bellman 内部符号，导致 groth16 **根本无法独立构建/测试**——加
+  `[patch.crates-io] bellman = { path = "../bellman" }` 后其独立测试通过（4+3），prover-smoke 不受影响。
+
+### 18.4 实验索引与独立复现（P1）
+
+- `experiments/metadata/INDEX.md`：一张总表把每条研究线（目标 a–g + 各测量线）映射到结果文档、
+  原始数据入口与当前结论，并明确三类文件规则（raw 不覆盖 / 派生表可重建 / 报告作解释）。
+- `docs/reproduction.md`：独立复现规程（干净 checkout、工具链、无参数门禁、带参数哈希的真实
+  证明复现、跨硬件项）。
+- **实际执行了一次同主机独立复现**（`experiments/metadata/sapling_independent_reproduction_20261018.md`）：
+  干净 clone + 全新构建（45.7 s）+ 不设任何开关：两个门禁全过（digest 与主仓库捕获一致）、
+  内存台账 5/5 验证、峰值中位 **86,184,600 B**（认证值 86,184,607 B，**−7 B**）、prove 中位
+  ≈3,233 ms。跨硬件复现仍未做，已如实登记。
+
+> 一句话：本轮不新增任何实验结论，而是把已有结论接到可维护代码与可独立复现的链路上——CI 守护
+> 两个默认-on 开关，索引提供单一入口，同主机复现确认默认配置在干净 checkout 上逐字节成立。

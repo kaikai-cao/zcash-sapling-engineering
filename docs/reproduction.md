@@ -101,6 +101,12 @@ compare:
 
 Record machine, OS, toolchain and affinity in the batch provenance headers.
 
+**Status 2026-10-18:** a same-host independent reproduction (clean checkout,
+fresh build, no switches set) has been performed and passed — see
+[`sapling_independent_reproduction_20261018.md`](experiments/metadata/sapling_independent_reproduction_20261018.md)
+(prove peak 86,184,600 B vs the certified 86,184,607 B, −7 B; gates identical).
+Cross-hardware/OS reproduction remains open.
+
 ## 5. What "reproduced" means here
 
 A reproduction is successful when: the gates pass, every proof verifies
