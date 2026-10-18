@@ -16,10 +16,17 @@ param(
     [string[]]$Orders = @('ABBA', 'ABBA', 'BAAB'),
 
     # Raw CSV suffix prefix. The two arms land in
-    #   sapling_<prover>_prover_runs_<LabelPrefix>_off.csv  (SAPLING_MSM_SIGNED_DIGITS=0)
-    #   sapling_<prover>_prover_runs_<LabelPrefix>_on.csv   (SAPLING_MSM_SIGNED_DIGITS=1)
+    #   sapling_<prover>_prover_runs_<LabelPrefix>_off.csv  (<SwitchVar>=0)
+    #   sapling_<prover>_prover_runs_<LabelPrefix>_on.csv   (<SwitchVar>=1)
     [ValidatePattern('^[a-z0-9][a-z0-9_-]{0,47}$')]
     [string]$LabelPrefix = 'msm_signed_abba',
+
+    # Process-level environment switch that selects the arm. The default is the
+    # target-b switch; target a reuses the same driver with
+    #   -SwitchVar SAPLING_MSM_LAZY_RECODING
+    # so the arm semantics (off = 0 = historical behaviour) are identical.
+    [ValidatePattern('^[A-Z][A-Z0-9_]{2,63}$')]
+    [string]$SwitchVar = 'SAPLING_MSM_SIGNED_DIGITS',
 
     [switch]$AllowDirtyWorktree
 )
@@ -34,7 +41,7 @@ $logDir = Join-Path $repoRoot 'experiments\raw\logs'
 if (-not (Test-Path -LiteralPath $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 }
-$driverLog = Join-Path $logDir ("driver_target_b_{0}_t{1}_{2}_{3}_{4}.log" -f $Prover, $Threads, $maskTag, $LabelPrefix, (Get-Date).ToString('yyyyMMdd-HHmmss'))
+$driverLog = Join-Path $logDir ("driver_{0}_{1}_t{2}_{3}_{4}_{5}.log" -f $SwitchVar.ToLowerInvariant(), 'abba', $Prover, $Threads, $maskTag, (Get-Date).ToString('yyyyMMdd-HHmmss'))
 
 function Get-HostCpuLoadPct {
     # Instantaneous total CPU load. Used only as the "is the host quiet" record;
@@ -66,7 +73,7 @@ foreach ($order in $Orders) {
 $roundCount = $orderList.Count
 
 $lines = New-Object System.Collections.Generic.List[string]
-$lines.Add("# target b (signed-digit MSM) ABBA driver")
+$lines.Add(("# ABBA driver switch={0}" -f $SwitchVar))
 $lines.Add(("prover={0} threads={1} affinity={2} rounds={3} orders={4} label_prefix={5}" -f $Prover, $Threads, $maskTag, $roundCount, ($orderList -join '/'), $LabelPrefix))
 $lines.Add(("git_head={0}" -f (& git -C $repoRoot rev-parse HEAD).Trim()))
 $lines.Add(("host={0} logical_processors={1}" -f $env:COMPUTERNAME, [Environment]::ProcessorCount))
@@ -76,12 +83,13 @@ for ($round = 1; $round -le $roundCount; $round++) {
     $lines.Add(("round={0} order={1}" -f $round, $orderList[$round - 1]))
     for ($position = 1; $position -le 4; $position++) {
         $arm = if ($orderChars[$position - 1] -eq 'A') { 'off' } else { 'on' }
-        $env:SAPLING_MSM_SIGNED_DIGITS = if ($arm -eq 'on') { '1' } else { '0' }
+        $armValue = if ($arm -eq 'on') { '1' } else { '0' }
+        [Environment]::SetEnvironmentVariable($SwitchVar, $armValue, 'Process')
         $label = '{0}_{1}' -f $LabelPrefix, $arm
         $load = Get-HostCpuLoadPct
         $stamp = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss')
-        $header = ("round={0} pos={1} arm={2} signed_digits={3} label={4} start={5} host_cpu_load_pct={6}" -f `
-                $round, $position, $arm, $env:SAPLING_MSM_SIGNED_DIGITS, $label, $stamp, $load)
+        $header = ("round={0} pos={1} arm={2} {3}={4} label={5} start={6} host_cpu_load_pct={7}" -f `
+                $round, $position, $arm, $SwitchVar, $armValue, $label, $stamp, $load)
         Write-Host "===== $header ====="
         $lines.Add($header)
 
