@@ -106,7 +106,9 @@ foreach ($name in @('sapling-spend.params', 'sapling-output.params')) {
 }
 
 $gitHead = (& git -C $RepoRoot rev-parse HEAD).Trim()
-$worktreeDirty = @((& git -C $RepoRoot status --porcelain 2>$null) | Where-Object { $_ -and $_.Trim() }).Count -gt 0
+$worktreeDirty = @((& git -C $RepoRoot status --porcelain 2>$null) | Where-Object {
+        $_ -and $_.Trim() -and $_ -notmatch '^\?\? (experiments/raw/|experiments/metadata/|results/)'
+    }).Count -gt 0
 $hostInfo = "$([Environment]::MachineName) / $([Environment]::ProcessorCount) LP / $((Get-CimInstance Win32_Processor).Name)"
 $preregPath = Join-Path $metadataDir 'sapling_msm_scaling_diagnosis_preregistration_20261022.md'
 $preregHash = (Get-FileHash -LiteralPath $preregPath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -135,7 +137,7 @@ function Get-SpendBatchIds {
 }
 
 function Get-OutputBatchIds {
-    $path = Join-Path $rawDir 'sapling_output_prover_runs_msm_scaling_20261022.csv'
+    $path = Join-Path $rawDir 'sapling_output_prover_runs_msm_scaling_20261022_output.csv'
     $ids = New-Object System.Collections.Generic.HashSet[string]
     if (Test-Path -LiteralPath $path) {
         Import-Csv -LiteralPath $path | ForEach-Object {
@@ -335,17 +337,15 @@ function Invoke-OutputRunner {
 foreach ($pass in @(1, 2)) {
     $seq = if ($pass -eq 1) { @(1, 16) } else { @(16, 1) }
     foreach ($t in $seq) {
-        $label = "${Tag}_output_t${t}_0x1"
-        if ($t -eq 16) { $label = "${Tag}_output_t16_0xffff" }
         $mask = if ($t -eq 1) { 0x1 } else { 0xFFFF }
-        Invoke-OutputRunner -Arm 'O-Scale' -Config ("t{0}_pass{1}" -f $t, $pass) -Threads $t -Mask $mask -Batches 1 -Label $label
+        Invoke-OutputRunner -Arm 'O-Scale' -Config ("t{0}_pass{1}" -f $t, $pass) -Threads $t -Mask $mask -Batches 1 -Label "${Tag}_output"
     }
 }
 $outputAbba = @(0xFFFF, 0x5555, 0x5555, 0xFFFF)
 for ($i = 0; $i -lt $outputAbba.Count; $i++) {
     $mask = $outputAbba[$i]
     $maskTag = '0x{0:X}' -f $mask
-    Invoke-OutputRunner -Arm 'O-ABBA' -Config ("t8_{0}_abba{1}" -f $maskTag, ($i + 1)) -Threads 8 -Mask $mask -Batches 1 -Label "${Tag}_output_t8"
+    Invoke-OutputRunner -Arm 'O-ABBA' -Config ("t8_{0}_abba{1}" -f $maskTag, ($i + 1)) -Threads 8 -Mask $mask -Batches 1 -Label "${Tag}_output"
 }
 
 # ---------------------------------------------------------------------------

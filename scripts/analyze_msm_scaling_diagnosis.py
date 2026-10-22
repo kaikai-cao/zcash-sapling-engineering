@@ -46,7 +46,7 @@ TABLE_DIR = ROOT / "results" / "tables"
 FIGURE_DIR = ROOT / "results" / "figures"
 
 MANIFEST_PATH = METADATA_DIR / f"msm_scaling_manifest_{TAG}.csv"
-OUTPUT_RAW = RAW_DIR / f"sapling_output_prover_runs_{TAG}.csv"
+OUTPUT_RAW = RAW_DIR / f"sapling_output_prover_runs_{TAG}_output.csv"
 TX_RAW = RAW_DIR / f"sapling_tx_scaling_runs_{TAG}.csv"
 
 SPEND_STAGE_COLUMNS = [
