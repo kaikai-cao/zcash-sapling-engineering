@@ -32,6 +32,8 @@ param(
     [ValidatePattern('^[a-z0-9][a-z0-9_-]{0,39}$')]
     [string]$Tag = 'msm_scaling_20261022',
 
+    [int]$ResumeThrough = 0,
+
     [switch]$AllowDirtyWorktree
 )
 
@@ -70,8 +72,12 @@ if ($Tag -ne 'msm_scaling_20261022') {
 }
 
 $manifestPath = Join-Path $metadataDir ("msm_scaling_manifest_{0}.csv" -f $Tag)
-if (Test-Path -LiteralPath $manifestPath) {
-    throw "Manifest already exists; refusing to overwrite: $manifestPath"
+$manifestExists = Test-Path -LiteralPath $manifestPath
+if ($manifestExists -and $ResumeThrough -le 0) {
+    throw "Manifest already exists; pass -ResumeThrough <completed-invocations> to continue: $manifestPath"
+}
+if (-not $manifestExists -and $ResumeThrough -gt 0) {
+    throw "Cannot resume through invocation ${ResumeThrough}: manifest not found: $manifestPath"
 }
 
 $spendRunner = Join-Path $RepoRoot 'scripts\run_spend_combined_profile.ps1'
@@ -125,6 +131,17 @@ Write-Host ''
 
 $manifest = New-Object System.Collections.Generic.List[object]
 $order = 0
+if ($manifestExists) {
+    $existing = @(Import-Csv -LiteralPath $manifestPath)
+    foreach ($row in $existing) { $manifest.Add($row) }
+    $order = [int](($existing | Measure-Object -Property order -Maximum).Maximum)
+    if ($order -ne $ResumeThrough) {
+        throw "Manifest has $order completed invocations, but -ResumeThrough is $ResumeThrough."
+    }
+    Write-Host ("Resuming after invocation {0}; {1} manifest rows loaded." -f $order, $manifest.Count)
+}
+$script:order = $order
+$script:sequence = 0
 
 function Get-SpendBatchIds {
     $ids = New-Object System.Collections.Generic.HashSet[string]
@@ -181,6 +198,12 @@ function Invoke-StageRunner {
         [string]$Kind = 'spend'
     )
 
+    $script:sequence++
+    if ($script:sequence -le $ResumeThrough) {
+        Write-Host ("[{0}] skip (already complete): arm={1} config={2}" -f $script:sequence, $Arm, $Config)
+        return
+    }
+
     $script:order++
     $order = $script:order
     $start = (Get-Date).ToUniversalTime()
@@ -200,7 +223,7 @@ function Invoke-StageRunner {
     }
 
     try {
-        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Runner @RunnerArgs 2>&1
+        $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Runner @RunnerArgs
         $exitCode = $LASTEXITCODE
     }
     finally {

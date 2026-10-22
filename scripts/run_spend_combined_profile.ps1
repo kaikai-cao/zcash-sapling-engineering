@@ -516,6 +516,15 @@ function Get-ExpectedSignedWindow {
 
 $signedRecoding = [Environment]::GetEnvironmentVariable('SAPLING_MSM_SIGNED_DIGITS', 'Process') -ne '0'
 
+$windowOverride = $null
+$rawWindowOverride = [Environment]::GetEnvironmentVariable('SAPLING_MSM_WINDOW_C', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($rawWindowOverride)) {
+    if ($rawWindowOverride -notmatch '^\d+$') {
+        throw "Invalid SAPLING_MSM_WINDOW_C: $rawWindowOverride"
+    }
+    $windowOverride = [int]$rawWindowOverride
+}
+
 $queries = @(
     @{ Name = 'H_query_G1'; Group = 'G1'; Count = 131071 },
     @{ Name = 'L_query_G1'; Group = 'G1'; Count = 98638 },
@@ -547,7 +556,7 @@ foreach ($m in $msmMatches) {
     $query = $queries[($callId - 1) % 8]
     $actualExponentCount = [int]$m.Groups[2].Value
     $actualWindow = [int]$m.Groups[4].Value
-    $expectedWindow = if ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
+    $expectedWindow = if ($null -ne $windowOverride) { $windowOverride } elseif ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
 
     if ($actualExponentCount -ne [int]$query.Count -or $actualWindow -ne $expectedWindow) {
         throw "Call $callId does not match the expected Groth16 query mapping ($($query.Name)): exponent_count=$actualExponentCount, window=$actualWindow."
@@ -596,7 +605,7 @@ foreach ($m in $innerStageMatches) {
     $bucketCount = [int]$m.Groups[4].Value
     $chunkCount = [int]$m.Groups[5].Value
     $elementSize = [int]$m.Groups[6].Value
-    $expectedWindow = if ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
+    $expectedWindow = if ($null -ne $windowOverride) { $windowOverride } elseif ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
     $expectedBucketCount = if ($signedRecoding) {
         [int][Math]::Pow(2, $expectedWindow - 1)
     }

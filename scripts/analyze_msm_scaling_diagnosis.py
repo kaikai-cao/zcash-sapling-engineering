@@ -96,7 +96,10 @@ def to_float(value) -> float:
 
 def to_int(value) -> int | None:
     try:
-        return int(str(value).strip())
+        text = str(value).strip()
+        if text.lower().startswith("0x"):
+            return int(text, 16)
+        return int(text)
     except (TypeError, ValueError):
         return None
 
@@ -179,14 +182,20 @@ def modelled_adds(n: int, window: int) -> int:
     return w_value(window) * (n + 2 * (1 << (window - 1)))
 
 
+def batch_medians(batches: list[list[float]]) -> list[float]:
+    return [median(batch) for batch in batches if batch]
+
+
 def cluster_bootstrap_median(batches: list[list[float]], rng: random.Random) -> tuple[float, float, float]:
     if not batches:
         raise ValueError("no batches")
-    point = median([v for batch in batches for v in batch])
+    # Frozen definition: median of per-batch warm medians, with the batch as
+    # the bootstrap unit.
+    point = median(batch_medians(batches))
     stats = []
     for _ in range(BOOTSTRAP_N):
         picked = [batches[rng.randrange(len(batches))] for _ in batches]
-        stats.append(median([v for batch in picked for v in batch]))
+        stats.append(median(batch_medians(picked)))
     stats.sort()
     lo = stats[int((BOOTSTRAP_ALPHA / 2) * BOOTSTRAP_N)]
     hi = stats[int((1 - BOOTSTRAP_ALPHA / 2) * BOOTSTRAP_N) - 1]
@@ -196,14 +205,14 @@ def cluster_bootstrap_median(batches: list[list[float]], rng: random.Random) -> 
 def cluster_bootstrap_difference(
     left: list[list[float]], right: list[list[float]], rng: random.Random
 ) -> tuple[float, float, float]:
-    point = median([v for batch in left for v in batch]) - median([v for batch in right for v in batch])
+    left_point = median(batch_medians(left))
+    right_point = median(batch_medians(right))
+    point = left_point - right_point
     stats = []
     for _ in range(BOOTSTRAP_N):
         lp = [left[rng.randrange(len(left))] for _ in left]
         rp = [right[rng.randrange(len(right))] for _ in right]
-        stats.append(
-            median([v for batch in lp for v in batch]) - median([v for batch in rp for v in batch])
-        )
+        stats.append(median(batch_medians(lp)) - median(batch_medians(rp)))
     stats.sort()
     lo = stats[int((BOOTSTRAP_ALPHA / 2) * BOOTSTRAP_N)]
     hi = stats[int((1 - BOOTSTRAP_ALPHA / 2) * BOOTSTRAP_N) - 1]
@@ -213,14 +222,13 @@ def cluster_bootstrap_difference(
 def cluster_bootstrap_ratio(
     num: list[list[float]], den: list[list[float]], rng: random.Random
 ) -> tuple[float, float, float]:
-    point = median([v for batch in num for v in batch]) / median([v for batch in den for v in batch])
+    point = median(batch_medians(num)) / median(batch_medians(den))
     stats = []
     for _ in range(BOOTSTRAP_N):
         np_ = [num[rng.randrange(len(num))] for _ in num]
         dp = [den[rng.randrange(len(den))] for _ in den]
         stats.append(
-            median([v for batch in np_ for v in batch])
-            / median([v for batch in dp for v in batch])
+            median(batch_medians(np_)) / median(batch_medians(dp))
         )
     stats.sort()
     lo = stats[int((BOOTSTRAP_ALPHA / 2) * BOOTSTRAP_N)]
@@ -284,13 +292,20 @@ def load_table_group(record: dict, path: Path) -> dict:
 
 def spend_batch_metrics(batch_rows: list[dict]) -> dict:
     warm = [r for r in batch_rows if (to_int(r.get("run")) or 0) >= 2]
-    return {
+    result = {
         "prove_ms": [to_float(r["prove_ms"]) for r in warm],
         "warm_n": len(warm),
         "verified": all(str(r.get("verified", "")).lower() == "true" for r in batch_rows),
         "rows": len(batch_rows),
         "rayon_threads": {r.get("rayon_threads") for r in batch_rows},
     }
+    if batch_rows:
+        batch_id = batch_rows[0].get("batch_id")
+        stage_rows = read_csv(RAW_DIR / f"sapling_spend_stage_profile_{batch_id}.csv")
+        warm_stage = [r for r in stage_rows if (to_int(r.get("run")) or 0) >= 2]
+        for column in SPEND_STAGE_COLUMNS:
+            result[column] = [to_float(r.get(column)) for r in warm_stage]
+    return result
 
 
 def output_batch_metrics(batch_rows: list[dict]) -> dict:
@@ -324,8 +339,14 @@ def tx_batch_metrics(batch_rows: list[dict]) -> dict:
 
 def summarize_metric(batches: list[list[float]]) -> dict:
     flat = [v for batch in batches for v in batch if not math.isnan(v)]
+    bms = batch_medians(batches)
+    if len(flat) >= 2:
+        q1, _, q3 = statistics.quantiles(flat, n=4, method="inclusive")
+        iqr = q3 - q1
+    else:
+        iqr = 0.0
     return {
-        "median": median(flat),
+        "median": median(bms),
         "mean": float(statistics.fmean(flat)),
         "sd": float(statistics.stdev(flat)) if len(flat) > 1 else 0.0,
         "cv_pct": (float(statistics.stdev(flat)) / float(statistics.fmean(flat)) * 100.0)
@@ -333,6 +354,10 @@ def summarize_metric(batches: list[list[float]]) -> dict:
         else 0.0,
         "min": min(flat),
         "max": max(flat),
+        "iqr": float(iqr),
+        "batch_median_min": min(bms),
+        "batch_median_max": max(bms),
+        "batch_median_range": max(bms) - min(bms),
         "warm_n": len(flat),
     }
 
@@ -573,6 +598,10 @@ def analyze() -> None:
                     "cv_pct": round(metric["cv_pct"], 3),
                     "min": round(metric["min"], 4),
                     "max": round(metric["max"], 4),
+                    "iqr": round(metric["iqr"], 4),
+                    "batch_median_min": round(metric["batch_median_min"], 4),
+                    "batch_median_max": round(metric["batch_median_max"], 4),
+                    "batch_median_range": round(metric["batch_median_range"], 4),
                 }
             )
     write_csv(TABLE_DIR / f"msm_scaling_summary_{TAG}.csv", summary_rows)
@@ -633,10 +662,10 @@ def analyze() -> None:
         window = h_batches[0]["window"]
         chunk_count = h_batches[0]["chunk_count"]
         n = h_batches[0]["exponent_count"]
-        wall = median([v for rec in h_batches for v in rec["wall"]])
-        fill_sum = median([v for rec in h_batches for v in rec["fill_sum"]])
-        fill_max = median([v for rec in h_batches for v in rec["fill_max"]])
-        max_conc = median([v for rec in h_batches for v in rec["max_conc"]])
+        wall = median([median(rec["wall"]) for rec in h_batches])
+        fill_sum = median([median(rec["fill_sum"]) for rec in h_batches])
+        fill_max = median([median(rec["fill_max"]) for rec in h_batches])
+        max_conc = median([median(rec["max_conc"]) for rec in h_batches])
         model = modelled_adds(n, window) if window else float("nan")
         fill_per_chunk = fill_sum / chunk_count if chunk_count else float("nan")
         row = {
@@ -660,7 +689,7 @@ def analyze() -> None:
             "fill_parallel_eff": round(fill_sum / (wall * key[2]), 4) if wall else "",
             "modelled_adds": model,
             "ns_per_add": round(wall * 1e6 / model, 4) if model and not math.isnan(model) else "",
-            "payload_at_max_concurrency_bytes": int(median([v for rec in h_batches for v in rec["payload"]])),
+            "payload_at_max_concurrency_bytes": int(median([median(rec["payload"]) for rec in h_batches])),
         }
         h_rows.append(row)
     write_csv(TABLE_DIR / f"msm_scaling_hquery_summary_{TAG}.csv", h_rows)
@@ -684,8 +713,8 @@ def analyze() -> None:
             for metrics in data["per_batch"].values():
                 right_batches.append(metrics[metric])
         diff, lo, hi = cluster_bootstrap_difference(left_batches, right_batches, rng)
-        left_med = median([v for b in left_batches for v in b])
-        right_med = median([v for b in right_batches for v in b])
+        left_med = median(batch_medians(left_batches))
+        right_med = median(batch_medians(right_batches))
         row = {
             "kind": kind,
             "metric": metric,
@@ -740,7 +769,10 @@ def analyze() -> None:
                 window = to_int(warm[0]["window"])
                 n = to_int(warm[0]["exponent_count"])
                 if window and n:
-                    ns_batches.append([wall * 1e6 / modelled_adds(n, window)])
+                    model = modelled_adds(n, window)
+                    ns_batches.append(
+                        [to_float(r["chunk_parallel_wall_ms"]) * 1e6 / model for r in warm]
+                    )
         if not ns_batches:
             continue
         point, lo, hi = cluster_bootstrap_median(ns_batches, rng)
@@ -778,7 +810,10 @@ def analyze() -> None:
                     window = to_int(warm[0]["window"])
                     n = to_int(warm[0]["exponent_count"])
                     if window and n:
-                        batches.append([wall * 1e6 / modelled_adds(n, window)])
+                        model = modelled_adds(n, window)
+                        batches.append(
+                            [to_float(r["chunk_parallel_wall_ms"]) * 1e6 / model for r in warm]
+                        )
             return batches
         if 12 in WINDOW_ORDER and 13 in WINDOW_ORDER:
             ratio, lo, hi = cluster_bootstrap_ratio(ns_batches_for(12), ns_batches_for(13), rng)
