@@ -194,10 +194,10 @@ impl Authorization for SighashAuth {
 }
 
 fn shielded_sighash(tx: &Transaction) -> [u8; 32] {
-    let data: TransactionData<SighashAuth> = tx
-        .clone()
-        .into_data()
-        .map_bundles(|_| None, |bundle| bundle, |bundle| bundle);
+    let data: TransactionData<SighashAuth> =
+        tx.clone()
+            .into_data()
+            .map_bundles(|_| None, |bundle| bundle, |bundle| bundle);
     let sighash = PrecomputedSighashData::new(data).signature_hash(&SignableInput::Shielded);
     *sighash.as_ref()
 }
@@ -312,7 +312,10 @@ fn build_once<SP: SpendProver, OP: OutputProver>(
         let consensus_ok = validator.check_bundle(bundle, sighash_bytes);
         let proofs_ok = validator.validate(spend_vk, output_vk, &mut *rng);
 
-        (start.elapsed().as_secs_f64() * 1000.0, consensus_ok && proofs_ok)
+        (
+            start.elapsed().as_secs_f64() * 1000.0,
+            consensus_ok && proofs_ok,
+        )
     } else {
         (f64::NAN, false)
     };
@@ -367,10 +370,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // ---- 进程级 setup（不计入构造时间） ----
     let start = Instant::now();
-    let spend_params = SpendParameters::read(
-        File::open(&spend_params_path)?,
-        true,
-    )?;
+    let spend_params = SpendParameters::read(File::open(&spend_params_path)?, true)?;
     let output_params = OutputParameters::read(File::open(&output_params_path)?, true)?;
     let setup_params_ms = start.elapsed().as_secs_f64() * 1000.0;
 
@@ -396,7 +396,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     if let Some(parent) = csv_path.parent().filter(|p| !p.as_os_str().is_empty()) {
         create_dir_all(parent)?;
     }
-    let mut csv = OpenOptions::new().create(true).append(true).open(&csv_path)?;
+    let mut csv = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&csv_path)?;
     if csv.metadata()?.len() == 0 {
         writeln!(
             csv,
@@ -421,7 +424,11 @@ spend_params_sha256,output_params_sha256,exe_sha256,exe_path,rustc_version,build
     let rustc_version = option_env!("RUSTC_VERSION_UNKNOWN")
         .unwrap_or("see batch log")
         .to_string();
-    let build_profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+    let build_profile = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
     let git_head = std::env::var("TX_SMOKE_GIT_HEAD").unwrap_or_default();
 
     println!("batch_id={batch_id}");
@@ -485,11 +492,27 @@ spend_params_sha256,output_params_sha256,exe_sha256,exe_path,rustc_version,build
         );
         assert_eq!(version_label, "V5", "run {run}: 交易版本应为 V5");
         match &reference {
-            None => reference = Some((built.tx_bytes, txid.clone(), version_label.clone(), branch_label.clone())),
+            None => {
+                reference = Some((
+                    built.tx_bytes,
+                    txid.clone(),
+                    version_label.clone(),
+                    branch_label.clone(),
+                ))
+            }
             Some((bytes, ref_txid, ref_version, ref_branch)) => {
-                assert_eq!(*bytes, built.tx_bytes, "run {run}: 序列化长度与其他 run 不一致");
-                assert_eq!(ref_version, &version_label, "run {run}: 版本与其他 run 不一致");
-                assert_eq!(ref_branch, &branch_label, "run {run}: branch id 与其他 run 不一致");
+                assert_eq!(
+                    *bytes, built.tx_bytes,
+                    "run {run}: 序列化长度与其他 run 不一致"
+                );
+                assert_eq!(
+                    ref_version, &version_label,
+                    "run {run}: 版本与其他 run 不一致"
+                );
+                assert_eq!(
+                    ref_branch, &branch_label,
+                    "run {run}: branch id 与其他 run 不一致"
+                );
                 let _ = ref_txid;
             }
         }
@@ -498,12 +521,19 @@ spend_params_sha256,output_params_sha256,exe_sha256,exe_path,rustc_version,build
         }
 
         // 反序列化一致性：同一字节串读回后 txid 必须相同。
-        let round_trip = Transaction::read(&mut &{
-            let mut bytes = Vec::new();
-            tx.write(&mut bytes)?;
-            bytes
-        }[..], tx.consensus_branch_id())?;
-        assert_eq!(format!("{}", round_trip.txid()), txid, "run {run}: 反序列化后 txid 不一致");
+        let round_trip = Transaction::read(
+            &mut &{
+                let mut bytes = Vec::new();
+                tx.write(&mut bytes)?;
+                bytes
+            }[..],
+            tx.consensus_branch_id(),
+        )?;
+        assert_eq!(
+            format!("{}", round_trip.txid()),
+            txid,
+            "run {run}: 反序列化后 txid 不一致"
+        );
 
         let durations = &built.explore_durations_ms;
         let (spend_proof, out_a, out_b) = match durations.len() {

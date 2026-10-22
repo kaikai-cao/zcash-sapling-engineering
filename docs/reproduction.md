@@ -109,7 +109,7 @@ Record machine, OS, toolchain and affinity in the batch provenance headers.
 | Layer | Where | Result |
 |---|---|---|
 | Same-host independent reproduction (clean checkout, fresh build, no switches set) | this host, Windows | passed — [`sapling_independent_reproduction_20261018.md`](experiments/metadata/sapling_independent_reproduction_20261018.md): prove peak 86,184,600 B vs certified 86,184,607 B (−7 B); gates identical |
-| Parameter-free CI, all five jobs | GitHub Actions, Ubuntu runners, merged `main` (`765dc8b`) | [run 39115163051](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/39115163051) — success (also green on the PR head `f28f379`) |
+| Parameter-free CI, all five jobs at that time | GitHub Actions, Ubuntu runners, merged `main` (`765dc8b`) | [run 39115163051](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/39115163051) — success (also green on the PR head `f28f379`); a sixth job (`experiments/transaction-smoke` fmt + `cargo check --locked`) was added 2026-10-22 |
 | Same checks re-run locally | this host, Windows | all pass; bellman 49 + groth16 4/3 library tests green |
 | FFT gate digests across three instruction-set builds (`x86-64`, `x86-64-v2`, `native`) | this host, Windows | 12/12 digests bit-identical |
 | FFT gate digests across operating systems (Windows capture vs Ubuntu CI log, run [39116177753](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/39116177753)) | this host + GitHub CI | 12/12 digests bit-identical, same order |

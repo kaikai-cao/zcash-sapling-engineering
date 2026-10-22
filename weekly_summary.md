@@ -646,21 +646,28 @@ MSM 跨重编码 / lazy 等价）。所有门禁命令均在提交前于本地�
 | `t_total_construct`（build + serialize） | **4,292.720 ms** | **1,176.072 ms** | 4.888 ms（对照） |
 | `t_build` | 4,292.699 ms | 1,176.049 ms | 4.832 ms |
 | `t_serialize` | 0.022 ms | 0.024 ms | 0.020 ms |
-| `t_proving`（配对） | 4,287.528 ms（**99.88%**） | — | — |
+| `t_proving`（独立组中位差） | 4,287.867 ms（**99.89%**） | — | — |
 | `sum_proofs` | 4,292.703 ms | 1,175.588 ms | 4.367 ms |
 | spend / output A / output B | 3,321.5 / 480.2 / 486.2 ms | 928.0 / 132.7 / 127.9 ms | mock |
 | `t_verify`（不计入构造） | 10.384 ms | 13.826 ms | 未做 |
 
-- **构造时间 = 证明时间：** 99.88% 的 `t_build` 是 Groth16；sighash、Spend 授权签名、
+- **构造时间 = 证明时间：** 99.89% 的 `t_build` 是 Groth16；sighash、Spend 授权签名、
   binding 签名、bundle 装配与序列化合计约 **5 ms（0.11%）**。
-- **两个独立估计闭合：** 配对 `t_proving` 与 `sum_proofs` 相差 0.121%（门限 5%）。
+- **两个独立估计闭合：** 独立组 `t_proving` 与 `sum_proofs` 相差 0.113%（门限 5%）。
+  主估计取两组中位之差，**不是逐 run 配对**：mock 臂不消耗证明随机数，从 run 2 起
+  RNG 流与真实臂分叉（A1/A3 只有 run 1 的 txid 相同）；编号对齐差 4,287.528 ms 仅作诊断。
 - **8 线程 3.65×：** 总构造时间降到 1/3.65，并行效率约 45.6%，与既有 8 线程饱和结论一致。
-- **结构常量：** 全部 12 条真实 run 均为 2,377 B、v5、1 spend / 2 outputs、fee 10,000、
-  Sapling value balance +10,000；12/12 通过 `BatchValidator`；验收表 7/7 PASS（主判据 18/18）。
+- **结构常量：** 12 条真实 + 6 条 mock run 均为 2,377 B、v5、1 spend / 2 outputs、fee 10,000、
+  Sapling value balance +10,000（分析脚本在 18/18 行独立复检）；12/12 通过 `BatchValidator`；
+  验收表 7/7 PASS（主判据 18/18）。txid 随 run 变化，结论是"序列化长度与结构一致"，
+  不是"交易字节完全相同"。
 - **边界：** 本地构造时间，不含参数加载（约 27 s，在计时窗口外）、钱包输入选择、note 解密、
   数据库、广播、mempool、打包与确认；Merkle 路径与 note 为**合成测试状态**。
 - **测量前偏差：** 初版预注册按 3 个 logical actions 估手续费 15,000；ZIP-317 实际取
   `max(1 spend, 2 outputs) = 2`，故为 10,000。修正发生在任何正式测量之前，记录在预注册 §10。
+- **评审后收紧（不触碰原始数据）：** 交易 crate 已纳入 CI（`cargo fmt --check` +
+  `cargo clippy -- -D warnings` + `cargo check --locked --all-targets`）；分析脚本独立复检
+  mock 臂全部结构字段；`t_proving` 主定义改为独立组中位差，编号对齐差降为诊断。冻结阈值未改。
 
 产物：`experiments/raw/csv/sapling_tx_construct_runs_{real,mock}.csv`、启动摘要 CSV、
 `experiments/raw/logs/tx_construct_*`、`results/tables/sapling_tx_construct_*_20261022.csv`、
