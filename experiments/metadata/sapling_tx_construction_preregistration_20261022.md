@@ -183,3 +183,34 @@
 | 2026-10-22 | 取消原 A4 参照臂（"直接调 `create_proof`"），主判据由 30/30 改为 18/18，删除原辅 6（与参照臂自洽） | ① A4 与 A1 内部 `prove_spend_ms` / `prove_output*_ms` 打点是**同一个调用**，增量信息为零；② 单份 output 证明的独立校验需要复刻构造器内部的 `epk`/`cmu` 计算（`EphemeralSecretKey` 的派生方法是 `pub(crate)`），会引入人工复刻误差；③ mock 臂（A3）的证明按定义不可通过密码学校验，原表中"30/30 含 A3 校验通过"自相矛盾 | **无**（本次修订早于任何实验代码与任何测量） |
 
 修订只影响"如何判 PASS"的表述，**不改变**冻结场景（§2）、计时口径（§3）与主指标载体（`t_total_construct`）。
+
+---
+
+## 10. 偏差记录（测量前发现的手续费口径错误）
+
+**发现时点**：实验 crate 首次冒烟运行（`Builder::build` 返回 `ChangeRequired(ZatBalance(5000))`），早于任何正式测量数据落盘。
+
+**§2/§5 原文保留不动**（审计留痕），实际执行的场景值以下表为准：
+
+| 项 | 冻结文本（§2 / §5 辅 1） | 实际执行值 | 说明 |
+|---|---|---|---|
+| 手续费 `FEE_ZATS` | 15,000 | **10,000** | 见下推导 |
+| 找零输出 `OUT_CHANGE_ZATS` | 39,985,000 | **39,990,000** | 仍满足 `100,000,000 − 60,000,000 − fee` |
+| `value_balance` | −15,000 | **+10,000** | `ZatBalance` 有符号，定义 = 输入 − 输出；手续费留在 Sapling 一侧故为正 |
+| 辅 1 阈值语义（"全过"） | 不变 | 不变 | 只换被断言的常量，不改判据形式 |
+
+**推导**（`zcash_primitives 0.31.0`，`src/transaction/fees/zip317.rs`）：
+
+```
+logical_actions = max(transparent_inputs, transparent_outputs)
+                + max(sapling_spends, sapling_outputs)
+                + orchard_actions + ironwood_actions
+              = max(0, 0) + max(1, 2) + 0 + 0 = 2
+fee = marginal_fee(5,000) × max(grace_actions(2), logical_actions(2)) = 10,000
+```
+
+冻结文本按 "1 spend + 2 outputs = 3 actions" 相加估算，与 ZIP-317 的 `max` 口径不符；构造器按真实规则要求手续费 10,000，差额 5,000 无法作为找零留下。
+
+**影响范围**：仅手续费/找零两个常量与 `value_balance` 的期望值；交易形状（1 spend + 2 outputs）、版本（v5）、计时口径、3 臂设计、18/18 主判据、"阈值不动"原则均不受影响。分析脚本以本节的实际执行值为断言基准，并在结果文档中同时引用 §2 与 §10。
+
+**同一次冒烟运行中的第二处更正**：本节初稿曾把 `value_balance` 写成 −10,000（沿用 §2/§5 的负号）。实际 `zcash_protocol 0.11.0` 的 `ZatBalance` 是**有符号**值，定义为"输入 − 输出"，本场景手续费留在 Sapling 池一侧，因此为 **+10,000**。该更正同样发生在任何正式测量之前。
