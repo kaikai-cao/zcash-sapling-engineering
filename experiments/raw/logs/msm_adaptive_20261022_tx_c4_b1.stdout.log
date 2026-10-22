@@ -1,0 +1,18 @@
+arm=real
+spend_params=D:\Research\zcash-params\sapling-spend.params
+output_params=D:\Research\zcash-params\sapling-output.params
+setup_params_ms=27522.220
+setup_vk_ms=1.920
+batch_id=1792675938371
+exe_sha256=6e97c39fcc35517223e7d1df06c57eaf3a0b0c5423d3ed61a2d600dff7a39c5f
+spend_params_sha256=8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13
+output_params_sha256=2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db88570e3f3fb0e4
+witness_ms=19.110
+run=1 build_ms=939.221 serialize_ms=0.032 total_ms=939.253 spend_proof_ms=713.033 output_ms=[110.003,115.712] verify_ms=10.374 verified=true tx_bytes=2377 txid=f1112a35e4cf8c0719f9ee6407bb82743b97352d42839d90c513999f3f48a6c3
+run=2 build_ms=913.537 serialize_ms=0.021 total_ms=913.558 spend_proof_ms=690.581 output_ms=[112.769,109.779] verify_ms=9.868 verified=true tx_bytes=2377 txid=534aefd5627963aeef05993f671a890be96ff83245467f7256e0a3b4302bb8bb
+run=3 build_ms=857.034 serialize_ms=0.020 total_ms=857.054 spend_proof_ms=636.640 output_ms=[109.872,110.083] verify_ms=10.020 verified=true tx_bytes=2377 txid=fd27dca1c957c69080974be349e860b61f605d39101db88b7c8f0dc8420532fe
+run=4 build_ms=862.249 serialize_ms=0.020 total_ms=862.269 spend_proof_ms=643.836 output_ms=[108.737,109.236] verify_ms=9.994 verified=true tx_bytes=2377 txid=859d122d20b9b55d44989337fa0d064827db68cef50c6c9498d802b126af5773
+run=5 build_ms=862.632 serialize_ms=0.022 total_ms=862.654 spend_proof_ms=642.581 output_ms=[110.195,109.415] verify_ms=9.874 verified=true tx_bytes=2377 txid=7b85205e6b2122df00e3b3cb9c6f88860fc4e77cf6a821d7df927763d6db3ad7
+run=6 build_ms=873.212 serialize_ms=0.024 total_ms=873.236 spend_proof_ms=636.913 output_ms=[110.680,125.146] verify_ms=11.344 verified=true tx_bytes=2377 txid=938035351ba6e3d61a5a614503a07489ad900da2d4aad4729445fc356519e738
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_tx_scaling_runs_msm_adaptive_20261022.csv
+TX_CONSTRUCT_EXPERIMENT=PASS
