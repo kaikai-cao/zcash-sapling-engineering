@@ -716,3 +716,42 @@ Spend/Output/交易验证）。c=11 是本负载 8t/n=131071 的首选，c=12 �
 manifest `experiments/metadata/msm_scaling_manifest_msm_scaling_20261022.csv`；
 原始数据 `experiments/raw/csv/*msm_scaling_20261022*` 与 `experiments/raw/logs/msm_scaling_campaign_20261022.*.log`；
 派生表/图 `results/tables/msm_scaling_*_20261022.csv`、`results/figures/msm_scaling_*_20261022.png`。
+
+---
+
+## 25. Stage 1b：大 MSM 门控自适应窗口与尾部切分（2026-10-22）
+
+Stage 1a 的 pilot 发现全局自适应会让 Output 变慢、全窗口切分会把 reduce 开销加回来。
+因此正式测量前另立 Stage 1b 预注册：仅 `n ≥ 16384` 启用自适应，只切 `W mod P` 个尾部
+窗口。冻结设计为 8t `0x5555`、Spend 20 批 / Output 12 批 / 交易 12 批，共 44 批，每臂
+4 批。正式 campaign 完成 **44/44**、44 个唯一 batch ID，分析器 **A1–A10 全 PASS**；
+测量 HEAD `a4577cb`，预注册 SHA `fcd2bd7c…b0a1`。
+
+| 比较 | R（90% CI） | 判定 |
+|---|---:|---|
+| P1 Spend C1 门控自适应 / C0 | **1.019**（0.958–1.077） | 不支持 |
+| P2 Spend C2 c13 tail2 / C0 | **1.117**（1.052–1.179） | 不支持 |
+| P3 Spend C3 c10 tail4 / C0 | **1.027**（0.956–1.094） | 不支持 |
+| P4 Spend C1 / C4 强制 c11 | **1.020**（0.966–1.076） | 非劣效 FAIL |
+| P5 Output C1 / C0 | 0.997（0.962–1.055） | 未认证（上界 >1.05） |
+| P6 交易 C1 / C0 | 0.943（0.877–1.015） | 不回归 |
+
+关键是否定：**C4/C0 = 0.999**，强制 c=11 在同 campaign 中没有复现 Stage 0 的
+657.81 ms 优势；本次 C4 679.60 ms、C0 680.24 ms。H-query 机制上，c=11 把 reduce 从
+99.1 ms 降到 30.7 ms，但 fill 从 1,445 ms 升到 1,797 ms，wall 几乎不变（426.0 对
+418.4 ms）；tail2 的 wall 为 503.3 ms（+20.3%），tail4 为 431.3 ms（+3.1%），
+切分增加了任务/bucket 开销。Output 的 C4 为 117.60 ms（+28.9%），门控避免了该回归，
+但 C1 点估计 90.95 ms 的 CI 上界 1.0546 超过 1.05，只能记“未认证”。交易 C1 快 5.7%，
+但 CI 宽且与 C4 的 Output 回归混叠，不能作因果收益。
+
+**结论：Stage 1b 是否定结果，不切换默认值。** Stage 0 的 c=11 657.81 ms 是跨 campaign
+点估计，不能作为默认切换依据；跨 campaign 的最优点必须用同 campaign 正对照复核。
+执行偏差（Stage 1a pilot、尾切 smoke、首次启动标签长度失败、Output/交易逐批日志被
+同名 `_b1` 覆盖但 raw CSV 完整）均在结果文档中保留。
+
+产物：预注册 `experiments/metadata/sapling_msm_adaptive_stage1b_preregistration_20261022.md`；
+结果 `experiments/metadata/sapling_msm_adaptive_stage1b_results_20261022.md`；
+manifest `experiments/metadata/msm_adaptive_manifest_msm_adaptive_20261022.csv`；
+原始数据 `experiments/raw/csv/*msm_adaptive_20261022*`；
+派生表/图 `results/tables/msm_adaptive_*_msm_adaptive_20261022.csv`、
+`results/figures/msm_adaptive_*_msm_adaptive_20261022.png`。

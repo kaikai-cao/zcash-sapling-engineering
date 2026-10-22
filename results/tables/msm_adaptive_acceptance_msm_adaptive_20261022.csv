@@ -1,0 +1,11 @@
+item,status,detail
+A1,PASS,Spend batches=20; bad=none
+A2,PASS,Output batches=12; bad=none
+A3,PASS,Tx batches=12; bad=none
+A4,PASS,configs=5; expected all 8t_0x5555_*
+A5,PASS,git_heads=1; spend_exe=1; output_exe=1; tx_exe=1; params=1/1
+A6,PASS,tag=msm_adaptive_20261022; expected_prereg=fcd2bd7cbfd80443a0a9f9765f5077222c5b6ed4c5f5535c1536a8d6ec16b0a1
+A7,PASS,Spend H-query policy observed; Output C1 c10/W26 observed
+A8,PASS,"rows=44 unique=44 exits=[0] kinds={'spend': 20, 'output': 12, 'tx': 12}"
+A9,PASS,failed_files=0; nonempty_notes=0
+A10,PASS,analyzer rebuilt summary/contrasts/policy/stage tables and figures

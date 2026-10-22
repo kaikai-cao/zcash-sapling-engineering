@@ -1,0 +1,6 @@
+batch_id,run,params_read_validate_ms,prepare_vk_ms,input_prep_ms,prove_ms,verify_ms,proof_bytes,verified,rayon_threads,build_profile
+1792673509802,1,1906.523,1.014,12.884,132.912,2.210,192,true,8,release
+1792673509802,2,1906.523,1.014,12.884,91.072,2.167,192,true,8,release
+1792673509802,3,1906.523,1.014,12.884,91.287,2.403,192,true,8,release
+1792673509802,4,1906.523,1.014,12.884,91.477,2.261,192,true,8,release
+1792673509802,5,1906.523,1.014,12.884,89.985,2.176,192,true,8,release

@@ -1441,4 +1441,98 @@ manifest：`experiments/metadata/msm_scaling_manifest_msm_scaling_20261022.csv`�
 
 ---
 
-*本报告为工程细化与瓶颈定位，不构成算法级优化成功的声明。所有引用的时间均为对应批次的观测值，不是通用延迟保证。目标 a 的判定严格按预注册的冻结阈值给出（未通过）；其时间与瞬态收益为实测事实，是否据此改变默认值属所有者决策。目标 f 按冻结验收表判定为通过（六项全过），适用范围限于 `SAPLING_MSM_LAZY_RECODING=1` 配置与单线程路径。目标 g 按冻结验收表判定为通过（六项全过），两个开关的默认值已随之切换为 `1`（提交 `d4ed1df`），环境变量仍可双向覆盖。2026-10-18 的结项侦察（§24）确认内存线与时间线均到达地板，优化战役 a–g 完结。2026-10-22 的交易级测量（§25）补齐了完整交易构造器一层：1 spend + 2 outputs 的本地构造中位为 1 线程 4.29 s、8 线程 1.18 s，其中 99.89% 是 Groth16；该实验是测量 baseline，不产生新的优化结论，也不含广播与上链确认时间。*
+## 27. Stage 1b：大 MSM 门控自适应窗口与尾部切分（2026-10-22）
+
+§26 把 8t 损失分解为窗口尾部、SMT/放置和串行阶段三部分，并建议 Stage 1 优先做
+`W mod P` 感知的自适应窗口/窗口内切分。Stage 1a 的 pilot 先暴露两个问题：全局
+自适应（含 Output）使 Output 变慢，所有窗口切分又把 bucket reduce 开销加回来。
+因此正式测量前另行冻结 Stage 1b：**仅 `n ≥ 16384` 启用自适应**，并只切分
+`W mod P` 个尾部窗口（`tail`），不做全窗口切分。Stage 1a/1b 预注册分别提交于
+`7787ef7`/`75e9637`；本文以 Stage 1b 为准。
+
+### 27.1 冻结设计与执行
+
+- 8t `0x5555`；Spend 20 批、Output 12 批、交易 12 批，共 **44 批**；每批 5 proofs，
+  交易每批 6 次；每臂 4 批。
+- 臂：`C0` 默认（c=13）；`C1` 门控自适应（大 MSM c=11）；`C2` c=13 + tail split2；
+  `C3` c=10 + tail split4；`C4` 强制 c=11 正对照。`C2/C3` 仅 Spend。
+- 估计量：每批丢弃 run 1 后取中位，再对 4 个 batch 中位取中位；10,000 次
+  cluster bootstrap，90% CI。
+- 测量 HEAD `a4577cb`；Spend/Output/交易二进制 SHA 分别为
+  `4abe2771…f6bd`、`2505c210…e37c`、`6e97c39f…9c5f`；预注册 SHA
+  `fcd2bd7c…b0a1`。
+
+### 27.2 验收
+
+正式 campaign 44/44 批完成，44 个唯一 batch ID，全部 `exit_code=0`；冻结分析器
+**A1–A10 共 10/10 PASS**。Spend 20 批各 5/5 proof 验证；Output 12 批各 5/5；
+交易 12 批 × 6 = 72/72 通过 `BatchValidator` 和结构检查（V5、1 spend + 2 outputs、
+2,377 B、`0x5555`）。所有批次单一 HEAD、单一二进制/参数哈希；A7 的 Spend
+H-query 策略与 Output `c=10/W=26` 均逐批匹配。
+
+### 27.3 结果
+
+| 臂 | Spend prove 中位 | 对 C0 | 90% CI | 判定 |
+|---|---:|---:|---:|---|
+| C0 默认 c=13 | **680.24 ms** | — | — | — |
+| C1 门控自适应 | 693.12 ms | **1.019** | 0.958–1.077 | P1 不支持 |
+| C2 c=13 tail2 | 760.13 ms | **1.117** | 1.052–1.179 | P2 不支持 |
+| C3 c=10 tail4 | 698.35 ms | **1.027** | 0.956–1.094 | P3 不支持 |
+| C4 强制 c=11 | 679.60 ms | **0.999** | 0.940–1.055 | 正对照无收益 |
+
+- **P1 不支持**：C1 点估计比 C0 慢 1.9%，CI 上界 1.077；没有达到 `≤0.95` 的冻结阈值。
+- **正对照 C4/C0=0.999**：强制 c=11 在同一 campaign 中没有复现 Stage 0 的
+  657.81 ms 优势；因此 P1 的否定不能归因于门控实现，c=11 本身在该 campaign 中
+  没有 prove 收益。
+- **P2/P3 不支持**：尾部切分没有降低 wall；C2 慢 11.7%，C3 慢 2.7%。
+- **P4 FAIL**：C1/C4=1.020，CI 上界 1.076 >1.05；两者的大 MSM 策略相同，差异主要
+  来自 C1 的 `A_input`（n=8）保留默认 c=3（86 个任务）而 C4 强制 c=11（24 个任务），
+  以及批次噪声；这提示小 n 的 `task_count` 也有一阶影响，但不足以形成可采纳收益。
+- **P5 未认证**：Output C1/C0=0.997（点估计快 0.3%），但 CI 上界 **1.0546 >1.05**；
+  只能记为“未见回归点估计，但置信区间过宽，未通过认证”。C4/C0=1.289（c=11 使
+  Output 慢 28.9%），说明 `n<16384` 门控必要，但门控本身不产生 Output 收益。
+- **P6 通过不回归**：交易 C1/C0=0.943（CI 0.877–1.015，快 5.7%）。但 C4/C0=0.987，
+  且 C1/C4 差异与 C4 的 Output c=11 回归混叠；P6 只能作为不回归证据，不能写成
+  自适应窗口改善交易的因果结论。
+
+### 27.4 机制：fill/reduce 交换与尾部开销
+
+H-query stage 中位（每臂 4 批）：
+
+| 臂 | wall (ms) | fill (ms) | reduce (ms) | 对 C0 wall |
+|---|---:|---:|---:|---:|
+| C0 c=13 | 418.4 | 1,445.1 | 99.1 | — |
+| C1 c=11 | 426.0 | 1,797.5 | 30.7 | +1.8% |
+| C4 c=11 | 414.2 | 1,743.8 | 30.4 | −1.0% |
+| C2 tail2 | 503.3 | 1,496.5 | 124.2 | +20.3% |
+| C3 tail4 | 431.3 | 1,912.0 | 20.5 | +3.1% |
+
+c=11 把 reduce 降低约 69%，但 fill 增加约 21–24%，wall 被抵消；Stage 0 的
+`ns_per_add` 优势没有转化为端到端 prove 收益。tail 切分的 fill 只增加 3.6%
+（C2）或 32.3%（C3），却增加任务/bucket 开销，C2 的 reduce 反而增加 25.3%，
+wall 增加 20.3%；C3 把 reduce 压到 20.5 ms，仍因 fill 增加而慢 3.1%。因此
+“只切尾部、少做 reduce”的模型不成立，fill 与任务形状才是主项。
+
+### 27.5 结论与偏差
+
+**Stage 1b 是否定结果，不切换默认值。** P1/P2/P3 不支持，P4 FAIL，P5 未认证，
+P6 仅不回归；Stage 0 的 c=11 657.81 ms 是跨 campaign 点估计，本次同 campaign
+正对照 C4 为 679.60 ms、C0 为 680.24 ms，不能作为默认切换依据。该结论与方法学
+教训比“再调一个窗口参数”更重要：**跨 campaign 的最优点必须用同 campaign 正对照复核**。
+
+执行偏差已保留：Stage 1a 的 6 个 pilot 批次、Stage 1b 的门控/尾切 smoke、首次
+正式启动在 batch 1 前的标签长度失败（无 proof 进程/无 raw prove 行；失败
+manifest/log 以 `.failed_launch` 保留）、以及 Output/交易逐批日志被子进程同名
+`_b1` 覆盖（raw CSV 和 campaign 日志完整，测量行未丢失）。完整记录见
+`experiments/metadata/sapling_msm_adaptive_stage1b_results_20261022.md`。
+
+一手记录：`experiments/metadata/sapling_msm_adaptive_stage1b_results_20261022.md`；
+预注册：`experiments/metadata/sapling_msm_adaptive_stage1b_preregistration_20261022.md`；
+manifest：`experiments/metadata/msm_adaptive_manifest_msm_adaptive_20261022.csv`；
+原始数据：`experiments/raw/csv/*msm_adaptive_20261022*`；
+派生表/图：`results/tables/msm_adaptive_*_msm_adaptive_20261022.csv`、
+`results/figures/msm_adaptive_*_msm_adaptive_20261022.png`。
+
+---
+
+*本报告为工程细化与瓶颈定位，不构成算法级优化成功的声明。所有引用的时间均为对应批次的观测值，不是通用延迟保证。目标 a 的判定严格按预注册的冻结阈值给出（未通过）；其时间与瞬态收益为实测事实，是否据此改变默认值属所有者决策。目标 f 按冻结验收表判定为通过（六项全过），适用范围限于 `SAPLING_MSM_LAZY_RECODING=1` 配置与单线程路径。目标 g 按冻结验收表判定为通过（六项全过），两个开关的默认值已随之切换为 `1`（提交 `d4ed1df`），环境变量仍可双向覆盖。2026-10-18 的结项侦察（§24）确认内存线与时间线均到达地板，优化战役 a–g 完结。2026-10-22 的交易级测量（§25）补齐了完整交易构造器一层：1 spend + 2 outputs 的本地构造中位为 1 线程 4.29 s、8 线程 1.18 s，其中 99.89% 是 Groth16；该实验是测量 baseline，不产生新的优化结论，也不含广播与上链确认时间。2026-10-22 的 Stage 0（§26）完成了 8t 膝点诊断；Stage 1b（§27）随后检验门控自适应窗口与尾部切分，P1/P2/P3 不支持、P4 FAIL、P5 未认证、P6 仅不回归，因此**没有切换任何默认值**，Stage 0 的 c=11 657.81 ms 也没有在同 campaign 正对照中复现。*
