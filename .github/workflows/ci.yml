@@ -84,7 +84,7 @@ jobs:
         run: cargo build --release --locked --manifest-path experiments/prover-smoke/Cargo.toml
 
   check-tx-smoke:
-    name: transaction crate: fmt + clippy + check (locked, parameter-free)
+    name: transaction crate fmt + clippy + check (locked, parameter-free)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
