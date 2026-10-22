@@ -460,7 +460,7 @@ if ($recordedThreadCounts.Count -ne 1 -or [string]$recordedThreadCounts[0] -ne [
 $msmRegex = [regex]'BELLMAN_MSM_PROFILE call_id=(\d+) exponent_count=(\d+) density_map_size=(None|Some\(\d+\)) window=(\d+) task_start_delay_ms=([\d.]+) elapsed_ms=([\d.]+)'
 $submitRegex = [regex]'BELLMAN_MSM_SUBMIT_PROFILE call_id=(\d+) submit_elapsed_ms=([\d.]+)'
 $stageRegex = [regex]'G16_STAGE_PROFILE circuit_synthesis_constraints_ms=([\d.]+) worker_vk_setup_ms=([\d.]+) qap_fft_h_exponent_prep_ms=([\d.]+) h_query_access_dispatch_ms=([\d.]+) assignment_query_prep_dispatch_ms=([\d.]+) proof_scalar_terms_ms=([\d.]+) wait_and_assembly_ms=([\d.]+) create_proof_body_ms=([\d.]+)'
-$innerStageRegex = [regex]'BELLMAN_MSM_STAGE_PROFILE call_id=(\d+) exponent_count=(\d+) window=(\d+)(?: signed=\d+)? bucket_count=(\d+) chunk_count=(\d+) bucket_element_size_bytes=(\d+) exponent_chunk_prep_ms=([\d.]+) chunk_parallel_wall_ms=([\d.]+) bucket_init_sum_ms=([\d.]+) bucket_init_max_ms=([\d.]+) bucket_fill_sum_ms=([\d.]+) bucket_fill_max_ms=([\d.]+) bucket_reduce_sum_ms=([\d.]+) bucket_reduce_max_ms=([\d.]+) max_concurrent_chunk_regions=(\d+) bucket_payload_at_max_concurrency_estimate_bytes=(\d+) result_merge_ms=([\d.]+)'
+$innerStageRegex = [regex]'BELLMAN_MSM_STAGE_PROFILE call_id=(\d+) exponent_count=(\d+) window=(\d+)(?: signed=\d+)? bucket_count=(\d+) chunk_count=(\d+) bucket_element_size_bytes=(\d+) exponent_chunk_prep_ms=([\d.]+) chunk_parallel_wall_ms=([\d.]+) bucket_init_sum_ms=([\d.]+) bucket_init_max_ms=([\d.]+) bucket_fill_sum_ms=([\d.]+) bucket_fill_max_ms=([\d.]+) bucket_reduce_sum_ms=([\d.]+) bucket_reduce_max_ms=([\d.]+) max_concurrent_chunk_regions=(\d+) bucket_payload_at_max_concurrency_estimate_bytes=(\d+) result_merge_ms=([\d.]+)(?: split=(\d+) task_count=(\d+))?(?: split_mode=(\w+))?'
 $workerFallbackRegex = [regex]'BELLMAN_WORKER_FALLBACK previous_count=(\d+) max_count=(\d+) rayon_threads=(\d+)'
 $workerAsyncOverrideRegex = [regex]'BELLMAN_WORKER_ASYNC_OVERRIDE previous_count=(\d+) max_count=(\d+) rayon_threads=(\d+)'
 
@@ -525,6 +525,76 @@ if (-not [string]::IsNullOrWhiteSpace($rawWindowOverride)) {
     $windowOverride = [int]$rawWindowOverride
 }
 
+$adaptiveWindow = $false
+$rawAdaptiveWindow = [Environment]::GetEnvironmentVariable('SAPLING_MSM_ADAPTIVE_WINDOW', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($rawAdaptiveWindow)) {
+    $adaptiveWindow = $rawAdaptiveWindow.Trim() -match '^(1|true|on|yes)$'
+}
+
+$windowSplit = 1
+$rawWindowSplit = [Environment]::GetEnvironmentVariable('SAPLING_MSM_WINDOW_SPLIT', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($rawWindowSplit)) {
+    if ($rawWindowSplit -notmatch '^\d+$' -or [int]$rawWindowSplit -lt 1 -or [int]$rawWindowSplit -gt 8) {
+        throw "Invalid SAPLING_MSM_WINDOW_SPLIT: $rawWindowSplit"
+    }
+    $windowSplit = [int]$rawWindowSplit
+}
+
+$splitMode = 'all'
+$rawSplitMode = [Environment]::GetEnvironmentVariable('SAPLING_MSM_WINDOW_SPLIT_MODE', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($rawSplitMode)) {
+    $candidateMode = $rawSplitMode.Trim().ToLowerInvariant()
+    if ($candidateMode -notin @('all', 'tail')) {
+        throw "Invalid SAPLING_MSM_WINDOW_SPLIT_MODE: $rawSplitMode"
+    }
+    $splitMode = $candidateMode
+}
+
+function Get-ExpectedAdaptiveWindow {
+    param(
+        [int]$ExponentCount,
+        [int]$ElementSize
+    )
+
+    $bestC = 3
+    $bestCost = [double]::MaxValue
+    for ($c = 3; $c -le 14; $c++) {
+        $bucketCount = [long](1 -shl ($c - 1))
+        $activeBytes = [long]$Threads * $bucketCount * [long]$ElementSize
+        if ($activeBytes -gt (16 * 1024 * 1024)) {
+            continue
+        }
+        $w = [int][Math]::Floor(255.0 / $c) + 1
+        $waves = [int][Math]::Ceiling([double]$w / [double]$Threads)
+        $cost = [double]$waves * ([double]$ExponentCount + 2.0 * [double]$bucketCount)
+        if ($cost -lt $bestCost) {
+            $bestCost = $cost
+            $bestC = $c
+        }
+    }
+
+    if ($bestCost -eq [double]::MaxValue) {
+        return Get-ExpectedSignedWindow -ExponentCount $ExponentCount
+    }
+    return $bestC
+}
+
+function Get-ExpectedWindow {
+    param([hashtable]$Query)
+
+    if ($null -ne $windowOverride) {
+        return $windowOverride
+    }
+    if ($signedRecoding -and $adaptiveWindow -and [int]$Query.Count -ge 16384) {
+        $elementSize = if ($Query.Group -eq 'G1') { 144 } else { 288 }
+        return Get-ExpectedAdaptiveWindow -ExponentCount ([int]$Query.Count) -ElementSize $elementSize
+    }
+    if ($signedRecoding) {
+        return Get-ExpectedSignedWindow -ExponentCount ([int]$Query.Count)
+    }
+    return 12
+}
+
 $queries = @(
     @{ Name = 'H_query_G1'; Group = 'G1'; Count = 131071 },
     @{ Name = 'L_query_G1'; Group = 'G1'; Count = 98638 },
@@ -556,7 +626,7 @@ foreach ($m in $msmMatches) {
     $query = $queries[($callId - 1) % 8]
     $actualExponentCount = [int]$m.Groups[2].Value
     $actualWindow = [int]$m.Groups[4].Value
-    $expectedWindow = if ($null -ne $windowOverride) { $windowOverride } elseif ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
+    $expectedWindow = Get-ExpectedWindow -Query $query
 
     if ($actualExponentCount -ne [int]$query.Count -or $actualWindow -ne $expectedWindow) {
         throw "Call $callId does not match the expected Groth16 query mapping ($($query.Name)): exponent_count=$actualExponentCount, window=$actualWindow."
@@ -605,7 +675,7 @@ foreach ($m in $innerStageMatches) {
     $bucketCount = [int]$m.Groups[4].Value
     $chunkCount = [int]$m.Groups[5].Value
     $elementSize = [int]$m.Groups[6].Value
-    $expectedWindow = if ($null -ne $windowOverride) { $windowOverride } elseif ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
+    $expectedWindow = Get-ExpectedWindow -Query $query
     $expectedBucketCount = if ($signedRecoding) {
         [int][Math]::Pow(2, $expectedWindow - 1)
     }
@@ -622,6 +692,26 @@ foreach ($m in $innerStageMatches) {
     $maxConcurrent = [int]$m.Groups[15].Value
     $bucketPayloadEstimate = [long]$m.Groups[16].Value
     $expectedBucketPayloadEstimate = [long]$maxConcurrent * $bucketCount * $elementSize
+    $observedSplit = if ($m.Groups[18].Success) { [int]$m.Groups[18].Value } else { 1 }
+    $observedTaskCount = if ($m.Groups[19].Success) { [int]$m.Groups[19].Value } else { $chunkCount }
+    $observedSplitMode = if ($m.Groups[20].Success) { $m.Groups[20].Value } else { 'none' }
+    if ($windowSplit -le 1) {
+        $expectedTaskCount = $expectedChunkCount
+    }
+    elseif ($splitMode -eq 'all') {
+        $expectedTaskCount = $expectedChunkCount * $windowSplit
+    }
+    else {
+        $tailWindows = $expectedChunkCount % $Threads
+        if ($tailWindows -eq 0) {
+            $expectedTaskCount = $expectedChunkCount
+        }
+        else {
+            $expectedTaskCount = ($expectedChunkCount - $tailWindows) + ($tailWindows * $windowSplit)
+        }
+    }
+    $expectedSplit = if ($expectedTaskCount -gt $expectedChunkCount) { $windowSplit } else { 1 }
+    $expectedSplitMode = if ($expectedSplit -gt 1) { $splitMode } else { 'none' }
 
     if ($exponentCount -ne [int]$query.Count) {
         throw "Inner-stage call $callId ($($query.Name)) exponent_count mismatch: $exponentCount."
@@ -632,10 +722,13 @@ foreach ($m in $innerStageMatches) {
     if ($chunkCount -ne $expectedChunkCount) {
         throw "Inner-stage call $callId ($($query.Name)) chunk_count mismatch: $chunkCount; expected $expectedChunkCount."
     }
+    if ($observedSplit -ne $expectedSplit -or $observedTaskCount -ne $expectedTaskCount -or $observedSplitMode -ne $expectedSplitMode) {
+        throw "Inner-stage call $callId ($($query.Name)) split/task_count/mode mismatch: split=$observedSplit task_count=$observedTaskCount mode=$observedSplitMode; expected split=$expectedSplit task_count=$expectedTaskCount mode=$expectedSplitMode."
+    }
     if ($elementSize -ne $expectedElementSize) {
         throw "Inner-stage call $callId ($($query.Name)) element size mismatch: $elementSize; expected $expectedElementSize."
     }
-    if ($maxConcurrent -lt 1 -or $maxConcurrent -gt $chunkCount) {
+    if ($maxConcurrent -lt 1 -or $maxConcurrent -gt [Math]::Max($chunkCount, $expectedTaskCount)) {
         throw "Inner-stage call $callId ($($query.Name)) reports invalid concurrent chunk count: $maxConcurrent."
     }
     if ($bucketPayloadEstimate -ne $expectedBucketPayloadEstimate) {
@@ -652,6 +745,9 @@ foreach ($m in $innerStageMatches) {
         window = $window
         bucket_count = $bucketCount
         chunk_count = $chunkCount
+        split = $observedSplit
+        task_count = $observedTaskCount
+        split_mode = $observedSplitMode
         bucket_element_size_bytes = $elementSize
         exponent_chunk_prep_ms = [double]$m.Groups[7].Value
         chunk_parallel_wall_ms = [double]$m.Groups[8].Value
@@ -718,6 +814,9 @@ foreach ($query in $queries) {
         window = [int]$queryRows[0].window
         bucket_count = [int]$queryRows[0].bucket_count
         chunk_count = [int]$queryRows[0].chunk_count
+        split = [int]$queryRows[0].split
+        task_count = [int]$queryRows[0].task_count
+        split_mode = [string]$queryRows[0].split_mode
         bucket_element_size_bytes = [int]$queryRows[0].bucket_element_size_bytes
         runs = $queryRows.Count
         median_exponent_chunk_prep_ms = Get-Median -Values $prep

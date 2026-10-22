@@ -103,11 +103,7 @@ fn msm_window_c_override() -> Option<u32> {
         value = MSM_WINDOW_C_OVERRIDE.load(Ordering::Relaxed);
     }
 
-    if value < 0 {
-        None
-    } else {
-        Some(value as u32)
-    }
+    if value < 0 { None } else { Some(value as u32) }
 }
 
 /// Programmatic counterpart of `SAPLING_MSM_WINDOW_C` for benchmark binaries.
@@ -119,6 +115,105 @@ pub fn set_msm_window_c(c: Option<u32>) {
         _ => -1,
     };
     MSM_WINDOW_C_OVERRIDE.store(value, Ordering::Relaxed);
+}
+
+// Stage 1 experimental switch: choose `c` from the tail-aware model in
+// `adaptive_signed_window` instead of the historical operation-count model.
+// It is off by default, so unset environments are bit-for-bit the old path.
+const MSM_ADAPTIVE_WINDOW_DEFAULT: i32 = 0;
+static MSM_ADAPTIVE_WINDOW_OVERRIDE: AtomicI32 = AtomicI32::new(i32::MIN);
+
+fn msm_adaptive_window_enabled() -> bool {
+    let mut value = MSM_ADAPTIVE_WINDOW_OVERRIDE.load(Ordering::Relaxed);
+    if value < 0 {
+        let parsed = std::env::var("SAPLING_MSM_ADAPTIVE_WINDOW")
+            .map(|raw| {
+                matches!(
+                    raw.trim(),
+                    "1" | "true" | "on" | "yes" | "TRUE" | "ON" | "YES"
+                ) as i32
+            })
+            .unwrap_or(MSM_ADAPTIVE_WINDOW_DEFAULT);
+        let _ = MSM_ADAPTIVE_WINDOW_OVERRIDE.compare_exchange(
+            i32::MIN,
+            parsed,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+        value = MSM_ADAPTIVE_WINDOW_OVERRIDE.load(Ordering::Relaxed);
+    }
+
+    value != 0
+}
+
+/// Programmatic counterpart of `SAPLING_MSM_ADAPTIVE_WINDOW`.
+pub fn set_msm_adaptive_window(enabled: bool) {
+    MSM_ADAPTIVE_WINDOW_OVERRIDE.store(if enabled { 1 } else { 0 }, Ordering::Relaxed);
+}
+
+// Stage 1 experimental switch: split every window's exponent range into `s`
+// contiguous segments. `s = 1` is the old one-task-per-window path.
+const MSM_WINDOW_SPLIT_DEFAULT: i32 = 1;
+static MSM_WINDOW_SPLIT_OVERRIDE: AtomicI32 = AtomicI32::new(i32::MIN);
+
+fn msm_window_split() -> u32 {
+    let mut value = MSM_WINDOW_SPLIT_OVERRIDE.load(Ordering::Relaxed);
+    if value < 0 {
+        let parsed = std::env::var("SAPLING_MSM_WINDOW_SPLIT")
+            .ok()
+            .and_then(|raw| raw.trim().parse::<u32>().ok())
+            .filter(|s| (1..=8).contains(s))
+            .map(|s| s as i32)
+            .unwrap_or(MSM_WINDOW_SPLIT_DEFAULT);
+        let _ = MSM_WINDOW_SPLIT_OVERRIDE.compare_exchange(
+            i32::MIN,
+            parsed,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+        value = MSM_WINDOW_SPLIT_OVERRIDE.load(Ordering::Relaxed);
+    }
+
+    value as u32
+}
+
+/// Programmatic counterpart of `SAPLING_MSM_WINDOW_SPLIT`.
+pub fn set_msm_window_split(split: u32) {
+    let value = if (1..=8).contains(&split) {
+        split as i32
+    } else {
+        MSM_WINDOW_SPLIT_DEFAULT
+    };
+    MSM_WINDOW_SPLIT_OVERRIDE.store(value, Ordering::Relaxed);
+}
+
+// Stage 1b: split only the `W mod P` tail windows instead of every window.
+// This leaves the full waves as large, efficient tasks and spends the extra
+// bucket arrays only where they can fill the last partially occupied wave.
+const MSM_TAIL_SPLIT_DEFAULT: i32 = 0;
+static MSM_TAIL_SPLIT_OVERRIDE: AtomicI32 = AtomicI32::new(i32::MIN);
+
+fn msm_tail_window_split() -> bool {
+    let mut value = MSM_TAIL_SPLIT_OVERRIDE.load(Ordering::Relaxed);
+    if value < 0 {
+        let parsed = std::env::var("SAPLING_MSM_WINDOW_SPLIT_MODE")
+            .map(|raw| raw.trim().eq_ignore_ascii_case("tail") as i32)
+            .unwrap_or(MSM_TAIL_SPLIT_DEFAULT);
+        let _ = MSM_TAIL_SPLIT_OVERRIDE.compare_exchange(
+            i32::MIN,
+            parsed,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+        value = MSM_TAIL_SPLIT_OVERRIDE.load(Ordering::Relaxed);
+    }
+
+    value != 0
+}
+
+/// Programmatic counterpart of `SAPLING_MSM_WINDOW_SPLIT_MODE`.
+pub fn set_msm_tail_window_split(enabled: bool) {
+    MSM_TAIL_SPLIT_OVERRIDE.store(if enabled { 1 } else { 0 }, Ordering::Relaxed);
 }
 
 // Signed ("balanced") window recoding for the Pippenger bucket fill.
@@ -361,6 +456,69 @@ fn best_signed_window(bits: usize, exponent_count: usize) -> u32 {
     best_c
 }
 
+/// Number of Rayon workers available to this MSM call.
+///
+/// `current_num_threads()` is the pool size, not the number of threads that
+/// happen to be active at this instant. That is the right quantity for the
+/// tail-aware model: it describes how many chunk slots a wave can fill.
+#[cfg(feature = "multicore")]
+fn msm_worker_count() -> usize {
+    rayon::current_num_threads().max(1)
+}
+
+#[cfg(not(feature = "multicore"))]
+fn msm_worker_count() -> usize {
+    1
+}
+
+/// Tail-aware signed-window choice used by Stage 1.
+///
+/// The historical `best_signed_window` minimises total group additions,
+/// `W(c) * (n + 2 * 2^(c-1))`, which assumes every chunk has the same cost and
+/// ignores the final partial wave. On a fixed `P`-worker pool the wall time is
+/// closer to `ceil(W(c)/P) * (n + 2 * 2^(c-1))`. We also refuse candidates whose
+/// *concurrent* bucket arrays exceed a small fixed memory envelope, because the
+/// measured per-add cost rises with bucket footprint and Stage 1 must not trade
+/// unbounded memory for a timing win.
+const ADAPTIVE_MIN_EXPONENTS: usize = 16_384;
+
+fn adaptive_signed_window(
+    bits: usize,
+    exponent_count: usize,
+    workers: usize,
+    bucket_element_size_bytes: usize,
+) -> u32 {
+    const MAX_ACTIVE_BUCKET_BYTES: usize = 16 * 1024 * 1024;
+
+    let workers = workers.max(1);
+    let mut best_c = 3u32;
+    let mut best_cost = usize::MAX;
+
+    for c in 3..=14u32 {
+        let bucket_count = 1usize << (c - 1);
+        let active_bytes = workers
+            .checked_mul(bucket_count)
+            .and_then(|value| value.checked_mul(bucket_element_size_bytes));
+        if active_bytes.map_or(true, |bytes| bytes > MAX_ACTIVE_BUCKET_BYTES) {
+            continue;
+        }
+
+        let windows = signed_window_count(bits, c);
+        let waves = windows.div_ceil(workers);
+        let cost = waves.saturating_mul(exponent_count.saturating_add(2 * bucket_count));
+        if cost < best_cost {
+            best_cost = cost;
+            best_c = c;
+        }
+    }
+
+    if best_cost == usize::MAX {
+        best_signed_window(bits, exponent_count)
+    } else {
+        best_c
+    }
+}
+
 struct MsmMemProbe {
     bucket_alloc_max_bytes: AtomicUsize,
     // Directly measured exponent-shape census (replaces the earlier density
@@ -411,12 +569,7 @@ fn update_atomic_max(target: &AtomicUsize, value: usize) {
     let mut current = target.load(Ordering::Relaxed);
 
     while value > current {
-        match target.compare_exchange_weak(
-            current,
-            value,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
+        match target.compare_exchange_weak(current, value, Ordering::Relaxed, Ordering::Relaxed) {
             Ok(_) => break,
             Err(observed) => current = observed,
         }
@@ -448,7 +601,9 @@ fn record_timing(
 }
 
 fn elapsed_ns(start: Option<Instant>) -> u64 {
-    start.map(|value| value.elapsed().as_nanos() as u64).unwrap_or(0)
+    start
+        .map(|value| value.elapsed().as_nanos() as u64)
+        .unwrap_or(0)
 }
 
 fn ns_to_ms(value: u64) -> f64 {
@@ -740,6 +895,7 @@ fn multiexp_inner<Q, D, G, S>(
     density_map: D,
     exponents: Arc<Vec<Exponent<G::Scalar>>>,
     c: u32,
+    split: u32,
     signed: bool,
     profile: bool,
     branch_counts: bool,
@@ -798,12 +954,106 @@ where
         (G::Scalar::NUM_BITS as usize + c as usize - 1) / c as usize
     };
 
+    // Stage 1: optional intra-window splitting. `s = 1` keeps the historical
+    // one-task-per-window dispatch. Each segment owns a bucket array, so the
+    // split is exact but adds bucket arrays/reductions.
+    //
+    // Stage 1b adds `tail` mode: keep the full waves as full-window tasks and
+    // split only the `W mod P` windows that would otherwise leave the last wave
+    // partially occupied. This is the load-balancing experiment; `all` is kept
+    // for the Stage 1a pilot comparison.
+    let split_count = split.clamp(1, exponent_count.max(1) as u32) as usize;
+    let tail_split = msm_tail_window_split();
+    let workers = msm_worker_count();
+    let tail_windows = if tail_split && workers > 0 {
+        window_count % workers
+    } else {
+        0
+    };
+    let actual_split = if split_count > 1 && (!tail_split || tail_windows > 0) {
+        split_count
+    } else {
+        1
+    };
+    let segment_ranges: Vec<(usize, usize)> = if actual_split == 1 {
+        vec![(0usize, exponent_count)]
+    } else {
+        let base = exponent_count / actual_split;
+        let remainder = exponent_count % actual_split;
+        (0..actual_split)
+            .map(|segment| {
+                let start = segment * base + segment.min(remainder);
+                let len = base + usize::from(segment < remainder);
+                (start, len)
+            })
+            .collect()
+    };
+    let tasks: Vec<(usize, usize, usize)> = if actual_split == 1 {
+        (0..window_count)
+            .map(|chunk| (chunk, 0usize, exponent_count))
+            .collect()
+    } else if tail_split {
+        let full_windows = window_count.saturating_sub(tail_windows);
+        let mut tasks = (0..full_windows)
+            .map(|chunk| (chunk, 0usize, exponent_count))
+            .collect::<Vec<_>>();
+        for chunk in full_windows..window_count {
+            for &(start, len) in segment_ranges.iter() {
+                tasks.push((chunk, start, len));
+            }
+        }
+        tasks
+    } else {
+        let mut tasks = Vec::with_capacity(window_count * actual_split);
+        for chunk in 0..window_count {
+            for &(start, len) in segment_ranges.iter() {
+                tasks.push((chunk, start, len));
+            }
+        }
+        tasks
+    };
+    let split_mode = if actual_split > 1 {
+        if tail_split {
+            "tail"
+        } else {
+            "all"
+        }
+    } else {
+        "none"
+    };
+
+    // Sparse density maps do not consume a base for a false slot. To start a
+    // segment at global exponent index `start`, skip the number of *true*
+    // density slots before it, not `start` bases. The prefix is only needed for
+    // split runs; the usual one-task path keeps the original loop untouched.
+    let density_prefix: Option<Arc<Vec<usize>>> = if actual_split > 1 {
+        let mut prefix = Vec::with_capacity(exponent_count + 1);
+        prefix.push(0usize);
+        let mut true_count = 0usize;
+        for density in density_map.as_ref().iter().take(exponent_count) {
+            if density {
+                true_count += 1;
+            }
+            prefix.push(true_count);
+        }
+        while prefix.len() <= exponent_count {
+            prefix.push(true_count);
+        }
+        Some(Arc::new(prefix))
+    } else {
+        None
+    };
+
     let exponent_chunk_prep_start = stage_timing.then(Instant::now);
     // The carry-bit variant only applies to the signed path, and the slot
     // arithmetic needs the raw window to fit a u64.
     let lazy_recoding = msm_lazy_recoding_enabled() && signed && c <= 63;
     let carry_bits = if lazy_recoding {
-        Some(Arc::new(build_carry_bits(&exponents, c as usize, window_count)))
+        Some(Arc::new(build_carry_bits(
+            &exponents,
+            c as usize,
+            window_count,
+        )))
     } else {
         None
     };
@@ -823,9 +1073,13 @@ where
                     Exponent::Bits(_) => chunked_exponents += 1,
                 }
             }
-            probe.zero_exponents.store(zero_exponents, Ordering::Relaxed);
+            probe
+                .zero_exponents
+                .store(zero_exponents, Ordering::Relaxed);
             probe.one_exponents.store(one_exponents, Ordering::Relaxed);
-            probe.chunked_exponents.store(chunked_exponents, Ordering::Relaxed);
+            probe
+                .chunked_exponents
+                .store(chunked_exponents, Ordering::Relaxed);
         }
         Arc::new(Vec::new())
     } else if let Some(probe) = mem_probe.as_ref() {
@@ -864,7 +1118,9 @@ where
             })
             .collect::<Vec<_>>();
 
-        probe.zero_exponents.store(zero_exponents, Ordering::Relaxed);
+        probe
+            .zero_exponents
+            .store(zero_exponents, Ordering::Relaxed);
         probe.one_exponents.store(one_exponents, Ordering::Relaxed);
         probe
             .chunked_exponents
@@ -900,10 +1156,27 @@ where
                      density_map: D,
                      source: Arc<Vec<Exponent<G::Scalar>>>,
                      recoding: Recoding,
-                     chunk: usize|
+                     chunk: usize,
+                     segment_start: usize,
+                     segment_len: usize|
           -> Result<G, SynthesisError> {
         let mut acc = G::identity();
         let mut bases = bases.build();
+
+        // Sparse density sources contain only true slots. Skip the true slots
+        // that precede this exponent segment before consuming any base.
+        if let Some(prefix) = density_prefix.as_ref() {
+            let skip = prefix.get(segment_start).copied().unwrap_or(0);
+            let end = prefix
+                .get(segment_start.saturating_add(segment_len))
+                .copied()
+                .unwrap_or(skip);
+            let segment_true_slots = end.saturating_sub(skip);
+            if segment_true_slots > 0 && skip > 0 {
+                bases.skip(skip)?;
+            }
+        }
+
         // Fold parameters for the carry-bit recoding (unused when the digits are
         // materialised, where the slot is read straight from the vector).
         let half: u64 = 1u64 << (c - 1);
@@ -912,10 +1185,7 @@ where
         // Track overlapping chunk regions for this single MSM call. The guard
         // is dropped even if a checked source operation returns an error.
         let _active_bucket_guard = if let Some(profile) = worker_stage_profile.as_ref() {
-            let active = profile
-                .active_chunk_regions
-                .fetch_add(1, Ordering::Relaxed)
-                + 1;
+            let active = profile.active_chunk_regions.fetch_add(1, Ordering::Relaxed) + 1;
             update_atomic_max(&profile.max_active_chunk_regions, active);
             Some(ActiveBucketRegionGuard {
                 profile: Arc::clone(profile),
@@ -926,9 +1196,7 @@ where
 
         // Allocate the bucket array.
         let bucket_init_start = stage_timing.then(Instant::now);
-        let mem_before_bucket = worker_mem_probe
-            .as_ref()
-            .map(|_| crate::mem_probe::live());
+        let mem_before_bucket = worker_mem_probe.as_ref().map(|_| crate::mem_probe::live());
         let mut buckets = vec![G::identity(); bucket_count];
         if let Some(probe) = worker_mem_probe.as_ref() {
             if let Some(before) = mem_before_bucket {
@@ -936,9 +1204,7 @@ where
                 update_atomic_max(&probe.bucket_alloc_max_bytes, delta);
             }
         }
-        if let (Some(stage), Some(start)) =
-            (worker_stage_profile.as_ref(), bucket_init_start)
-        {
+        if let (Some(stage), Some(start)) = (worker_stage_profile.as_ref(), bucket_init_start) {
             record_timing(
                 &stage.bucket_init_sum_ns,
                 &stage.bucket_init_max_ns,
@@ -971,12 +1237,14 @@ where
             // The density map is *not* truncated by its own length: `FullDensity`
             // yields `iter::repeat(true)`, so the original `exponents.iter().zip(..)`
             // was what bounded the loop. Take the exponent count explicitly.
-            for (index, density) in density_map
+            for (offset, density) in density_map
                 .as_ref()
                 .iter()
+                .skip(segment_start)
+                .take(segment_len)
                 .enumerate()
-                .take(exponent_count)
             {
+                let index = segment_start + offset;
                 if density {
                     density_true_slot_visits += 1;
                     let (is_zero, is_one, digit) = resolve_slot(
@@ -1023,8 +1291,7 @@ where
                                         .sub_assign_from_source(&mut bases)?;
                                 }
                             } else {
-                                buckets[(digit - 1) as usize]
-                                    .add_assign_from_source(&mut bases)?;
+                                buckets[(digit - 1) as usize].add_assign_from_source(&mut bases)?;
                             }
                         }
                     }
@@ -1035,12 +1302,14 @@ where
         } else {
             // Production path preserves the original loop without branch counters.
             // Bounded by the exponent count, not by the density map: see above.
-            for (index, density) in density_map
+            for (offset, density) in density_map
                 .as_ref()
                 .iter()
+                .skip(segment_start)
+                .take(segment_len)
                 .enumerate()
-                .take(exponent_count)
             {
+                let index = segment_start + offset;
                 if density {
                     let (is_zero, is_one, digit) = resolve_slot(
                         &recoding,
@@ -1074,9 +1343,7 @@ where
                 }
             }
         }
-        if let (Some(stage), Some(start)) =
-            (worker_stage_profile.as_ref(), bucket_fill_start)
-        {
+        if let (Some(stage), Some(start)) = (worker_stage_profile.as_ref(), bucket_fill_start) {
             record_timing(
                 &stage.bucket_fill_sum_ns,
                 &stage.bucket_fill_max_ns,
@@ -1086,17 +1353,39 @@ where
 
         if branch_counts {
             if let Some(stage) = worker_stage_profile.as_ref() {
-                stage.density_true_slot_visits.fetch_add(density_true_slot_visits, Ordering::Relaxed);
-                stage.density_false_slot_visits.fetch_add(density_false_slot_visits, Ordering::Relaxed);
-                stage.zero_exponent_slot_visits.fetch_add(zero_exponent_slot_visits, Ordering::Relaxed);
-                stage.one_exponent_slot_visits.fetch_add(one_exponent_slot_visits, Ordering::Relaxed);
-                stage.chunked_exponent_slot_visits.fetch_add(chunked_exponent_slot_visits, Ordering::Relaxed);
-                stage.zero_window_digit_visits.fetch_add(zero_window_digit_visits, Ordering::Relaxed);
-                stage.nonzero_window_digit_visits.fetch_add(nonzero_window_digit_visits, Ordering::Relaxed);
-                stage.bucket_base_add_calls.fetch_add(bucket_base_add_calls, Ordering::Relaxed);
-                stage.direct_one_add_calls.fetch_add(direct_one_add_calls, Ordering::Relaxed);
-                stage.base_skip_calls.fetch_add(base_skip_calls, Ordering::Relaxed);
-                stage.base_skip_elements.fetch_add(base_skip_elements, Ordering::Relaxed);
+                stage
+                    .density_true_slot_visits
+                    .fetch_add(density_true_slot_visits, Ordering::Relaxed);
+                stage
+                    .density_false_slot_visits
+                    .fetch_add(density_false_slot_visits, Ordering::Relaxed);
+                stage
+                    .zero_exponent_slot_visits
+                    .fetch_add(zero_exponent_slot_visits, Ordering::Relaxed);
+                stage
+                    .one_exponent_slot_visits
+                    .fetch_add(one_exponent_slot_visits, Ordering::Relaxed);
+                stage
+                    .chunked_exponent_slot_visits
+                    .fetch_add(chunked_exponent_slot_visits, Ordering::Relaxed);
+                stage
+                    .zero_window_digit_visits
+                    .fetch_add(zero_window_digit_visits, Ordering::Relaxed);
+                stage
+                    .nonzero_window_digit_visits
+                    .fetch_add(nonzero_window_digit_visits, Ordering::Relaxed);
+                stage
+                    .bucket_base_add_calls
+                    .fetch_add(bucket_base_add_calls, Ordering::Relaxed);
+                stage
+                    .direct_one_add_calls
+                    .fetch_add(direct_one_add_calls, Ordering::Relaxed);
+                stage
+                    .base_skip_calls
+                    .fetch_add(base_skip_calls, Ordering::Relaxed);
+                stage
+                    .base_skip_elements
+                    .fetch_add(base_skip_elements, Ordering::Relaxed);
             }
         }
 
@@ -1110,9 +1399,7 @@ where
             running_sum.add_assign(&exp);
             acc.add_assign(&running_sum);
         }
-        if let (Some(stage), Some(start)) =
-            (worker_stage_profile.as_ref(), bucket_reduce_start)
-        {
+        if let (Some(stage), Some(start)) = (worker_stage_profile.as_ref(), bucket_reduce_start) {
             record_timing(
                 &stage.bucket_reduce_sum_ns,
                 &stage.bucket_reduce_max_ns,
@@ -1132,41 +1419,63 @@ where
         Some(bits) => Recoding::CarryBits(Arc::clone(bits)),
         None => Recoding::Materialized(Arc::clone(&chunked_exponents)),
     };
-    let parts = (0..window_count as u32)
+    let task_count = tasks.len();
+    let parts = tasks
         .into_par_iter()
-        .map(|chunk| {
-            this(
-                bases.clone(),
-                density_map.clone(),
-                exponents.clone(),
-                recoding.clone(),
-                chunk as usize,
+        .map(|(chunk, segment_start, segment_len)| {
+            (
+                chunk,
+                this(
+                    bases.clone(),
+                    density_map.clone(),
+                    exponents.clone(),
+                    recoding.clone(),
+                    chunk,
+                    segment_start,
+                    segment_len,
+                ),
             )
         })
-        .collect::<Vec<Result<_, _>>>();
+        .collect::<Vec<(usize, Result<_, _>)>>();
     let chunk_parallel_wall_ns = elapsed_ns(chunk_parallel_start);
-    let chunk_count = parts.len();
+    let chunk_count = window_count;
 
-    // Combine the independent chunk results.
+    // Combine segment results within each window first, then apply the window
+    // weight. This avoids `split` extra doublings per window and keeps the
+    // exact same weighted sum as the one-task path.
     let result_merge_start = stage_timing.then(Instant::now);
-    let final_result = parts
-        .into_iter()
-        .rev()
-        .try_fold(G::identity(), |acc, part| {
-            part.map(|part| (0..c).fold(acc, |acc, _| acc.double()) + part)
-        });
+    let mut window_results = vec![G::identity(); window_count];
+    let mut first_error = None;
+    for (chunk, part) in parts {
+        match part {
+            Ok(part) => window_results[chunk].add_assign(&part),
+            Err(error) => {
+                if first_error.is_none() {
+                    first_error = Some(error);
+                }
+            }
+        }
+    }
+    let final_result = if let Some(error) = first_error {
+        Err(error)
+    } else {
+        window_results
+            .into_iter()
+            .rev()
+            .try_fold(G::identity(), |acc, part| {
+                Ok((0..c).fold(acc, |acc, _| acc.double()) + part)
+            })
+    };
     let result_merge_ns = elapsed_ns(result_merge_start);
 
     if let Some(stage) = stage_profile.as_ref() {
-        let max_concurrent_chunk_regions = stage
-            .max_active_chunk_regions
-            .load(Ordering::Relaxed);
+        let max_concurrent_chunk_regions = stage.max_active_chunk_regions.load(Ordering::Relaxed);
         let bucket_element_size_bytes = std::mem::size_of::<G>();
         let bucket_payload_at_max_concurrency_estimate_bytes =
             max_concurrent_chunk_regions * bucket_count * bucket_element_size_bytes;
 
         eprintln!(
-            "BELLMAN_MSM_STAGE_PROFILE call_id={} exponent_count={} window={} signed={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_chunk_prep_ms={:.3} chunk_parallel_wall_ms={:.3} bucket_init_sum_ms={:.3} bucket_init_max_ms={:.3} bucket_fill_sum_ms={:.3} bucket_fill_max_ms={:.3} bucket_reduce_sum_ms={:.3} bucket_reduce_max_ms={:.3} max_concurrent_chunk_regions={} bucket_payload_at_max_concurrency_estimate_bytes={} result_merge_ms={:.3}",
+            "BELLMAN_MSM_STAGE_PROFILE call_id={} exponent_count={} window={} signed={} bucket_count={} chunk_count={} bucket_element_size_bytes={} exponent_chunk_prep_ms={:.3} chunk_parallel_wall_ms={:.3} bucket_init_sum_ms={:.3} bucket_init_max_ms={:.3} bucket_fill_sum_ms={:.3} bucket_fill_max_ms={:.3} bucket_reduce_sum_ms={:.3} bucket_reduce_max_ms={:.3} max_concurrent_chunk_regions={} bucket_payload_at_max_concurrency_estimate_bytes={} result_merge_ms={:.3} split={} task_count={} split_mode={}",
             call_id.unwrap_or(0),
             exponent_count,
             c,
@@ -1185,6 +1494,9 @@ where
             max_concurrent_chunk_regions,
             bucket_payload_at_max_concurrency_estimate_bytes,
             ns_to_ms(result_merge_ns),
+            actual_split,
+            task_count,
+            split_mode,
         );
 
         if branch_counts {
@@ -1263,14 +1575,25 @@ where
         if signed {
             // Balanced-signed digits halve the bucket count at the same width,
             // so the optimal window is one bit wider than the unsigned rule and
-            // is worth recomputing from the operation-count model.
-            best_signed_window(G::Scalar::NUM_BITS as usize, exponents.len())
+            // is worth recomputing. Stage 1's opt-in policy also accounts for
+            // the final partial wave on the active worker pool.
+            if msm_adaptive_window_enabled() && exponents.len() >= ADAPTIVE_MIN_EXPONENTS {
+                adaptive_signed_window(
+                    G::Scalar::NUM_BITS as usize,
+                    exponents.len(),
+                    msm_worker_count(),
+                    std::mem::size_of::<G>(),
+                )
+            } else {
+                best_signed_window(G::Scalar::NUM_BITS as usize, exponents.len())
+            }
         } else if exponents.len() < 32 {
             3u32
         } else {
             (f64::from(exponents.len() as u32)).ln().ceil() as u32
         }
     });
+    let split = msm_window_split();
 
     if let Some(query_size) = density_map.as_ref().get_query_size() {
         // If the density map has a known query size, it should not be
@@ -1307,7 +1630,16 @@ where
         let start = profile.then(Instant::now);
         let task_start_timeline_ns = profile.then(profile_timestamp_ns);
         let result = multiexp_inner(
-            bases, density_map, exponents, c, signed, profile, branch_counts, stage_timing, call_id,
+            bases,
+            density_map,
+            exponents,
+            c,
+            split,
+            signed,
+            profile,
+            branch_counts,
+            stage_timing,
+            call_id,
         );
         // Read elapsed immediately after the inner call to minimize distortion.
         let elapsed_ms = start.map(|value| value.elapsed().as_secs_f64() * 1000.0);
@@ -1413,10 +1745,67 @@ fn test_with_bls12() {
             .collect::<Vec<_>>(),
     );
 
-    let naive: <Bls12 as Engine>::G1 = naive_multiexp(g.clone(), v);
+    let naive: <Bls12 as Engine>::G1 = naive_multiexp(g.clone(), v.clone());
 
     let pool = Worker::new();
-    let fast = multiexp(&pool, (g, 0), FullDensity, v_bits).wait().unwrap();
-
+    let fast = multiexp(&pool, (g.clone(), 0), FullDensity, v_bits.clone())
+        .wait()
+        .unwrap();
     assert_eq!(naive, fast);
+
+    // Stage 1: splitting a window into contiguous exponent ranges must preserve
+    // the exact group sum, including the signed recoding and bucket reduce.
+    set_msm_window_split(2);
+    let split = multiexp(&pool, (g.clone(), 0), FullDensity, v_bits.clone())
+        .wait()
+        .unwrap();
+    set_msm_window_split(1);
+    assert_eq!(naive, split);
+
+    // Stage 1b: tail-only splitting uses the same exact segment decomposition,
+    // but leaves earlier full waves as full-window tasks.
+    set_msm_tail_window_split(true);
+    set_msm_window_split(2);
+    let tail_split = multiexp(&pool, (g.clone(), 0), FullDensity, v_bits.clone())
+        .wait()
+        .unwrap();
+    set_msm_window_split(1);
+    set_msm_tail_window_split(false);
+    assert_eq!(naive, tail_split);
+
+    // Sparse density maps keep only the true bases in the source. Splitting
+    // must skip the true slots before a segment, not the raw exponent index.
+    let mut sparse = DensityTracker::new();
+    for index in 0..SAMPLES {
+        sparse.add_element();
+        if index % 3 != 0 {
+            sparse.inc(index);
+        }
+    }
+    let sparse_bases = Arc::new(
+        g.iter()
+            .enumerate()
+            .filter(|(index, _)| index % 3 != 0)
+            .map(|(_, base)| base.clone())
+            .collect::<Vec<_>>(),
+    );
+    let mut sparse_naive = <Bls12 as Engine>::G1::identity();
+    for (index, (base, exp)) in g.iter().zip(v.iter()).enumerate() {
+        if index % 3 != 0 {
+            sparse_naive += *base * *exp;
+        }
+    }
+    set_msm_window_split(2);
+    let sparse_split = multiexp(&pool, (sparse_bases, 0), Arc::new(sparse), v_bits.clone())
+        .wait()
+        .unwrap();
+    set_msm_window_split(1);
+    assert_eq!(sparse_naive, sparse_split);
+
+    // Stage 1 adaptive selection must also return the same sum. This test does
+    // not assert which `c` is chosen (that depends on the host's Rayon pool).
+    set_msm_adaptive_window(true);
+    let adaptive = multiexp(&pool, (g, 0), FullDensity, v_bits).wait().unwrap();
+    set_msm_adaptive_window(false);
+    assert_eq!(naive, adaptive);
 }
