@@ -2,7 +2,8 @@
 t_total_construct,4292.720,100.00,t_build + t_serialize
 t_build,4292.699,100.00,Builder::build
 t_serialize,0.022,0.001,tx.write
-t_proving,4287.528,99.88,paired t_build - t_mock_build (estimate)
+t_proving,4287.867,99.89,"median(t_build) - median(t_mock_build), independent groups"
+t_proving_index_aligned,4287.528,99.88,diagnostic only: run-index-aligned difference (not co-randomised)
 sum_proofs,4292.703,100.00,spend + output_a + output_b
 prove_spend,3321.495,77.38,1 proof
 prove_output_a,480.232,11.19,1 proof

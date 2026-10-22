@@ -1,8 +1,8 @@
 ﻿criterion,description,threshold,observed,result
 primary,complete construction + structure + cryptographic verification,18/18,"18/18 (real verified 12/12, mock structural 6/6)",PASS
-aux1,"structural constancy (tx_bytes, V5, 1 spend, 2 outputs, fee, balance)",tx_bytes=2377; fee=10000; balance=+10000,tx_bytes=2377; fee=10000; balance=+10000,PASS
-aux2,proving share of build time,>= 0.90,0.9988,PASS
-aux3,two-estimate agreement (sum_proofs vs paired t_proving),<= 5% of t_build,0.121%,PASS
+aux1,"structural constancy across all arms (tx_bytes, V5, 1 spend, 2 outputs, fee, balance)",tx_bytes=2377 on 18/18; fee=10000; balance=+10000,tx_bytes=2377 on 18/18; fields checked on 18/18,PASS
+aux2,proving share of build time,>= 0.90,0.9989,PASS
+aux3,two-estimate agreement (sum_proofs vs group-median t_proving),<= 5% of t_build,0.113%,PASS
 aux4,non-proving overhead (mock build),<= 100 ms,4.832 ms,PASS
 aux5,A1 within-arm stability,CV <= 5%,0.668%,PASS
 aux6,serialize consistency + round-trip txid (in-binary assertion),max residual <= 0.01 ms; A1/A2 txids match per run,max residual=0.001000 ms; cross-arm txid match=yes,PASS
