@@ -1,0 +1,12 @@
+params_path=D:\Research\zcash-params\sapling-spend.params
+params_read_validate_ms=25372.638
+prepare_vk_ms=1.015
+input_prep_ms=14.497
+run=1, prove_ms=708.264, verify_ms=2.877, proof_bytes=192, verified=true
+run=2, prove_ms=654.885, verify_ms=2.942, proof_bytes=192, verified=true
+run=3, prove_ms=651.020, verify_ms=3.231, proof_bytes=192, verified=true
+run=4, prove_ms=656.867, verify_ms=3.196, proof_bytes=192, verified=true
+run=5, prove_ms=657.693, verify_ms=3.011, proof_bytes=192, verified=true
+batch_id=1792659257062
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_prover_runs_msm_scaling_20261022_spend_t8_0x5555_c11.csv
+SPEND_PROOF_EXPERIMENT=PASS
