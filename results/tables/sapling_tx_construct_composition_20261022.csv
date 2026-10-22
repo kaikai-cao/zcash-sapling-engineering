@@ -1,0 +1,11 @@
+﻿component,median_ms,share_of_total_pct,definition
+t_total_construct,4292.720,100.00,t_build + t_serialize
+t_build,4292.699,100.00,Builder::build
+t_serialize,0.022,0.001,tx.write
+t_proving,4287.528,99.88,paired t_build - t_mock_build (estimate)
+sum_proofs,4292.703,100.00,spend + output_a + output_b
+prove_spend,3321.495,77.38,1 proof
+prove_output_a,480.232,11.19,1 proof
+prove_output_b,486.221,11.33,1 proof
+t_mock_build,4.832,0.113,"non-proving overhead (witness assembly, encoding, sighash, signatures)"
+t_build - sum_proofs,-0.004,-0.00,residual: assembly + encoding + signatures

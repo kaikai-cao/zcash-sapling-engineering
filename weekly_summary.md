@@ -627,3 +627,42 @@ MSM 跨重编码 / lazy 等价）。所有门禁命令均在提交前于本地�
 - 最终报告顶部原写基线 `e4a28ed`（当时即当前 main）。现改为：实验代码与数据冻结基线
   `e4a28ed`；后续主分支提交（至 `7e51ca0`）仅用于报告与复现文档收尾，未改动实验数值；
   实验数值以各目标一手结果文档及原始数据为准。
+
+## 23. 完整交易构造计时（2026-10-22）
+
+§1–§22 的时间都来自证明函数（`SpendParameters::create_proof` / `OutputParameters::create_proof`）。
+本轮补上交易层：用真实构造器 `Builder::build(...)` 构造一笔固定 **1 spend + 2 outputs**
+的交易，直接计时整个构造器起止，再分解时间组成。**这是测量 baseline，不产生优化收益结论。**
+
+预注册（先于代码与测量）：`experiments/metadata/sapling_tx_construction_preregistration_20261022.md`；
+一手结果：`experiments/metadata/sapling_tx_construction_results_20261022.md`；报告 §25。
+
+**场景：** spend 100,000,000 zats、收款 60,000,000、找零 39,990,000、ZIP-317 手续费 10,000；
+`target_height = 1,700,000`（v5 / NU5）；32 层合成 Merkle 路径、position 0；固定 zip32 种子；
+参数文件与既有批次相同。三个独立进程臂各 6 run，丢弃 run 1，亲和性设置后读回核验。
+
+| 暖态中位 | A1 真实 1t @ `0x1` | A2 真实 8t @ `0xFFFF` | A3 mock 1t @ `0x1` |
+|---|---:|---:|---:|
+| `t_total_construct`（build + serialize） | **4,292.720 ms** | **1,176.072 ms** | 4.888 ms（对照） |
+| `t_build` | 4,292.699 ms | 1,176.049 ms | 4.832 ms |
+| `t_serialize` | 0.022 ms | 0.024 ms | 0.020 ms |
+| `t_proving`（配对） | 4,287.528 ms（**99.88%**） | — | — |
+| `sum_proofs` | 4,292.703 ms | 1,175.588 ms | 4.367 ms |
+| spend / output A / output B | 3,321.5 / 480.2 / 486.2 ms | 928.0 / 132.7 / 127.9 ms | mock |
+| `t_verify`（不计入构造） | 10.384 ms | 13.826 ms | 未做 |
+
+- **构造时间 = 证明时间：** 99.88% 的 `t_build` 是 Groth16；sighash、Spend 授权签名、
+  binding 签名、bundle 装配与序列化合计约 **5 ms（0.11%）**。
+- **两个独立估计闭合：** 配对 `t_proving` 与 `sum_proofs` 相差 0.121%（门限 5%）。
+- **8 线程 3.65×：** 总构造时间降到 1/3.65，并行效率约 45.6%，与既有 8 线程饱和结论一致。
+- **结构常量：** 全部 12 条真实 run 均为 2,377 B、v5、1 spend / 2 outputs、fee 10,000、
+  Sapling value balance +10,000；12/12 通过 `BatchValidator`；验收表 7/7 PASS（主判据 18/18）。
+- **边界：** 本地构造时间，不含参数加载（约 27 s，在计时窗口外）、钱包输入选择、note 解密、
+  数据库、广播、mempool、打包与确认；Merkle 路径与 note 为**合成测试状态**。
+- **测量前偏差：** 初版预注册按 3 个 logical actions 估手续费 15,000；ZIP-317 实际取
+  `max(1 spend, 2 outputs) = 2`，故为 10,000。修正发生在任何正式测量之前，记录在预注册 §10。
+
+产物：`experiments/raw/csv/sapling_tx_construct_runs_{real,mock}.csv`、启动摘要 CSV、
+`experiments/raw/logs/tx_construct_*`、`results/tables/sapling_tx_construct_*_20261022.csv`、
+`results/figures/sapling_tx_construct_*.png`；代码 `experiments/transaction-smoke/`；
+分析 `scripts/analyze_tx_construct_experiment.py`；启动器 `scripts/run_tx_construct_campaign.ps1`。

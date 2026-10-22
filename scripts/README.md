@@ -23,6 +23,7 @@ The scripts have different side effects. Some only analyze existing data; others
 | `measure_process_peak_working_set.ps1` | Measure process memory usage for either Spend or Output. | Requires `-Circuit Spend` or `-Circuit Output`. Runs the relevant executable and records memory measurements and logs. |
 | `run_process_first_repeat.ps1` | Study the first proving repeat and process/system load behavior. | Requires `-Circuit Spend` or `-Circuit Output`; accepts `-Processes` to control the number of processes. Runs actual proving workloads. |
 | `run_sapling_cache_condition_comparison.ps1` | Compare proving under different cache conditions. | Requires `-Circuit Spend` or `-Circuit Output`; accepts `-Pairs`, `-RamMapPath`, `-SpendParamsPath`, and `-OutputParamsPath`. Parameter paths also support `SAPLING_SPEND_PARAMS`, `SAPLING_OUTPUT_PARAMS`, and `ZCASH_PARAMS_DIR`; RAMMap supports `SAPLING_RAMMAP_PATH`. Requires an elevated PowerShell session, invokes RAMMap for the approximate cold condition, runs real proof-generation processes, and appends records to the cache-comparison CSV. Do not run for syntax or documentation checks. |
+| `run_tx_construct_campaign.ps1` | Run the frozen 1-spend + 2-output transaction-construction measurement through the real `Builder::build(...)`. | Three single-process arms (real 1t @ `0x1`, real 8t @ `0xFFFF`, mock 1t @ `0x1`), six runs each. Sets and reads back processor affinity, validates the six rows of each arm (structure, fee, `BatchValidator`), and **appends** to `experiments/raw/csv/sapling_tx_construct_runs_{real,mock}.csv`; logs go to `experiments/raw/logs/tx_construct_<tag>*`. Requires a clean worktree unless `-AllowDirtyWorktree`; takes ~4 minutes because each arm re-reads the parameters (~27 s). |
 
 ## 3. MSM and Worker-Execution Analysis
 
@@ -47,6 +48,7 @@ The scripts have different side effects. Some only analyze existing data; others
 | Script | Purpose | Main artifacts or side effects |
 |---|---|---|
 | `summarize_engineering.py` | Consolidate selected formal-baseline measurements for engineering-level comparisons. | Reads configured circuit-scale, parameter, performance, and memory CSVs; generates derived result tables and figures. The selected baseline batch IDs and dependency identity are defined in the source code. |
+| `analyze_tx_construct_experiment.py` | Evaluate the frozen transaction-construction acceptance table and rebuild its derived tables/figures. | Read-only with respect to raw data: reads the frozen tag `tx_construct_20261022`, drops run 1, and rewrites `results/tables/sapling_tx_construct_*_20261022.csv` plus three figures. Exits non-zero if any of the seven criteria fails. A different batch requires editing `TAG` and the output names. |
 
 ## 6. Typical Workflow
 
