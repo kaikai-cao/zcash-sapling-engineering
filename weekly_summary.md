@@ -673,3 +673,46 @@ MSM 跨重编码 / lazy 等价）。所有门禁命令均在提交前于本地�
 `experiments/raw/logs/tx_construct_*`、`results/tables/sapling_tx_construct_*_20261022.csv`、
 `results/figures/sapling_tx_construct_*.png`；代码 `experiments/transaction-smoke/`；
 分析 `scripts/analyze_tx_construct_experiment.py`；启动器 `scripts/run_tx_construct_campaign.ps1`。
+
+---
+
+## 24. MSM 多核扩展膝点诊断（Stage 0，2026-10-22）
+
+交易 baseline 的 8 线程 3.65× 只说明“有膝点”，没有说明原因。Stage 0 先预注册
+44 个批次、冻结验收表，再在不改 vendor 算法和默认值的前提下做三组诊断：Spend/Output/
+真实交易的 1/2/4/8/16 线程扩展；8t `0xFFFF` 对 `0x5555` 的 ABBA；8t H-query 窗口
+`c ∈ {10,11,12,13}` 扫描。执行中两次中断：一次是运行时修改 tracked 文档导致 dirty；
+一次是 S-Window runner 的 expected-window 断言没有读取 `SAPLING_MSM_WINDOW_C`。失败
+batch `1792658853429` 只留下 5 行 raw prove 行，已原样保留、不计入 44 条。最终
+44/44 个纳入 manifest 的 invocation 退出码 0，A0、A10-invocations、A1–A12 共
+**14/14 PASS**。
+
+- **H2（SMT/放置）部分支持：** 8t Spend `0xFFFF` 756.74 ms、`0x5555` 724.80 ms，
+  差 **4.22%**，90% CI 跨 0；H-query `fill_per_chunk` 差 4.30%（<8% 门槛）。
+  Output 4.15%、交易 6.66% 方向一致，但主检验不把 SMT 判为主因。
+- **H1（窗口尾部）支持：** 8t `0x5555` 的 `c=12`/`c=13` `ns_per_add` 比
+  **R=0.8047**（90% CI 0.7666–0.8465，上界 <1），`max_concurrent=8`。实际 prove
+  最好的是 **c=11（W=24，T=100%，657.81 ms，5.07×）**；c=12 662.55 ms；c=13
+  751.51 ms。c=13 的 `fill_imbalance=1.307`、`fill_parallel_eff=0.389`，明显差于
+  c=11 的 1.081 / 0.532。
+- **H3（串行/低扩展）部分支持：** 8t 串行项占 body 31.5%（≥15%），但
+  `t(P)=a+b/P` 对 16t 预测误差 **−20.48%**（a=370.889 ms，b=2,980.288 ms，
+  串行分数 0.1107）。16t 相对 8t `0x5555` 只快 3.3%，交易层反而慢 28%。
+- **H4（内存/带宽）只作约束：** 8t c=13 的 `ns_per_add` 相对 1t 为 0.353，没有
+  “每 add 变慢”；但 c=10（0.59 MB）→ c=13（4.72 MB）的 `ns_per_add` 从 122.50
+  升到 173.20，bucket footprint 与窗口尾部混叠，Stage 1 必须同时带内存上限。
+- **交易层：** 8t `0x5555` 814.30 ms（5.32×），`0xFFFF` 872.36 ms（4.96×），
+  16t 1,044.32 ms（4.14×）。历史 baseline 的 8t 1,176.1 ms（3.65×）未复现，二进制
+  SHA 相同；两批保留、不混合。
+
+**Stage 1 第一优先（预注册 §6.5）：自适应窗口/窗口内切分**（`W mod P` 感知；在
+Spend/Output/交易验证）。c=11 是本负载 8t/n=131071 的首选，c=12 次选；以 prove wall
+为主目标、带 bucket 内存上限，而不是只拟合 `ns_per_add` 或直接改静态默认。8t
+`0x5555` 作为 Stage 1 控制；16t 不推荐。H3 的串行阶段重叠是第二优先，但不应与窗口
+策略同时改。
+
+产物：预注册 `experiments/metadata/sapling_msm_scaling_diagnosis_preregistration_20261022.md`；
+结果 `experiments/metadata/sapling_msm_scaling_diagnosis_results_20261022.md`；
+manifest `experiments/metadata/msm_scaling_manifest_msm_scaling_20261022.csv`；
+原始数据 `experiments/raw/csv/*msm_scaling_20261022*` 与 `experiments/raw/logs/msm_scaling_campaign_20261022.*.log`；
+派生表/图 `results/tables/msm_scaling_*_20261022.csv`、`results/figures/msm_scaling_*_20261022.png`。

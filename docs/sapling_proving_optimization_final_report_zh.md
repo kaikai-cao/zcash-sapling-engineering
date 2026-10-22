@@ -163,6 +163,9 @@
 
 ---
 
+
+> **2026-10-22 更新（Stage 0）：** 交易 baseline 之后的 44 批诊断显示，8t 的损失不能只归因于 SMT（Spend `0xFFFF`→`0x5555` 为 4.22%，90% CI 跨 0；H2 部分支持）；H-query 窗口尾部被支持（`c=12`/`c=13` 的 `ns_per_add` R=0.8047，90% CI 上界 0.8465），且本负载实际 8t prove 最好的是 `c=11`（W=24，100% 尾部，657.81 ms，5.07×）。因此“继续微调窗口”不是无依据的 target h，而应作为**单独预注册的 Stage 1 自适应窗口/窗口内切分**（`W mod P` 感知、带 bucket 内存上限）来检验；8t `0x5555` 作为控制，16t 不推荐。详见 [`sapling_msm_scaling_diagnosis_results_20261022.md`](../experiments/metadata/sapling_msm_scaling_diagnosis_results_20261022.md)。
+
 ## 8. 证据索引（本报告数字的出处）
 
 | 主题 | 文档 |
@@ -173,6 +176,7 @@
 | 目标 e / b / a / f / g 结果 | `experiments/metadata/sapling_{default_config_experiment,msm_signed_digit,msm_lazy_recoding,qap_fft_scratch,combo_default}_*_2026101[78].md` |
 | 结项侦察（内存/时间地板） | `experiments/metadata/sapling_default_{stage_decomposition,time_profile}_20261018.md` |
 | 复现规程与跨配置/跨 OS 验证 | [`docs/reproduction.md`](reproduction.md)、`experiments/metadata/sapling_{independent,cross_config}_reproduction_20261018.md` |
+| MSM 多核扩展膝点（Stage 0） | [`sapling_msm_scaling_diagnosis_results_20261022.md`](../experiments/metadata/sapling_msm_scaling_diagnosis_results_20261022.md)；报告 §26；INDEX |
 | 原始测量数据（从不覆盖） | `experiments/raw/csv/`、`experiments/raw/logs/` |
 | 周度过程记录 | [`weekly_summary.md`](../weekly_summary.md) §13–§19 |
 
