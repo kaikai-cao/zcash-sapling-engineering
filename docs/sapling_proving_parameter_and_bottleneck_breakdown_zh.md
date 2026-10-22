@@ -1338,6 +1338,107 @@ balance +10,000 由分析脚本在 18/18 行上独立复检；证明占比 0.998
 图 `results/figures/sapling_tx_construct_*.png`；代码 `experiments/transaction-smoke/`；
 分析 `scripts/analyze_tx_construct_experiment.py`。
 
+## 26. Stage 0：MSM 多核扩展膝点诊断（2026-10-22）
+
+§25 的交易 baseline 显示 8 线程只有约 3.65×，但没有解释“为什么”。Stage 0 在
+`experiments/metadata/sapling_msm_scaling_diagnosis_preregistration_20261022.md` 中
+先冻结设计、验收表和 H1–H4 判定规则，再运行 44 个批次：Spend/Output/真实交易的
+1/2/4/8/16 线程扩展、8 线程 `0xFFFF` 对 `0x5555` 的 ABBA、以及 8 线程
+`c ∈ {10,11,12,13}` 的 H-query 窗口扫描。全程不改 vendor 算法、不改默认值；只使用
+既有 `SAPLING_PROFILE`、`SAPLING_MSM_STAGE_TIMING` 和 `SAPLING_MSM_WINDOW_C`。
+
+**验收：** 44/44 个纳入 manifest 的 runner invocation 退出码 0，44 个唯一 batch ID；
+A0、A10-invocations、A1–A12 共 14/14 PASS。执行中发生过两次中断（第一次是运行时
+修改 tracked 文档导致 dirty；第二次是 S-Window runner 的 expected-window 断言没有读取
+`SAPLING_MSM_WINDOW_C`），失败 batch `1792658853429` 只留下 5 行 raw prove 行，已原样
+保留、不计入 44 条；完整偏差记录见结果文档 §2.2。
+
+### 26.1 线程扩展
+
+Spend 的 warm 中位（1t `0x1`，8t 为 `0x5555` ABBA 组，16t 为 `0xFFFF`）：
+
+| 配置 | prove 中位 (ms) | speedup | 并行效率 |
+|---|---:|---:|---:|
+| 1t `0x1` | 3,336.76 | 1.00× | 100% |
+| 2t `0xFFFF` / `0x5555` | 1,910.95 / 1,781.91 | 1.75× / 1.87× | 87.3% / 93.6% |
+| 4t `0xFFFF` / `0x5555` | 1,067.15 / 1,023.85 | 3.13× / 3.26× | 78.2% / 81.5% |
+| 8t `0xFFFF` / `0x5555` | 756.74 / 724.80 | 4.41× / 4.60× | 55.1% / 57.5% |
+| 16t `0xFFFF` | 700.61 | 4.76× | 29.8% |
+
+8t → 16t 只再降 3.3%，而线程数翻倍；16t 不作为默认运行点。8t 的 4.60× 仍远低于 8×，
+但已经**不复现**历史交易 baseline 的 3.65×（见 §26.4）。
+
+### 26.2 H2：SMT/放置（部分支持）
+
+8t Spend ABBA，每 mask 4 个 batch、16 个 warm 证明：
+
+| 指标 | `0xFFFF` | `0x5555` | Δ（FFFF−5555）/FFFF | 90% CI |
+|---|---:|---:|---:|---:|
+| Spend `prove_ms` | 756.74 ms | 724.80 ms | **+4.22%** | −23.40 … +102.65 ms（跨 0） |
+| Spend `fill_per_chunk` | 84.57 ms | 80.93 ms | +4.30% | — |
+| Output `prove_ms` | 92.07 ms | 88.24 ms | +4.15% | +2.42 … +5.22 ms |
+| 交易 `build_ms` | 872.36 ms | 814.30 ms | +6.66% | +53.34 … +62.78 ms |
+
+预注册 H2 的“支持”要求 `Δ_prove ≥ 5%`、CI 下界 >0、`Δ_fill ≥ 8%`。Spend 三条都不满足；
+但 2% ≤ Δ < 5%，所以是**部分支持**，不是“已证实 SMT 是主因”。Output 4.15%、交易
+6.66% 方向一致；交易层是次要证据，不能替代 Spend 主检验。Stage 1 应把 `0x5555` 作为
+8t 控制变量，而不是直接写“SMT 主因”。
+
+### 26.3 H1：H-query 窗口尾部（支持）
+
+8t `0x5555`，`W = floor(255/c)+1`，`T = W/(8·ceil(W/8))`：
+
+| c | W | T | prove 中位 (ms) | `ns_per_add` | 对 c=13 的 R | 90% CI | payload |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 10 | 26 | 81.25% | 676.93 | 122.50 | 0.707* | — | 0.59 MB |
+| 11 | 24 | **100%** | **657.81** | 127.21 | **0.7345** | 0.7007–0.7715 | 1.18 MB |
+| 12 | 22 | 91.67% | 662.55 | 139.37 | **0.8047** | 0.7666–0.8465 | 2.36 MB |
+| 13 | 20 | 83.33% | 751.51 | 173.20 | 1.000 | — | 4.72 MB |
+
+\* c=10 的 R 由中位数直接计算，预注册未要求其 CI。
+
+主比较 `c=12` 对 `c=13`：R=0.8047，90% CI 上界 0.8465 <1，`max_concurrent=8` ⇒
+**H1 支持**。次要比较 `c=11` 对 `c=13`：R=0.7345，CI 上界 0.7715 <1 ⇒ 也支持。
+实际 prove 最好的是 **c=11**（657.81 ms，5.07×），而 `ns_per_add` 最低的是 c=10；
+c=11 同时有 W=24（8 的整数倍）、T=100%、payload 1.18 MB，是 Stage 1 的首选候选。
+c=13 的 `fill_imbalance=1.307`、`fill_parallel_eff=0.389`，明显差于 c=11 的
+1.081 / 0.532。
+
+### 26.4 H3/H4 与交易层
+
+8t 串行项（synthesis + QAP/FFT + proof scalar）占 body 的 **31.5%**，但
+`t(P)=a+b/P` 对 16t 的预测误差为 **−20.48%**（`a=370.889 ms`，`b=2,980.288 ms`，
+串行分数 0.1107）⇒ H3 **部分支持**。1t 的串行 FFT、16t 的 HT 争用和
+`wait_and_assembly` 的等待成分都不能被两参数模型吸收。
+
+H4 不做独立判定：8t `c=13` 的 `ns_per_add` 相对 1t 为 **0.353**，没有“每 add 变慢”；
+但 c=10（0.59 MB）→ c=13（4.72 MB）的 `ns_per_add` 从 122.50 升到 173.20，说明
+bucket footprint 与窗口尾部混叠，Stage 1 的自适应策略必须同时带内存上限。
+
+Output 8t `0x5555` 为 **88.24 ms**（5.42×），略好于 16t `0xFFFF`（88.87 ms）；
+交易 8t `0x5555` 为 **814.30 ms**（5.32×），8t `0xFFFF` 为 872.36 ms（4.96×），
+16t `0xFFFF` 为 1,044.32 ms（4.14×，比 8t `0x5555` 慢 28%）。交易的 8t 结果与历史
+baseline 的 1,176.1 ms（3.65×）不一致；二进制 SHA 相同，本文不混合两者，历史 8t
+保留为“未复现的基线批次”。
+
+### 26.5 Stage 1 第一优先
+
+按预注册 §6.5：H2 部分支持、H1 支持 ⇒ **自适应窗口/窗口内切分**（`W mod P` 感知；
+在 Spend/Output/交易验证）。c=11 是本负载 8t/n=131071 的首选，c=12 为次选；策略应
+以 prove wall 为主目标、带 bucket 内存上限，而不是只拟合 `ns_per_add` 或只改静态默认值。
+8t `0x5555` 作为 Stage 1 控制；16t 不推荐。H3 的串行阶段重叠是第二优先，但不应与窗口
+策略同时改，否则无法归因。
+
+**结论：** Stage 0 没有实现优化；它把 8t 损失分解为“窗口尾部/负载不均衡（支持）+
+SMT/放置（部分支持）+ 串行/低扩展阶段（部分支持）”。下一步是单独预注册的 Stage 1
+自适应窗口实验，而不是继续堆静态基线或文档。
+
+一手记录：`experiments/metadata/sapling_msm_scaling_diagnosis_results_20261022.md`；
+预注册：`experiments/metadata/sapling_msm_scaling_diagnosis_preregistration_20261022.md`；
+manifest：`experiments/metadata/msm_scaling_manifest_msm_scaling_20261022.csv`；
+原始数据：`experiments/raw/csv/*msm_scaling_20261022*`、`experiments/raw/logs/msm_scaling_campaign_20261022.*.log`；
+派生表/图：`results/tables/msm_scaling_*_20261022.csv`、`results/figures/msm_scaling_*_20261022.png`。
+
 ---
 
 *本报告为工程细化与瓶颈定位，不构成算法级优化成功的声明。所有引用的时间均为对应批次的观测值，不是通用延迟保证。目标 a 的判定严格按预注册的冻结阈值给出（未通过）；其时间与瞬态收益为实测事实，是否据此改变默认值属所有者决策。目标 f 按冻结验收表判定为通过（六项全过），适用范围限于 `SAPLING_MSM_LAZY_RECODING=1` 配置与单线程路径。目标 g 按冻结验收表判定为通过（六项全过），两个开关的默认值已随之切换为 `1`（提交 `d4ed1df`），环境变量仍可双向覆盖。2026-10-18 的结项侦察（§24）确认内存线与时间线均到达地板，优化战役 a–g 完结。2026-10-22 的交易级测量（§25）补齐了完整交易构造器一层：1 spend + 2 outputs 的本地构造中位为 1 线程 4.29 s、8 线程 1.18 s，其中 99.89% 是 Groth16；该实验是测量 baseline，不产生新的优化结论，也不含广播与上链确认时间。*

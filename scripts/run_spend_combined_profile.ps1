@@ -15,7 +15,10 @@ param(
     [long]$AffinityMask = 0,
     [ValidatePattern('^[a-z0-9][a-z0-9_-]{0,39}$')]
     [string]$RunDataLabel = 'release',
-    [switch]$AllowDirtyWorktree
+    [switch]$AllowDirtyWorktree,
+    # Ignore untracked append-only outputs (raw CSVs, logs, derived tables) when
+    # checking worktree cleanliness. Modified tracked files still block the run.
+    [switch]$AllowUntrackedOutputs
 )
 
 $ErrorActionPreference = 'Stop'
@@ -127,7 +130,18 @@ foreach ($path in $requiredPaths) {
 # Record engineering repository identity and worktree status before building.
 $branch = Get-GitValue -GitArgs @('branch', '--show-current')
 $head = Get-GitValue -GitArgs @('rev-parse', 'HEAD')
-$initialStatus = Get-GitValue -GitArgs @('status', '--porcelain')
+$initialStatusRaw = Get-GitValue -GitArgs @('status', '--porcelain')
+$initialStatusLines = @($initialStatusRaw -split "`r?`n" | Where-Object { $_ -and $_.Trim() })
+$ignoredOutputStatus = @()
+if ($AllowUntrackedOutputs) {
+    $ignoredOutputStatus = @($initialStatusLines | Where-Object {
+            $_ -match '^\?\? (experiments/raw/|experiments/metadata/|results/)'
+        })
+    $initialStatusLines = @($initialStatusLines | Where-Object {
+            $_ -notmatch '^\?\? (experiments/raw/|experiments/metadata/|results/)'
+        })
+}
+$initialStatus = $initialStatusLines -join "`n"
 $dirtyAtStart = -not [string]::IsNullOrWhiteSpace($initialStatus)
 
 if ($dirtyAtStart -and -not $AllowDirtyWorktree) {
@@ -311,12 +325,19 @@ try {
     $process.StartInfo = $startInfo
     [void]$process.Start()
 
+    $effectiveAffinity = 0L
     if ($AffinityMask -gt 0) {
         try {
             $process.ProcessorAffinity = [IntPtr]$AffinityMask
+            $effectiveAffinity = [int64]$process.ProcessorAffinity
         }
         catch {
             throw "Failed to set processor affinity mask $AffinityMask on the prover process: $($_.Exception.Message)"
+        }
+
+        if ($effectiveAffinity -ne [int64]$AffinityMask) {
+            $process.Kill()
+            throw ("Processor affinity did not take effect: requested 0x{0:X}, read back 0x{1:X}." -f $AffinityMask, $effectiveAffinity)
         }
     }
 
@@ -439,7 +460,7 @@ if ($recordedThreadCounts.Count -ne 1 -or [string]$recordedThreadCounts[0] -ne [
 $msmRegex = [regex]'BELLMAN_MSM_PROFILE call_id=(\d+) exponent_count=(\d+) density_map_size=(None|Some\(\d+\)) window=(\d+) task_start_delay_ms=([\d.]+) elapsed_ms=([\d.]+)'
 $submitRegex = [regex]'BELLMAN_MSM_SUBMIT_PROFILE call_id=(\d+) submit_elapsed_ms=([\d.]+)'
 $stageRegex = [regex]'G16_STAGE_PROFILE circuit_synthesis_constraints_ms=([\d.]+) worker_vk_setup_ms=([\d.]+) qap_fft_h_exponent_prep_ms=([\d.]+) h_query_access_dispatch_ms=([\d.]+) assignment_query_prep_dispatch_ms=([\d.]+) proof_scalar_terms_ms=([\d.]+) wait_and_assembly_ms=([\d.]+) create_proof_body_ms=([\d.]+)'
-$innerStageRegex = [regex]'BELLMAN_MSM_STAGE_PROFILE call_id=(\d+) exponent_count=(\d+) window=(\d+) bucket_count=(\d+) chunk_count=(\d+) bucket_element_size_bytes=(\d+) exponent_chunk_prep_ms=([\d.]+) chunk_parallel_wall_ms=([\d.]+) bucket_init_sum_ms=([\d.]+) bucket_init_max_ms=([\d.]+) bucket_fill_sum_ms=([\d.]+) bucket_fill_max_ms=([\d.]+) bucket_reduce_sum_ms=([\d.]+) bucket_reduce_max_ms=([\d.]+) max_concurrent_chunk_regions=(\d+) bucket_payload_at_max_concurrency_estimate_bytes=(\d+) result_merge_ms=([\d.]+)'
+$innerStageRegex = [regex]'BELLMAN_MSM_STAGE_PROFILE call_id=(\d+) exponent_count=(\d+) window=(\d+)(?: signed=\d+)? bucket_count=(\d+) chunk_count=(\d+) bucket_element_size_bytes=(\d+) exponent_chunk_prep_ms=([\d.]+) chunk_parallel_wall_ms=([\d.]+) bucket_init_sum_ms=([\d.]+) bucket_init_max_ms=([\d.]+) bucket_fill_sum_ms=([\d.]+) bucket_fill_max_ms=([\d.]+) bucket_reduce_sum_ms=([\d.]+) bucket_reduce_max_ms=([\d.]+) max_concurrent_chunk_regions=(\d+) bucket_payload_at_max_concurrency_estimate_bytes=(\d+) result_merge_ms=([\d.]+)'
 $workerFallbackRegex = [regex]'BELLMAN_WORKER_FALLBACK previous_count=(\d+) max_count=(\d+) rayon_threads=(\d+)'
 $workerAsyncOverrideRegex = [regex]'BELLMAN_WORKER_ASYNC_OVERRIDE previous_count=(\d+) max_count=(\d+) rayon_threads=(\d+)'
 
@@ -478,6 +499,32 @@ foreach ($m in $submitMatches) {
     $submitByCall[$call] = [double]$m.Groups[2].Value
 }
 
+function Get-ExpectedSignedWindow {
+    param([int]$ExponentCount)
+    $bestC = 3
+    $bestOps = [double]::MaxValue
+    for ($c = 2; $c -le 20; $c++) {
+        $w = [int][Math]::Floor(255.0 / $c) + 1
+        $ops = $w * ($ExponentCount + 2.0 * [Math]::Pow(2, $c - 1))
+        if ($ops -lt $bestOps) {
+            $bestOps = $ops
+            $bestC = $c
+        }
+    }
+    return $bestC
+}
+
+$signedRecoding = [Environment]::GetEnvironmentVariable('SAPLING_MSM_SIGNED_DIGITS', 'Process') -ne '0'
+
+$windowOverride = $null
+$rawWindowOverride = [Environment]::GetEnvironmentVariable('SAPLING_MSM_WINDOW_C', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($rawWindowOverride)) {
+    if ($rawWindowOverride -notmatch '^\d+$') {
+        throw "Invalid SAPLING_MSM_WINDOW_C: $rawWindowOverride"
+    }
+    $windowOverride = [int]$rawWindowOverride
+}
+
 $queries = @(
     @{ Name = 'H_query_G1'; Group = 'G1'; Count = 131071 },
     @{ Name = 'L_query_G1'; Group = 'G1'; Count = 98638 },
@@ -509,7 +556,7 @@ foreach ($m in $msmMatches) {
     $query = $queries[($callId - 1) % 8]
     $actualExponentCount = [int]$m.Groups[2].Value
     $actualWindow = [int]$m.Groups[4].Value
-    $expectedWindow = if ($query.Count -lt 32) { 3 } else { 12 }
+    $expectedWindow = if ($null -ne $windowOverride) { $windowOverride } elseif ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
 
     if ($actualExponentCount -ne [int]$query.Count -or $actualWindow -ne $expectedWindow) {
         throw "Call $callId does not match the expected Groth16 query mapping ($($query.Name)): exponent_count=$actualExponentCount, window=$actualWindow."
@@ -558,9 +605,19 @@ foreach ($m in $innerStageMatches) {
     $bucketCount = [int]$m.Groups[4].Value
     $chunkCount = [int]$m.Groups[5].Value
     $elementSize = [int]$m.Groups[6].Value
-    $expectedWindow = if ($query.Count -lt 32) { 3 } else { 12 }
-    $expectedBucketCount = [int]([Math]::Pow(2, $expectedWindow) - 1)
-    $expectedChunkCount = [int][Math]::Ceiling(255.0 / $expectedWindow)
+    $expectedWindow = if ($null -ne $windowOverride) { $windowOverride } elseif ($signedRecoding) { Get-ExpectedSignedWindow -ExponentCount ([int]$query.Count) } else { 12 }
+    $expectedBucketCount = if ($signedRecoding) {
+        [int][Math]::Pow(2, $expectedWindow - 1)
+    }
+    else {
+        [int]([Math]::Pow(2, $expectedWindow) - 1)
+    }
+    $expectedChunkCount = if ($signedRecoding) {
+        [int][Math]::Floor(255.0 / $expectedWindow) + 1
+    }
+    else {
+        [int][Math]::Ceiling(255.0 / $expectedWindow)
+    }
     $expectedElementSize = if ($query.Group -eq 'G1') { 144 } else { 288 }
     $maxConcurrent = [int]$m.Groups[15].Value
     $bucketPayloadEstimate = [long]$m.Groups[16].Value
@@ -828,6 +885,7 @@ $report = @"
 - Fine-grained MSM inner-stage timing: $InnerStageTiming
 - Force async worker: $($ForceAsyncWorker.IsPresent)
 - Processor affinity mask: $AffinityMask
+- Processor affinity readback: 0x$('{0:X}' -f $effectiveAffinity)
 - Worker fallback records: $($workerFallbackMatches.Count)
 - Forced-async override records: $($workerAsyncOverrideMatches.Count)
 - Run start: $runStarted
@@ -837,6 +895,7 @@ $report = @"
 - Engineering worktree dirty at start: $dirtyAtStart
 - Engineering worktree status at start: $worktreeStatusLabel
 - Engineering worktree status details: $worktreeStatusDetails
+- Untracked output files ignored for cleanliness: $($AllowUntrackedOutputs.IsPresent) (count: $($ignoredOutputStatus.Count))
 - Sapling dependency repository: $saplingRepoUrl
 - Sapling dependency HEAD: $saplingCommit
 - Sapling dependency source: $saplingSource

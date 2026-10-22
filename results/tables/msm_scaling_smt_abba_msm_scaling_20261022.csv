@@ -1,0 +1,4 @@
+kind,metric,threads,batches_per_mask,median_0xFFFF,median_0x5555,delta_pct_FFFF_minus_5555,delta_ci90_low_ms,delta_ci90_high_ms,delta_ci90_excludes_zero,h_fill_per_chunk_0xFFFF,h_fill_per_chunk_0x5555,h_fill_delta_pct
+spend,prove_ms,8,4,756.7378,724.7998,4.2205,-23.3985,102.6537,False,84.5727,80.9349,4.3014
+output,prove_ms,8,2,92.067,88.244,4.1524,2.4235,5.2225,True,,,
+tx,build_ms,8,2,872.3605,814.303,6.6552,53.337,62.778,True,,,

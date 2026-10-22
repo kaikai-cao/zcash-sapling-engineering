@@ -1,0 +1,15 @@
+check,status,detail
+A0,PASS,manifest tag and preregistration hash present
+A10-invocations,PASS,expected 44 runner invocations
+A1,PASS,spend 5 rows and 5/5 verified per batch
+A2,PASS,spend 40 MSM + 40 inner-stage + 5 G16 records
+A3,PASS,spend stage closure <= 0.01 ms
+A4,PASS,window sweep window field matches requested c
+A5,PASS,output 5 rows and 5/5 verified per batch
+A6,PASS,"tx 6 rows, 6/6 verified, shape/tx_bytes frozen"
+A8,PASS,rayon_threads matches the requested value
+A7,PASS,affinity readback recorded/enforced
+A9,PASS,"single git head, preregistration hash, and frozen tx parameter hashes"
+A10,PASS,expected group layout and batch counts
+A11,PASS,unique batch ids and frozen tag
+A12,PASS,independent raw-data recheck completed
