@@ -1,0 +1,11 @@
+params_path=D:\Research\zcash-params\sapling-output.params
+params_read_validate_ms=2000.815
+prepare_vk_ms=1.020
+input_prep_ms=13.680
+run=1, prove_ms=550.116, verify_ms=2.148, proof_bytes=192, verified=true
+run=2, prove_ms=505.189, verify_ms=2.184, proof_bytes=192, verified=true
+run=3, prove_ms=509.899, verify_ms=2.207, proof_bytes=192, verified=true
+run=4, prove_ms=501.928, verify_ms=2.153, proof_bytes=192, verified=true
+run=5, prove_ms=511.376, verify_ms=2.524, proof_bytes=192, verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_output_prover_runs_msm_scaling_smoke_output_20261022.csv
+OUTPUT_PROOF_EXPERIMENT=PASS
