@@ -31,7 +31,11 @@ param(
 
     [string]$ParameterPath = '',
 
-    [switch]$AllowDirtyWorktree
+    [switch]$AllowDirtyWorktree,
+
+    # Ignore untracked append-only outputs (raw CSVs, logs, derived tables) when
+    # checking worktree cleanliness. Modified tracked files still block the run.
+    [switch]$AllowUntrackedOutputs
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,12 +53,21 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 }
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 
+$dirtyRaw = @(& git -C $RepoRoot status --porcelain 2>&1)
+if ($LASTEXITCODE -ne 0) {
+    throw "git status failed: $($dirtyRaw -join ' ')"
+}
+$ignoredOutputStatus = @()
+if ($AllowUntrackedOutputs) {
+    $ignoredOutputStatus = @($dirtyRaw | Where-Object {
+            $_ -and $_.Trim() -and $_ -match '^\?\? (experiments/raw/|experiments/metadata/|results/)'
+        })
+    $dirtyRaw = @($dirtyRaw | Where-Object {
+            -not ($_ -and $_.Trim() -and $_ -match '^\?\? (experiments/raw/|experiments/metadata/|results/)')
+        })
+}
 if (-not $AllowDirtyWorktree) {
-    $dirty = & git -C $RepoRoot status --porcelain 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "git status failed: $($dirty -join ' ')"
-    }
-    if (@($dirty | Where-Object { $_ -and $_.Trim() }).Count -gt 0) {
+    if (@($dirtyRaw | Where-Object { $_ -and $_.Trim() }).Count -gt 0) {
         throw "Working tree is dirty. Commit first, or pass -AllowDirtyWorktree (records a caveat)."
     }
 }
@@ -116,7 +129,7 @@ $oldProfile = [Environment]::GetEnvironmentVariable('SAPLING_PROFILE', 'Process'
 $exeHash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
 $paramsHash = (Get-FileHash -LiteralPath $ParameterPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $gitHead = (& git -C $RepoRoot rev-parse HEAD).Trim()
-$dirtyAtStart = @((& git -C $RepoRoot status --porcelain 2>$null) | Where-Object { $_ -and $_.Trim() }).Count -gt 0
+$dirtyAtStart = @($dirtyRaw | Where-Object { $_ -and $_.Trim() }).Count -gt 0
 
 # Reject affinity masks that cannot exist on this machine. PowerShell parses a
 # bare 0xFFFFFFFF as the 32-bit integer -1, which would silently become an
@@ -192,12 +205,20 @@ try {
                 [void]$process.Start()
 
                 # Pin after start; the prove phase has not begun yet.
+                $effectiveAffinity = 0L
                 if ($mask -ne 0) {
                     try {
                         $process.ProcessorAffinity = [IntPtr]([int64]$mask)
+                        $effectiveAffinity = [int64]$process.ProcessorAffinity
                     }
                     catch {
+                        $process.Kill()
                         throw "Failed to set processor affinity mask ${maskTag}: $($_.Exception.Message)"
+                    }
+
+                    if ($effectiveAffinity -ne [int64]$mask) {
+                        $process.Kill()
+                        throw ("Processor affinity did not take effect: requested 0x{0:X}, read back 0x{1:X}." -f $mask, $effectiveAffinity)
                     }
                 }
 
@@ -253,6 +274,7 @@ try {
                     label            = $Label
                     affinity_mask    = $maskTag
                     affinity_decimal = $mask
+                    affinity_readback_decimal = $effectiveAffinity
                     rayon_threads    = $threadTag
                     batches          = $Batches
                     proofs           = $allProve.Count
@@ -266,6 +288,7 @@ try {
                     params_sha256    = $paramsHash
                     git_head         = $gitHead
                     dirty_worktree   = $dirtyAtStart
+                    untracked_outputs_ignored = $ignoredOutputStatus.Count
                     source_csv       = $rawCsv
                 })
         }
