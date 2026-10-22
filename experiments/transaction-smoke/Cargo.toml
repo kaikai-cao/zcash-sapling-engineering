@@ -1,0 +1,39 @@
+[package]
+name = "sapling-tx-smoke"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "tx_construct_bench"
+path = "src/main.rs"
+
+[dependencies]
+# Transaction layer (the layer under measurement). Pinned exactly; the resolved
+# graph is recorded in Cargo.lock.
+zcash_primitives = "0.31"
+zcash_protocol = "0.11"
+transparent = { package = "zcash_transparent", version = "0.11" }
+orchard = "0.16"
+
+# Circuit / proving layer: the same code and the same git revision as the
+# existing Spend/Output experiments.
+sapling = { package = "sapling-crypto", git = "https://github.com/zcash/sapling-crypto", rev = "88a7946b4a3066787776e11f0a502654167e022d", features = ["circuit", "test-dependencies"] }
+
+bellman = { path = "../../vendor/bellman" }
+groth16 = { path = "../../vendor/groth16" }
+
+bls12_381 = "0.9"
+group = "0.14"
+jubjub = "0.11"
+rand = { version = "0.10", features = ["std_rng"] }
+sha2 = "0.10.9"
+
+# Ensure that the transaction layer links against *this* study's instrumented
+# bellman/groth16 and against the exact sapling-crypto revision used by the
+# existing benchmarks. Without this patch, cargo would resolve a second copy of
+# sapling-crypto from crates.io and the proofs would bypass the instrumented
+# bellman entirely.
+[patch.crates-io]
+sapling-crypto = { git = "https://github.com/zcash/sapling-crypto", rev = "88a7946b4a3066787776e11f0a502654167e022d" }
+bellman = { path = "../../vendor/bellman" }
+groth16 = { path = "../../vendor/groth16" }
