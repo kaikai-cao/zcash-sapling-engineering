@@ -135,7 +135,12 @@ def noninferiority_verdict(ratio: float, high: float) -> str:
 def regression_verdict(ratio: float, high: float) -> str:
     if ratio <= 1.03 and high <= 1.05:
         return "NO_REGRESSION"
-    return "REGRESSION_OR_UNCERTAIN"
+    if ratio <= 1.03:
+        # Point estimate is inside the non-regression band, but the frozen
+        # confidence bound is too wide to certify it. This is not evidence of
+        # a regression; it is a failed certification.
+        return "NOT_CERTIFIED"
+    return "REGRESSION"
 
 
 def manifest_rows() -> list[dict]:
