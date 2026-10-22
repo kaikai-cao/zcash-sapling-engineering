@@ -2,7 +2,8 @@
 
 > One table per research thread: where the conclusion lives, where the raw
 > evidence lives, and what the current verdict is. Generated 2026-10-18 for the
-> closed optimization campaign (targets a–g) and the measurement programme.
+> closed optimization campaign (targets a–g) and the measurement programme;
+> the transaction-construction row was added 2026-10-22.
 >
 > **Advisor-facing synthesis:** [`docs/sapling_proving_optimization_final_report_zh.md`](../../docs/sapling_proving_optimization_final_report_zh.md)
 > (2026-10-18) — the mainline report over the material indexed here.
@@ -41,6 +42,7 @@ Protocol: [`sapling_optimization_validation_protocol_20261017.md`](sapling_optim
 | Branch counters × inner-stage join | `sapling_spend_msm_branch_stage_analysis_20261018.md` | `experiments/raw/csv/sapling_spend_msm_{branch,inner_stage}_*`, `results/tables/sapling_spend_msm_branch_stage_join_*.csv` | H/L fill gap explained by exponent distributions; G2 ≈ 2.6× G1 per-digit cost |
 | Provenance & data integrity | `sapling_experiment_provenance_audit_20261011_151156.md`, `sapling_provenance_audit_closure_20261011.md` | `experiments/metadata/*.csv` (audit manifests) | source identity, dependency revision, parameter hashes recorded per batch |
 | Reproduction & CI verification | `sapling_independent_reproduction_20261018.md`, `sapling_cross_config_reproduction_20261018.md`, [`docs/reproduction.md`](../../docs/reproduction.md) | `experiments/raw/{csv,logs}/repro_independent_*` | parameter-free layer green on Windows (local CI-equivalent) and Ubuntu (GitHub CI, merged `main`); FFT digests identical across three instruction-set builds; real-proof cross-host reproduction still open |
+| **Transaction construction (2026-10-22)** | pre-registration `sapling_tx_construction_preregistration_20261022.md`; results `sapling_tx_construction_results_20261022.md`; report §25 | `experiments/raw/csv/sapling_tx_construct_runs_{real,mock}.csv`, `experiments/raw/logs/tx_construct_*`; `results/tables/sapling_tx_construct_*_20261022.csv` | **measurement baseline** (7/7 criteria PASS): real `Builder::build`, fixed 1 spend + 2 outputs; warm median `t_total_construct` **4,292.7 ms (1t @ `0x1`) / 1,176.1 ms (8t @ `0xFFFF`)**; proving share **99.88%**, non-proving overhead 4.83 ms; local construction only (not wallet/network; synthetic Merkle state) |
 
 ## Reproducing
 

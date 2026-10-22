@@ -6,7 +6,7 @@
 
 This repository investigates the computational cost of Sapling Spend and Output proof generation through release-mode benchmarks, source-level instrumentation, thread-scaling experiments, and system-level diagnostics. Its current contribution is an engineering measurement framework, an evidence-based bottleneck analysis, and a **completed pre-registered optimization campaign** (targets a–g) whose certified results are adopted as shipped defaults — two switch environment variables now default to `1` — not a new cryptographic construction and not a change to the Sapling protocol, circuit, or SNARK.
 
-> **Current research status (2026-10-18):** the formal proving baseline, parameter validation, source-level Groth16/Bellman profiling, MSM call analysis, thread-scaling measurements, selected memory/CPU/cache diagnostics, and provenance records have been collected, and the pre-registered optimization campaign (protocol: [`sapling_optimization_validation_protocol_20261017.md`](experiments/metadata/sapling_optimization_validation_protocol_20261017.md)) is **closed**. Adopted as shipped defaults: **target b** (balanced-signed window recoding of the bucket-fill MSM, certified 2026-10-17, `SAPLING_MSM_SIGNED_DIGITS=1`) and **target g** (the combination `SAPLING_MSM_LAZY_RECODING=1` + `SAPLING_FFT_SERIAL_SINGLE_THREAD=1`, accepted 2026-10-18), which lowers the shipped-default Spend prove peak **103.06 → 86.18 MB (−16.38%)** with 100% correctness and no time regression. Target a alone missed its frozen ≥15 MB threshold and is archived; targets f and g then captured the remaining physically convertible maximum exactly. Post-flip reconnaissance shows both optimization dimensions at their floors **for this pipeline and measurement setup** (memory: structural floor at 86.18 MB; time: arithmetic floor, MSM ≈85% of prove at ~462 ns per bucket-fill mixed addition), so **no further optimization target is currently warranted**. See §7.1–§7.6, §16–§18 and the consolidated [Chinese parameter & bottleneck breakdown](docs/sapling_proving_parameter_and_bottleneck_breakdown_zh.md) §19–§24. A single experiment index for all campaign targets is at [`experiments/metadata/INDEX.md`](experiments/metadata/INDEX.md); CI that guards the default-on switches — **three as of 2026-10-18** (target b's `SAPLING_MSM_SIGNED_DIGITS`, plus the two flipped by target g) — is at [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+> **Current research status (2026-10-18):** the formal proving baseline, parameter validation, source-level Groth16/Bellman profiling, MSM call analysis, thread-scaling measurements, selected memory/CPU/cache diagnostics, and provenance records have been collected, and the pre-registered optimization campaign (protocol: [`sapling_optimization_validation_protocol_20261017.md`](experiments/metadata/sapling_optimization_validation_protocol_20261017.md)) is **closed**. Adopted as shipped defaults: **target b** (balanced-signed window recoding of the bucket-fill MSM, certified 2026-10-17, `SAPLING_MSM_SIGNED_DIGITS=1`) and **target g** (the combination `SAPLING_MSM_LAZY_RECODING=1` + `SAPLING_FFT_SERIAL_SINGLE_THREAD=1`, accepted 2026-10-18), which lowers the shipped-default Spend prove peak **103.06 → 86.18 MB (−16.38%)** with 100% correctness and no time regression. Target a alone missed its frozen ≥15 MB threshold and is archived; targets f and g then captured the remaining physically convertible maximum exactly. Post-flip reconnaissance shows both optimization dimensions at their floors **for this pipeline and measurement setup** (memory: structural floor at 86.18 MB; time: arithmetic floor, MSM ≈85% of prove at ~462 ns per bucket-fill mixed addition), so **no further optimization target is currently warranted**. See §7.1–§7.6, §16–§18 and the consolidated [Chinese parameter & bottleneck breakdown](docs/sapling_proving_parameter_and_bottleneck_breakdown_zh.md) §19–§24. A single experiment index for all campaign targets is at [`experiments/metadata/INDEX.md`](experiments/metadata/INDEX.md); CI that guards the default-on switches — **three as of 2026-10-18** (target b's `SAPLING_MSM_SIGNED_DIGITS`, plus the two flipped by target g) — is at [`.github/workflows/ci.yml`](.github/workflows/ci.yml). **New 2026-10-22:** a transaction-level measurement now runs the real `Builder::build(...)` end to end for a fixed 1-spend + 2-output transaction: **4,292.7 ms on one pinned thread / 1,176.1 ms on eight** (warm medians, including serialization), of which **99.88% is Groth16 proving**; this is local construction time, not broadcast or confirmation time (see §7.7).
 
 ## Contents
 
@@ -53,6 +53,15 @@ The figures below provide a visual entry point into the archived measurements. T
 | f — single-thread FFT four-step scratch removal | memory | on `lazy=1`: peak −3,945,720 B, exactly the convertible maximum | **certified** |
 | g — combination (`lazy=1` + f) + default flip | memory | shipped-default prove peak **103.06 → 86.18 MB (−16.38%)**, correctness 100%, no time regression | **certified, both defaults `1`** |
 | closure reconnaissance | — | memory at structural floor; time at arithmetic floor for this pipeline | recorded (§7.6) |
+
+**Transaction-level measurement (2026-10-22, local construction only):**
+
+| Fixed shape: 1 spend + 2 outputs | 1 thread @ LP0 | 8 threads @ P-cores |
+|---|---:|---:|
+| `t_total_construct` (build + serialize, warm median) | **4,292.7 ms** | **1,176.1 ms** |
+| proving share (paired `build − mock_build`) | **99.88%** | — |
+| non-proving overhead (mock build) | 4.83 ms | — |
+| `BatchValidator` | 6/6 verified | 6/6 verified |
 
 <div align="center">
   <img src="results/figures/sapling_prove_time.png" alt="Recorded Sapling Spend and Output proving times" width="48%" />
@@ -343,6 +352,26 @@ After the default flip, the same methodology (stage decomposition before any thr
 
 Both notes are reconnaissance records, not target verdicts; the a–g campaign results remain valid. Scope of the closure: this pipeline (vendored bellman + Sapling Spend/Output) under the frozen measurement conventions.
 
+### 7.7 Transaction-level construction baseline (2026-10-22)
+
+§7.1–§7.6 time the proving functions. This measurement closes the next layer up: the real transaction builder. The scenario is frozen in [`sapling_tx_construction_preregistration_20261022.md`](experiments/metadata/sapling_tx_construction_preregistration_20261022.md) — one Sapling spend (100,000,000 zats) plus a 60,000,000-zat payment and a 39,990,000-zat change output, ZIP-317 fee 10,000, target height 1,700,000 (v5), a synthetic 32-level Merkle path at position 0, and the same parameter files as the earlier batches. Three single-process arms, six runs each, run 1 dropped; affinity set after launch and read back.
+
+| Warm median | A1 real 1t @ `0x1` | A2 real 8t @ `0xFFFF` | A3 mock 1t @ `0x1` |
+|---|---:|---:|---:|
+| **`t_total_construct` = `t_build` + `t_serialize`** | **4,292.720 ms** | **1,176.072 ms** | 4.888 ms (reference) |
+| `t_build` (`Builder::build`) | 4,292.699 ms | 1,176.049 ms | 4.832 ms |
+| `t_serialize` (`tx.write`) | 0.022 ms | 0.024 ms | 0.020 ms |
+| `t_proving` (paired `build − mock_build`) | 4,287.528 ms (**99.88%**) | — | — |
+| `sum_proofs` | 4,292.703 ms | 1,175.588 ms | 4.367 ms |
+| spend / output A / output B | 3,321.5 / 480.2 / 486.2 ms | 928.0 / 132.7 / 127.9 ms | mock |
+| `t_verify` (not part of construction) | 10.384 ms | 13.826 ms | not applicable |
+
+**Verdict: 7/7 frozen criteria pass** (18/18: 12 real transactions verified by `BatchValidator`, 6 mock constructions structurally valid; identical 2,377-byte v5 transactions; 1 spend / 2 outputs; fee 10,000; Sapling value balance +10,000; proving share 0.9988 ≥ 0.90; estimate gap 0.121% ≤ 5%; mock build 4.832 ms ≤ 100 ms; A1 CV 0.668% ≤ 5%; serialization residual 0.001 ms). This is a **measurement baseline**, not an optimization result: it changes no default.
+
+Interpretation: construction is proving — 99.88% of `t_build`; sighash, the Spend authorization and binding signatures, bundle assembly and serialization together account for about 5 ms (0.11%). Eight threads cut the whole construction to 1/3.65 (≈45.6% parallel efficiency). The two independent proving estimates agree within 0.12%, so the share is not an artefact of one estimator. Boundaries: local construction only — no parameter load (≈27 s, outside the timed window), wallet input selection, note decryption, database or network; the Merkle path and note are synthetic test state. The pre-measurement fee correction (15,000 → 10,000; value balance −15,000 → +10,000) is recorded in the pre-registration §10.
+
+One-off record: [`sapling_tx_construction_results_20261022.md`](experiments/metadata/sapling_tx_construction_results_20261022.md); raw data: [`runs_real.csv`](experiments/raw/csv/sapling_tx_construct_runs_real.csv), [`runs_mock.csv`](experiments/raw/csv/sapling_tx_construct_runs_mock.csv); code: [`experiments/transaction-smoke/`](experiments/transaction-smoke/); runner: [`scripts/run_tx_construct_campaign.ps1`](scripts/run_tx_construct_campaign.ps1); analysis: [`scripts/analyze_tx_construct_experiment.py`](scripts/analyze_tx_construct_experiment.py).
+
 ## 8. Source-Level Stage and MSM Profiling
 
 ### 8.1 Instrumentation approach
@@ -540,6 +569,8 @@ zcash-sapling-engineering/
 │   ├── prover-smoke/
 │   │   └── src/
 │   │       └── bin/
+│   ├── transaction-smoke/   # full Builder::build transaction benchmark
+│   │   └── src/
 │   └── raw/
 │       ├── csv/
 │       └── logs/
@@ -567,6 +598,7 @@ zcash-sapling-engineering/
 
 - `docs/`: project notes, the Sapling proving flow, smoke-check instructions, and baseline/MSM analysis notes.
 - `experiments/prover-smoke/`: the Rust harness and its Cargo configuration for the Sapling proving experiments.
+- `experiments/transaction-smoke/`: the independent harness that drives the real transaction builder (`Builder::build`) and measures the complete construction time.
 - `experiments/raw/csv/`: original per-run benchmark records, stage timings, MSM call data, memory/CPU/cache diagnostics, and parameter metadata.
 - `experiments/raw/logs/`: stdout/stderr captures, proving logs, source-instrumentation traces, and system diagnostic logs.
 - `experiments/metadata/`: parameter validation, provenance audits, experiment manifests, batch reports, parameter sizing, and research summaries.
@@ -605,6 +637,7 @@ The following are useful entry points into the recorded evidence.
 - [Default-config experiment results (2026-10-17)](experiments/metadata/sapling_default_config_experiment_results_20261017.md) — shipped default vs pinned-P-core configurations, the E-core parameter-read penalty, the un-certified Spend prove result, and the negative Output result.
 - [Signed-digit MSM pre-registration (2026-10-17)](experiments/metadata/sapling_msm_signed_digit_preregistration_20261017.md) / [results (2026-10-17)](experiments/metadata/sapling_msm_signed_digit_results_20261017.md) — target b: balanced-signed window recoding, certified (see §7.2).
 - [Lazy-recoding pre-registration (2026-10-18)](experiments/metadata/sapling_msm_lazy_recoding_preregistration_20261018.md) / [results (2026-10-18)](experiments/metadata/sapling_msm_lazy_recoding_results_20261018.md) — target a: de-materialised H-query windowed exponents, the frozen threshold it fails, the per-phase peak attribution that explains it, and the reconciled gross/net buffer accounting (see §7.3).
+- [Transaction-construction pre-registration (2026-10-22)](experiments/metadata/sapling_tx_construction_preregistration_20261022.md) / [results (2026-10-22)](experiments/metadata/sapling_tx_construction_results_20261022.md) — the frozen 1-spend + 2-output scenario, timing model, 18/18 acceptance table, and the measured local construction time (see §7.7).
 
 ### Principal raw datasets
 
@@ -619,6 +652,7 @@ The following are useful entry points into the recorded evidence.
 - [Pinned baseline rows](experiments/raw/csv/sapling_spend_prover_runs_pinned_baseline_20261017.csv) / [Output](experiments/raw/csv/sapling_output_prover_runs_pinned_baseline_20261017.csv) and [pinned thread-scaling rows](experiments/raw/csv/sapling_spend_prover_runs_thread_scaling_pinned_20261017.csv).
 - [Core-regime reference rows](experiments/raw/csv/sapling_spend_prover_runs_affinity_ecore_1t_20261017.csv), [unbound 1-thread rows](experiments/raw/csv/sapling_spend_prover_runs_unbound_1t_20261017.csv), and the [exponent-density census ledger](experiments/raw/csv/sapling_prove_memory_ledger_exponent_density_20261017.csv).
 - Default-config experiment rows: Spend [unbound-default](experiments/raw/csv/sapling_spend_prover_runs_default_threads_unbound_20261017.csv) / [P-core 8t](experiments/raw/csv/sapling_spend_prover_runs_pinned8_pcore_20261017.csv) / [all-28 LP 28t](experiments/raw/csv/sapling_spend_prover_runs_default_threads_all28_20261017.csv) / [all-28 LP 8t](experiments/raw/csv/sapling_spend_prover_runs_pinned8_all28_20261017.csv) / [P-core 16t](experiments/raw/csv/sapling_spend_prover_runs_pinned16_pcore_20261017.csv), the interleaved [round 1](experiments/raw/csv/sapling_spend_prover_runs_abab_unbound_default_20261017.csv) and [round 2](experiments/raw/csv/sapling_spend_prover_runs_abab2_unbound_default_20261017.csv) runs, the [rebuild-neutrality control](experiments/raw/csv/sapling_spend_prover_runs_rebuild_control_1t_lp0_20261017.csv), and the Output [unbound-default](experiments/raw/csv/sapling_output_prover_runs_default_threads_unbound_20261017.csv) / [P-core 8t](experiments/raw/csv/sapling_output_prover_runs_pinned8_pcore_20261017.csv) / [P-core 16t](experiments/raw/csv/sapling_output_prover_runs_pinned16_pcore_20261017.csv) / [all-28 LP 28t](experiments/raw/csv/sapling_output_prover_runs_default_threads_all28_20261017.csv) / [all-28 LP 8t](experiments/raw/csv/sapling_output_prover_runs_pinned8_all28_20261017.csv) rows, plus the quiet-host replication rows (Spend [unbound-default](experiments/raw/csv/sapling_spend_prover_runs_quiet_abab_unbound_default_20261017.csv) / [P-core 8t](experiments/raw/csv/sapling_spend_prover_runs_quiet_abab_pinned8_pcore_20261017.csv) / [P-core 16t](experiments/raw/csv/sapling_spend_prover_runs_quiet_abab_pinned16_pcore_20261017.csv)).
+- Transaction-construction runs: [real arms](experiments/raw/csv/sapling_tx_construct_runs_real.csv) and [mock arm](experiments/raw/csv/sapling_tx_construct_runs_mock.csv), plus the [campaign summary](experiments/raw/csv/sapling_tx_construct_campaign_tx_construct_20261022_summary.csv) and stdout/stderr under `experiments/raw/logs/tx_construct_tx_construct_20261022_*`.
 
 ### Derived tables and figures
 
@@ -630,6 +664,7 @@ The following are useful entry points into the recorded evidence.
 - [Target-b ABBA table](results/tables/sapling_msm_signed_digit_abba_20261017.csv) and [target-b H-query stage profile](results/tables/sapling_msm_signed_digit_stage_profile_20261017.csv).
 - [Target-a memory table](results/tables/sapling_msm_lazy_recoding_memory_20261018.csv) (primary indicator, auxiliary thresholds, verdict flags) and [target-a ABBA table](results/tables/sapling_msm_lazy_recoding_abba_20261018.csv) (the three non-regression arm sets).
 - [Spend / Output proof-time figure](results/figures/sapling_prove_time.png) and [proof-size figure](results/figures/sapling_proof_size.png).
+- Transaction construction: [summary](results/tables/sapling_tx_construct_summary_20261022.csv), [composition](results/tables/sapling_tx_construct_composition_20261022.csv), [acceptance](results/tables/sapling_tx_construct_acceptance_20261022.csv), and figures [composition](results/figures/sapling_tx_construct_composition_20261022.png) / [per-proof](results/figures/sapling_tx_construct_per_proof_20261022.png) / [1t vs 8t](results/figures/sapling_tx_construct_threads_20261022.png).
 - [Spend thread-scaling figure](results/figures/sapling_spend_thread_scaling.png), [MSM breakdown](results/figures/sapling_spend_msm_breakdown.png), and [stage breakdown](results/figures/sapling_spend_stage_breakdown.png).
 - [Output proving-time figure](results/figures/sapling_output_prove_ms.png), [verification-time figure](results/figures/sapling_output_verify_ms.png), and [worker task-start-delay figure](results/figures/sapling_output_worker_task_start_delay.png).
 
@@ -690,6 +725,19 @@ Do not run a proof-generation or system diagnostic merely to check syntax, regen
 
 Analysis scripts derive tables and figures from existing raw measurements. Before rerunning one, verify its configured input files and output names. Some tools support timestamped outputs and overwrite protection, but this is not guaranteed for every legacy analysis utility. Preserve raw CSVs and logs regardless of whether the derived outputs are regenerated.
 
+### 14.6 Reproduce the transaction-construction measurement
+
+This is the only runner in the repository that builds a complete transaction with the real `Builder::build(...)`. It needs the parameter files (§14.1) and takes about four minutes (each arm spends ~27 s loading parameters, outside the timed window):
+
+```powershell
+cargo build --release --locked --manifest-path .\experiments\transaction-smoke\Cargo.toml
+$env:ZCASH_PARAMS_DIR = 'D:\Research\zcash-params'
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_tx_construct_campaign.ps1 -Label tx_construct_20261022
+python .\scripts\analyze_tx_construct_experiment.py
+```
+
+The runner pins affinity (and reads it back), writes six rows per arm, validates structure and `BatchValidator` results, and appends to `experiments/raw/csv/sapling_tx_construct_runs_{real,mock}.csv`. The analyzer reads the frozen tag `tx_construct_20261022`, drops run 1, prints PASS/FAIL for all seven criteria, and rewrites only the derived `results/` files. Running with a different label requires changing the analyzer's `TAG` and its output names — never overwrite this batch.
+
 ## 15. Data Integrity and Experiment Provenance
 
 For each research-grade measurement, retain as much of the following as the runner records:
@@ -730,6 +778,7 @@ The current evidence supports the following scoped conclusions:
 15. **Target f removed the single-thread FFT four-step scratch and passed every frozen criterion.** Routing `log_num_threads()==0` transforms through the in-place serial FFT (new switch `SAPLING_FFT_SERIAL_SINGLE_THREAD`, default `0` at that commit) eliminates one full-domain scratch (131,072 × 32 B = 4,194,304 B per transform): on the `SAPLING_MSM_LAZY_RECODING=1` configuration the prove peak drops **90,130,334 → 86,184,614 B (−3,945,720 B, −4.38%)** — **byte-exactly the pre-computed physically convertible maximum** — with the correctness gate 12/12 bit-identical digests plus 20/20 verified proofs, all three time arm sets inside budget and directionally faster, and the shipped default (`lazy=0`) not rising (−760 B). See §7.4, report §22, [`sapling_qap_fft_scratch_results_20261018.md`](experiments/metadata/sapling_qap_fft_scratch_results_20261018.md).
 16. **Target g accepted the combination and flipped both defaults — the campaign's certified outcome.** With the acceptance table frozen before any target-g measurement (threshold ≥ 15,000,000 B, the bar target a alone missed, not raised despite a higher expectation), the combination (`SAPLING_MSM_LAZY_RECODING=1` + `SAPLING_FFT_SERIAL_SINGLE_THREAD=1`) lowers the shipped-default Spend prove peak **103,063,495 → 86,184,607 B (−16,878,888 B, −16.38%)**; correctness is 100% (10/10 ledger + 360/360 campaign + 5/5 post-flip proofs verified), all three time arm sets are faster (Spend 1 t −5.81%, Spend 8 t −3.95%, Output 1 t −2.35% pooled batch medians; paired 5/5 and sensitivity 6/6 per arm — recorded as supporting evidence, the primary indicator is memory), and post-flip re-verification with **no switches set** shows 12/12 identical gate digests, a +7 B ledger delta and a 5/5 batch. **Both switch defaults are now `1`** (`SAPLING_MSM_LAZY_RECODING`, `SAPLING_FFT_SERIAL_SINGLE_THREAD`); each environment variable still overrides the default in either direction. See §7.5, report §23, [`sapling_combo_default_results_20261018.md`](experiments/metadata/sapling_combo_default_results_20261018.md).
 17. **After the flip, both dimensions were shown to be at their floors — for this pipeline and measurement setup.** A post-flip stage decomposition (new default-off per-phase probe) puts the 86,184,603 B global peak at the end of `circuit_synthesis`, with the second-highest phase (82,870,091 B) bounding the physically convertible maximum at 3,314,512 B; a new capacity probe shows the proving-assignment vectors sit at capacity 131,072 — exactly the QAP domain size, fully consumed by `from_coeffs`, so pre-reserving exact lengths would *raise* the peak — and the only true slack (aux, 1,037,888 B) is unreleasable at the peak. A post-flip time profile shows MSM ≈85% of prove and bucket fill ≈78% of MSM at **462 ns per nonzero digit** (same-batch measurement matching the documented ~470 ns mixed-add bound), with the op-count model confirming window c = 13 optimal for all three large queries; candidates c (B-G2 aux) and d (assignment-conversion parallelisation) were checked and closed (no mechanism / below the 3% bar). **The closure is scoped**: it says nothing about other hardware, circuits, or Groth16 implementations. See §7.6, [`sapling_default_stage_decomposition_20261018.md`](experiments/metadata/sapling_default_stage_decomposition_20261018.md), [`sapling_default_time_profile_20261018.md`](experiments/metadata/sapling_default_time_profile_20261018.md).
+18. **The transaction-level measurement shows construction is proving, and quantifies the non-proving remainder.** Driving the real `Builder::build(...)` for a fixed 1-spend + 2-output v5 transaction gives a warm median **`t_total_construct` = 4,292.7 ms on one pinned thread** (build 4,292.7 + serialize 0.02 ms), of which **99.88%** is Groth16 (paired `build − mock_build`); the mock construction — witness assembly, proof encoding, sighash, Spend authorization and binding signatures, bundle assembly — costs **4.83 ms (0.11%)**, and the independent `sum_proofs` estimate agrees within **0.121%** of `t_build`. Eight threads on the P-cores give **1,176.1 ms (3.65×, ≈45.6% efficiency)**. All 12 real transactions verified (2,377-byte v5, 1 spend / 2 outputs, fee 10,000, value balance +10,000) and the frozen table is 7/7 PASS. These are **local construction times** with synthetic Merkle state, not broadcast/confirmation times and not a wallet path; the experiment changes no default. See §7.7, [`sapling_tx_construction_results_20261022.md`](experiments/metadata/sapling_tx_construction_results_20261022.md).
 
 ## 17. Limitations and Open Questions
 

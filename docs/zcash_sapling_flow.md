@@ -178,10 +178,13 @@ SaplingVerificationContext 或 BatchValidator
 | Spend proving | 5 次证明生成，5 次成功验证 |
 | Output proving | 5 次证明生成，5 次成功验证 |
 | Python 汇总 | 3 张 CSV 汇总表、7 张 PNG 图 |
+| **完整交易构造（2026-10-22）** | **真实 `Builder::build(...)` + 序列化 + `BatchValidator`；固定 1 spend + 2 outputs，1t 4.29 s / 8t 1.18 s，证明占 99.88%** |
 
-当前 proving 实验直接调用对应的参数与 prover 接口；验证实验直接调用 Sapling 的 Spend / Output 验证接口。
+Spend / Output proving 实验直接调用对应的参数与 prover 接口；验证实验直接调用 Sapling 的 Spend / Output 验证接口。它们衡量的是证明流程的核心环节。
 
-它们没有执行完整的 `Builder::build(...)` 钱包交易构造流程，也没有覆盖完整交易中的所有 bundle 最终检查、交易序列化和网络提交。因此，当前结果衡量的是 Sapling 证明流程中的核心环节，而不是生成一笔完整 Zcash 交易的总耗时。
+2026-10-22 新增的实验已经走通 `Builder::build(...)`：它用真实构造器组装 1 个 spend + 2 个 output（收款 + 找零）、计算 sighash、生成 Spend 授权签名与 binding 签名、装配 bundle、序列化并用 `BatchValidator` 校验。因此，"完整交易构造"这一层现在有本地计时数据：**1 线程 4,292.7 ms、8 线程 1,176.1 ms（暖态中位），其中 99.88% 是 Groth16 证明，非证明开销 4.83 ms，序列化 0.022 ms**。
+
+即便如此，它仍**不**覆盖完整钱包路径与网络路径：Merkle 路径与 note 是合成测试状态；不含输入选择、手续费估算迭代、note 解密、数据库 IO、广播、mempool、区块打包与确认。因此这些数字是**本地交易构造时间**，不是"一笔交易从上链到确认"的总时间。一手记录：`experiments/metadata/sapling_tx_construction_results_20261022.md`。
 
 ## 6. 阶段性结论
 
@@ -189,4 +192,4 @@ Sapling 的 Groth16 证明不是由钱包直接计算出来的，而是由交易
 
 Spend 与 Output 使用不同的电路和参数文件，但都生成固定大小的 Groth16 证明。后续分析应区分电路规模、参数加载、证明生成、证明验证和整个交易构造的开销，避免用单一时间指标代表整个系统性能。
 
-本阶段暂不开展算法优化，优先完成交易调用链和实验数据的可复现记录。
+本阶段暂不开展新的算法优化，优先完成交易调用链和实验数据的可复现记录。2026-10-18 的优化战役（目标 a–g）已完结，2026-10-22 又补齐了完整交易构造的本地计时（§5）；后续若要扩展到钱包或网络路径，应另立预注册并重新测量。
