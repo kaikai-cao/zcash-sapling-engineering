@@ -22,6 +22,9 @@ param(
     [ValidatePattern('^[a-z0-9][a-z0-9_-]{0,30}$')]
     [string]$Tag = 'msm_adaptive_20261022',
     [string]$PreregPath = 'experiments/metadata/sapling_msm_adaptive_stage1b_preregistration_20261022.md',
+    # Smoke-only truncation. The frozen formal campaign uses the default 44.
+    [ValidateRange(1, 44)]
+    [int]$MaxBatches = 44,
     [switch]$AllowDirtyWorktree
 )
 
@@ -177,6 +180,9 @@ foreach ($arm in $txOrder) {
 if ($plan.Count -ne 44) {
     throw "Internal order error: expected 44 batches, got $($plan.Count)."
 }
+if ($MaxBatches -lt $plan.Count) {
+    $plan = @($plan.GetRange(0, $MaxBatches))
+}
 
 $oldParams = $env:ZCASH_PARAMS_DIR
 $oldAdaptive = $env:SAPLING_MSM_ADAPTIVE_WINDOW
@@ -216,7 +222,7 @@ try {
 
         try {
             if ($kind -eq 'spend') {
-                $label = "msm_adaptive_${Tag}_spend_$($arm.ToLowerInvariant())"
+                $label = "${Tag}_spend_$($arm.ToLowerInvariant())"
                 $childArgs = @(
                     '-NoProfile', '-ExecutionPolicy', 'Bypass',
                     '-File', (Join-Path $RepoRoot 'scripts\run_spend_combined_profile.ps1'),
@@ -228,7 +234,7 @@ try {
                 )
             }
             elseif ($kind -eq 'output') {
-                $label = "msm_adaptive_${Tag}_output_$($arm.ToLowerInvariant())"
+                $label = "${Tag}_output_$($arm.ToLowerInvariant())"
                 $childArgs = @(
                     '-NoProfile', '-ExecutionPolicy', 'Bypass',
                     '-File', (Join-Path $RepoRoot 'scripts\run_pinned_prover_campaign.ps1'),
@@ -242,7 +248,7 @@ try {
                 )
             }
             else {
-                $label = "msm_adaptive_${Tag}_tx_$($arm.ToLowerInvariant())"
+                $label = "${Tag}_tx_$($arm.ToLowerInvariant())"
                 $childArgs = @(
                     '-NoProfile', '-ExecutionPolicy', 'Bypass',
                     '-File', (Join-Path $RepoRoot 'scripts\run_tx_scaling_campaign.ps1'),
@@ -307,13 +313,13 @@ try {
             notes = $notes
         }
 
-        if ($order -lt 44) {
+        if ($order -lt $plan.Count) {
             Start-Sleep -Seconds 5
         }
     }
 
     Add-Content -LiteralPath $campaignLog -Encoding utf8 -Value "end_utc=$([DateTime]::UtcNow.ToString('o'))"
-    Write-Host "Campaign complete: 44/44 batches"
+    Write-Host ("Campaign complete: {0}/{0} batches" -f $plan.Count)
     Write-Host "manifest: $manifestPath"
 }
 finally {
