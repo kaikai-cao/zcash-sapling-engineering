@@ -48,7 +48,7 @@ The scripts have different side effects. Some only analyze existing data; others
 | Script | Purpose | Main artifacts or side effects |
 |---|---|---|
 | `summarize_engineering.py` | Consolidate selected formal-baseline measurements for engineering-level comparisons. | Reads configured circuit-scale, parameter, performance, and memory CSVs; generates derived result tables and figures. The selected baseline batch IDs and dependency identity are defined in the source code. |
-| `analyze_tx_construct_experiment.py` | Evaluate the frozen transaction-construction acceptance table and rebuild its derived tables/figures. | Read-only with respect to raw data: reads the frozen tag `tx_construct_20261022`, drops run 1, and rewrites `results/tables/sapling_tx_construct_*_20261022.csv` plus three figures. Exits non-zero if any of the seven criteria fails. A different batch requires editing `TAG` and the output names. |
+| `analyze_tx_construct_experiment.py` | Evaluate the frozen transaction-construction acceptance table and rebuild its derived tables/figures. | Read-only with respect to raw data: reads the frozen tag `tx_construct_20261022`, drops run 1, and rewrites `results/tables/sapling_tx_construct_*_20261022.csv` plus three figures. Re-checks the structural contract (V5, 1 spend, 2 outputs, fee, value balance, constant byte length) independently on **all 18 rows**, including the mock arm. `t_proving` is the difference of independent-group medians; the run-index-aligned difference is emitted only as a diagnostic because the mock arm consumes no proof randomness. Exits non-zero if any of the seven criteria fails. A different batch requires editing `TAG` and the output names. |
 
 ## 6. Typical Workflow
 

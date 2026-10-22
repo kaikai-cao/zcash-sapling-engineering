@@ -8,8 +8,8 @@ name: ci
 #     separate, documented procedure (docs/reproduction.md).
 #   * Vendored crates (vendor/bellman, vendor/groth16) are upstream mirrors plus
 #     this study's instrumentation: they are compile-checked and test-gated, but
-#     not lint-gated (rustfmt/clippy -D warnings apply to the study's own crate,
-#     experiments/prover-smoke, only).
+#     not lint-gated. Rustfmt and clippy -D warnings apply to both study crates
+#     (experiments/prover-smoke, experiments/transaction-smoke).
 #   * The default-on optimization switches are guarded by the gates job — three
 #     as of 2026-10-18: SAPLING_MSM_SIGNED_DIGITS (adopted by target b) plus the
 #     two flipped by target g (SAPLING_MSM_LAZY_RECODING,
@@ -82,6 +82,28 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo build --release
         run: cargo build --release --locked --manifest-path experiments/prover-smoke/Cargo.toml
+
+  check-tx-smoke:
+    name: transaction crate: fmt + clippy + check (locked, parameter-free)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      # The transaction-construction harness is a separate crate with its own
+      # lockfile and its own [patch.crates-io] pins. Lint and compile-check it on
+      # every change so the benchmark code cannot rot between measurement
+      # campaigns. No parameter files are needed: this job never runs a proof.
+      - name: rustfmt
+        run: cargo fmt --check --manifest-path experiments/transaction-smoke/Cargo.toml
+      - name: clippy (deny warnings)
+        run: >
+          cargo clippy --locked --all-targets
+          --manifest-path experiments/transaction-smoke/Cargo.toml
+          -- -D warnings
+      - name: cargo check --locked
+        run: cargo check --locked --all-targets --manifest-path experiments/transaction-smoke/Cargo.toml
 
   gates:
     name: deterministic correctness gates (no params needed)

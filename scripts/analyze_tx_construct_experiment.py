@@ -16,8 +16,13 @@ Arms (one process each, REPEATS=6, run 1 dropped as warm-up):
 Timing model (frozen, 搂3):
 
     t_total_construct = t_build + t_serialize
-    t_proving         = t_build - t_mock_build        (paired, run by run)
+    t_proving         = median(t_build) - median(t_mock_build)   (independent groups)
     sum_proofs        = prove_spend + prove_output_a + prove_output_b
+
+The two real arms consume the same RNG stream, but the mock prover does not, so
+run i in A1 and run i in A3 are *not* a co-randomised pair.  The primary
+estimate is therefore the difference of group medians; the run-index-aligned
+difference is kept only as a diagnostic (``t_proving_index_aligned``).
 
 ``t_proving`` is only used to explain the composition of ``t_build``; the
 primary carrier is ``t_total_construct``. Nothing here is a network or wallet
@@ -203,15 +208,20 @@ def main() -> int:
     )
 
     # ---- composition ---------------------------------------------------
-    # Paired estimate: t_proving(run) = t_build(run) - t_mock_build(run).
-    paired_proving = [
-        real["build_ms"] - mock["build_ms"] for real, mock in zip(a1, a3)
-    ]
-    proving_median = statistics.median(paired_proving)
+    # Primary estimate: difference of independent-group medians.
     build_median = statistics.median(column(a1, "build_ms"))
     serialize_median = statistics.median(column(a1, "serialize_ms"))
     total_median = statistics.median(column(a1, "total_construct_ms"))
     mock_median = statistics.median(column(a3, "build_ms"))
+    proving_median = build_median - mock_median
+    # Diagnostic only: runs are numbered but not co-randomised across arms
+    # (the mock prover consumes no proof randomness, so the scenario RNG
+    # streams diverge after run 1).  Reported for transparency, not as a
+    # paired measurement.
+    index_aligned_proving = [
+        real["build_ms"] - mock["build_ms"] for real, mock in zip(a1, a3)
+    ]
+    index_aligned_median = statistics.median(index_aligned_proving)
     sum_proofs_median = statistics.median(column(a1, "sum_proofs_ms"))
     spend_median = statistics.median(column(a1, "prove_spend_ms"))
     out_a_median = statistics.median(column(a1, "prove_output_a_ms"))
@@ -225,7 +235,13 @@ def main() -> int:
             "t_proving",
             fmt(proving_median),
             fmt(proving_median / total_median * 100.0, 2),
-            "paired t_build - t_mock_build (estimate)",
+            "median(t_build) - median(t_mock_build), independent groups",
+        ],
+        [
+            "t_proving_index_aligned",
+            fmt(index_aligned_median),
+            fmt(index_aligned_median / total_median * 100.0, 2),
+            "diagnostic only: run-index-aligned difference (not co-randomised)",
         ],
         [
             "sum_proofs",
@@ -258,24 +274,37 @@ def main() -> int:
     # ---- acceptance ----------------------------------------------------
     real_rows = arms["A1_real_1t"] + arms["A2_real_8t"]
     mock_rows = arms["A3_mock_1t"]
+    all_rows = real_rows + mock_rows
+
+    def structure_ok(rows: list[dict]) -> bool:
+        """Frozen structural contract, checked independently for every arm.
+
+        The campaign launcher asserts the same fields at run time; repeating the
+        check here means a standalone download of the raw CSVs is sufficient to
+        re-derive acceptance without trusting the launcher's assertions.
+        """
+        return bool(rows) and all(
+            row["tx_version"] == "V5"
+            and row["spend_count"] == "1"
+            and row["output_count"] == "2"
+            and row["fee_zats"] == str(FEE_ZATS)
+            and row["value_balance_zats"] == str(VALUE_BALANCE_ZATS)
+            for row in rows
+        )
 
     primary_pass = (
         len(real_rows) == 12
         and all(row["verified"] == "true" for row in real_rows)
         and len(mock_rows) == 6
-        and all(row["tx_version"] == "V5" for row in mock_rows)
+        and structure_ok(mock_rows)
     )
 
-    structural_rows = arms["A1_real_1t"] + arms["A2_real_8t"]
-    tx_bytes_values = {row["tx_bytes"] for row in structural_rows}
+    tx_bytes_values = {row["tx_bytes"] for row in all_rows}
     structural_pass = (
         len(tx_bytes_values) == 1
         and tx_bytes_values == {str(EXPECTED_TX_BYTES)}
-        and all(row["tx_version"] == "V5" for row in structural_rows)
-        and all(row["spend_count"] == "1" for row in structural_rows)
-        and all(row["output_count"] == "2" for row in structural_rows)
-        and all(row["fee_zats"] == str(FEE_ZATS) for row in structural_rows)
-        and all(row["value_balance_zats"] == str(VALUE_BALANCE_ZATS) for row in structural_rows)
+        and structure_ok(real_rows)
+        and structure_ok(mock_rows)
     )
 
     proving_share = proving_median / build_median
@@ -293,7 +322,7 @@ def main() -> int:
         abs(row["total_construct_ms"] - (row["build_ms"] + row["serialize_ms"]))
         for row in arms["A1_real_1t"] + arms["A2_real_8t"] + arms["A3_mock_1t"]
     )
-    txids = [row["txid"] for row in structural_rows]
+    txids = [row["txid"] for row in all_rows]
     txid_hex_ok = all(re.fullmatch(r"[0-9a-f]{64}", txid) for txid in txids)
     # Both real arms start from the same per-process RNG seed, so run i must
     # produce the identical transaction in A1 and A2. This is a structural
@@ -312,9 +341,9 @@ def main() -> int:
         ],
         [
             "aux1",
-            "structural constancy (tx_bytes, V5, 1 spend, 2 outputs, fee, balance)",
-            f"tx_bytes={EXPECTED_TX_BYTES}; fee={FEE_ZATS}; balance=+{VALUE_BALANCE_ZATS}",
-            f"tx_bytes={sorted(tx_bytes_values)[0]}; fee={FEE_ZATS}; balance=+{VALUE_BALANCE_ZATS}",
+            "structural constancy across all arms (tx_bytes, V5, 1 spend, 2 outputs, fee, balance)",
+            f"tx_bytes={EXPECTED_TX_BYTES} on 18/18; fee={FEE_ZATS}; balance=+{VALUE_BALANCE_ZATS}",
+            f"tx_bytes={sorted(tx_bytes_values)[0]} on {len(all_rows)}/18; fields checked on 18/18",
             "PASS" if structural_pass else "FAIL",
         ],
         [
@@ -326,7 +355,7 @@ def main() -> int:
         ],
         [
             "aux3",
-            "two-estimate agreement (sum_proofs vs paired t_proving)",
+            "two-estimate agreement (sum_proofs vs group-median t_proving)",
             f"<= {ESTIMATOR_DIFF_MAX * 100.0:.0f}% of t_build",
             f"{estimator_diff * 100.0:.3f}%",
             "PASS" if estimator_pass else "FAIL",
@@ -486,7 +515,8 @@ def main() -> int:
     print(f"A1 warm build median {build_median:.3f} ms  (CV {cv_a1:.3f}%)")
     print(f"A2 warm build median {statistics.median(column(a2, 'build_ms')):.3f} ms")
     print(f"A3 warm mock build median {mock_median:.3f} ms")
-    print(f"t_proving (paired) median {proving_median:.3f} ms -> {proving_share * 100.0:.2f}% of build")
+    print(f"t_proving (group medians) {proving_median:.3f} ms -> {proving_share * 100.0:.2f}% of build")
+    print(f"  diagnostic: index-aligned median {index_aligned_median:.3f} ms (not co-randomised; not primary)")
     print(f"sum_proofs median {sum_proofs_median:.3f} ms  (estimator gap {estimator_diff * 100.0:.3f}%)")
     print(f"t_total_construct median {total_median:.3f} ms")
     print(f"t_verify median {statistics.median(column(a1, 'verify_ms')):.3f} ms (not part of construction)")
