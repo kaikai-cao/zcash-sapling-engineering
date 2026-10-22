@@ -178,11 +178,11 @@ SaplingVerificationContext 或 BatchValidator
 | Spend proving | 5 次证明生成，5 次成功验证 |
 | Output proving | 5 次证明生成，5 次成功验证 |
 | Python 汇总 | 3 张 CSV 汇总表、7 张 PNG 图 |
-| **完整交易构造（2026-10-22）** | **真实 `Builder::build(...)` + 序列化 + `BatchValidator`；固定 1 spend + 2 outputs，1t 4.29 s / 8t 1.18 s，证明占 99.88%** |
+| **完整交易构造（2026-10-22）** | **真实 `Builder::build(...)` + 序列化 + `BatchValidator`；固定 1 spend + 2 outputs，1t 4.29 s / 8t 1.18 s，证明占 99.89%** |
 
 Spend / Output proving 实验直接调用对应的参数与 prover 接口；验证实验直接调用 Sapling 的 Spend / Output 验证接口。它们衡量的是证明流程的核心环节。
 
-2026-10-22 新增的实验已经走通 `Builder::build(...)`：它用真实构造器组装 1 个 spend + 2 个 output（收款 + 找零）、计算 sighash、生成 Spend 授权签名与 binding 签名、装配 bundle、序列化并用 `BatchValidator` 校验。因此，"完整交易构造"这一层现在有本地计时数据：**1 线程 4,292.7 ms、8 线程 1,176.1 ms（暖态中位），其中 99.88% 是 Groth16 证明，非证明开销 4.83 ms，序列化 0.022 ms**。
+2026-10-22 新增的实验已经走通 `Builder::build(...)`：它用真实构造器组装 1 个 spend + 2 个 output（收款 + 找零）、计算 sighash、生成 Spend 授权签名与 binding 签名、装配 bundle、序列化并用 `BatchValidator` 校验。因此，"完整交易构造"这一层现在有本地计时数据：**1 线程 4,292.7 ms、8 线程 1,176.1 ms（暖态中位），其中 99.89% 是 Groth16 证明，非证明开销 4.83 ms，序列化 0.022 ms**。证明占比是独立组中位差估计（`median(build) − median(mock_build)`），不是逐 run 配对；mock 臂不消耗证明随机数，两臂只在 run 1 共享同一 RNG 流。
 
 即便如此，它仍**不**覆盖完整钱包路径与网络路径：Merkle 路径与 note 是合成测试状态；不含输入选择、手续费估算迭代、note 解密、数据库 IO、广播、mempool、区块打包与确认。因此这些数字是**本地交易构造时间**，不是"一笔交易从上链到确认"的总时间。一手记录：`experiments/metadata/sapling_tx_construction_results_20261022.md`。
 

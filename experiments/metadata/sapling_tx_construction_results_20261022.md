@@ -21,11 +21,11 @@
 | **`t_total_construct`（中位）** | **4,292.7 ms** | **1,176.1 ms** |
 | 其中 `t_build` | 4,292.7 ms | 1,176.0 ms |
 | 其中 `t_serialize` | 0.022 ms | 0.024 ms |
-| Groth16 证明部分（配对估计 `t_proving`） | 4,287.5 ms（**99.88%**） | —（本批次未做 8t mock 臂） |
+| Groth16 证明部分（独立组估计 `t_proving`） | 4,287.9 ms（**99.89%**） | —（本批次未做 8t mock 臂） |
 | 非证明开销（mock 构造） | **4.83 ms（0.11%）** | — |
 | 交易验证（不计入构造） | 10.4 ms | 13.8 ms |
 
-**一句话：交易构造时间几乎全部是 Groth16 证明时间（99.88%）；sighash、Spend 授权签名、binding 签名、bundle 装配与序列化加在一起约 5 ms。** 8 线程把总构造时间压到 1/3.65，并行效率约 45.6%。
+**一句话：交易构造时间几乎全部是 Groth16 证明时间（99.89%）；sighash、Spend 授权签名、binding 签名、bundle 装配与序列化加在一起约 5 ms。** 8 线程把总构造时间压到 1/3.65，并行效率约 45.6%。
 
 这是**本地交易构造时间**，不是广播、mempool 接纳、区块打包或上链确认时间，也不含钱包的输入选择、手续费迭代、note 解密与数据库 IO。
 
@@ -89,12 +89,15 @@ fee = 5,000 × max(grace=2, logical_actions=2) = 10,000
 | `t_serialize` | `tx.write(&mut Vec)` | 得到字节串 |
 | **`t_total_construct`** | **`t_build + t_serialize`** | 本文主指标 |
 | `t_mock_build` | 同一构造器、同一场景，mock prover | 构造器里**除 Groth16 之外**的全部开销 |
-| **`t_proving`** | **`t_build − t_mock_build`（逐 run 配对）** | Groth16 证明部分的估计量 |
+| **`t_proving`** | **`median(t_build) − median(t_mock_build)`（独立组估计）** | Groth16 证明部分的估计量 |
+| `t_proving_index_aligned` | 逐 run 编号对齐的 `t_build − t_mock_build` | **仅诊断**：两臂不是同一随机区组（见下） |
 | `prove_spend` / `prove_output_{a,b}` | `Builder::with_progress_notifier` 打点 | 每份证明的 `prepare_circuit + create_proof + encode_proof` |
 | `sum_proofs` | 三者之和 | 与 `t_proving` 互为独立估计 |
 | `t_verify` | 构造完成后 `BatchValidator` 校验整个 bundle | **不属于构造时间**，只用于正确性 |
 
 **不做的事：** 不把参数加载、`t_witness`、`t_verify` 加进构造时间；不把 `t_mock_build` 拆成"签名 X ms / 装配 Y ms"（它包含见证装配、编码、sighash、两类签名与装配，无法从这一路测量中分离）。
+
+**为什么主估计不是逐 run 配对：** A1/A2 两个真实臂从同一 RNG 种子出发、按同一顺序消耗随机数，因此同一 run 编号确实对应同一笔交易（txid 逐 run 相同）。但 A3 的 mock prover 不消耗证明随机数，从 run 2 起其场景 RNG 流已与真实臂分叉——实测 A1/A3 **只有 run 1 的 txid 相同**。所以"run i − run i"不是同一随机区组内的配对差，不能按配对设计报告。本文主估计改用两组独立中位之差；编号对齐差仅作诊断（数值见 §5.3），两者相差 0.34 ms。
 
 ---
 
@@ -141,7 +144,8 @@ fee = 5,000 × max(grace=2, logical_actions=2) = 10,000
 |---|---:|---:|---|
 | `t_total_construct` | 4,292.720 | 100.00% | `t_build + t_serialize` |
 | └ `t_build` | 4,292.699 | 100.00% | 构造器墙钟 |
-| 　├ `t_proving`（配对估计） | 4,287.528 | **99.88%** | `t_build − t_mock_build` |
+| 　├ `t_proving`（独立组估计） | 4,287.867 | **99.89%** | `median(t_build) − median(t_mock_build)` |
+| 　│　（诊断：编号对齐差） | 4,287.528 | 99.88% | 非同一随机区组，不用于验收 |
 | 　└ `t_mock_build`（非证明开销） | 4.832 | **0.113%** | 见证装配 + 编码 + sighash + 两类签名 + bundle 装配 |
 | └ `t_serialize` | 0.022 | 0.001% | `tx.write` |
 | 每证明分解 | | | |
@@ -156,10 +160,11 @@ fee = 5,000 × max(grace=2, logical_actions=2) = 10,000
 
 | 估计 | 值 (ms) | 与 `t_build` 的差 |
 |---|---:|---:|
-| `t_proving`（配对 `t_build − t_mock_build`） | 4,287.528 | 5.171（0.120%） |
-| `sum_proofs`（进度打点求和） | 4,292.703 | 0.004（0.0001%） |
+| `t_proving`（独立组中位差） | 4,287.867 | 4.832（0.113%） |
+| `t_proving_index_aligned`（仅诊断） | 4,287.528 | 5.171（0.120%） |
+| `sum_proofs`（进度打点逐 run 求和后取中位） | 4,292.703 | 0.004（0.0001%） |
 
-两者相差 5.17 ms，相对 `t_build` 为 **0.121%**，远低于冻结的 5% 门限。这说明"证明占 99.88%"不是单一估计量的假象。
+主估计与 `sum_proofs` 相差 4.836 ms，相对 `t_build` 为 **0.113%**，远低于冻结的 5% 门限。两种不同定义的估计都落在同一量级，说明"证明占 99.89%"不是单一估计量的假象。另可核对：三份单项证明的中位之和为 4,287.948 ms，与主估计仅差 0.081 ms；`sum_proofs` 之所以是 4,292.703 ms，是因为它先在每个 run 内求和再取中位，与"先取中位再相加"不是同一个统计量。
 
 ### 5.4 稳定性
 
@@ -187,14 +192,14 @@ A1 的逐 run 中位非常稳定；A2 的方差略大（2.97%），仍低于 5% 
 | 字段 | 值 |
 |---|---|
 | 交易版本 / branch | `V5` / `Nu5`（`tx_header = 2147483653`） |
-| 序列化字节数 | **2,377 B**（全部 12 条真实 run 完全一致） |
+| 序列化字节数 | **2,377 B**（12 条真实 + 6 条 mock run 全部相同） |
 | spend / output 数 | 1 / 2 |
 | 手续费 | 10,000 zats |
 | Sapling value balance | +10,000 zats |
 | 密码学校验 | 12/12 `BatchValidator` 通过（A1 6/6、A2 6/6） |
 | 反序列化 | 每 run 由二进制断言 txid 一致（exit=0） |
 
-A1 与 A2 的逐 run txid 完全相同（`f1112a35…`、`534aefd5…`、…）：两个进程从同一 RNG 种子出发、构造同一场景，这是"两臂确实在测同一件事"的结构性证据，而不是 txid 唯一性检查。
+A1 与 A2 的逐 run txid 相同（`f1112a35…`、`534aefd5…`、…）：两个真实臂从同一 RNG 种子出发、按同一顺序消耗随机数，这是"两臂确实在测同一件事"的结构性证据，不是 txid 唯一性检查。需要区分两件事：**txid 在不同 run 之间会变化**，且 A3 只有 run 1 与真实臂相同（mock 不消耗证明随机数，之后 RNG 流分叉）；数据支持的是"所有 run 的序列化长度为 2,377 B、交易结构字段一致"，**不是**"所有 run 的交易字节完全相同"。
 
 ---
 
@@ -203,9 +208,9 @@ A1 与 A2 的逐 run txid 完全相同（`f1112a35…`、`534aefd5…`、…）�
 | # | 判据 | 阈值 | 实测 | 结果 |
 |---|---|---|---|---|
 | 主 | 完整构造 + 结构断言 + 密码学校验 | 18/18 | 18/18（真实 12/12 校验通过；mock 6/6 结构通过） | **PASS** |
-| 辅 1 | 结构常量性 | `tx_bytes` 全同、V5、1 spend、2 outputs、fee=10,000、balance=+10,000 | 2,377 B 全同；V5；1/2；10,000；+10,000 | **PASS** |
-| 辅 2 | 证明占比 | `median(t_proving)/median(t_build) ≥ 0.90` | 0.9988 | **PASS** |
-| 辅 3 | 双估计一致性 | 差 ≤ `t_build` 的 5% | 0.121% | **PASS** |
+| 辅 1 | 结构常量性（18/18，分析脚本独立复检） | `tx_bytes` 全同、V5、1 spend、2 outputs、fee=10,000、balance=+10,000 | 2,377 B 全同；V5；1/2；10,000；+10,000 | **PASS** |
+| 辅 2 | 证明占比 | `median(t_proving)/median(t_build) ≥ 0.90` | 0.9989 | **PASS** |
+| 辅 3 | 双估计一致性 | 差 ≤ `t_build` 的 5% | 0.113% | **PASS** |
 | 辅 4 | 非证明开销 | `median(t_mock_build) ≤ 100 ms` | 4.832 ms | **PASS** |
 | 辅 5 | 臂内稳定性 | A1 `CV(t_build) ≤ 5%` | 0.668% | **PASS** |
 | 辅 6 | 序列化一致性 | `total = build + serialize`；反序列化 txid 相同 | 最大残差 0.001 ms；二进制内断言通过 | **PASS** |
@@ -273,12 +278,13 @@ python scripts\analyze_tx_construct_experiment.py
 ## 9. 偏差与解释边界
 
 1. **手续费 15,000 → 10,000（测量前）：** 见 §2 与预注册 §10。`value_balance` 同时由 −15,000 更正为 **+10,000**：`ZatBalance` 是有符号量，定义为"输入 − 输出"，手续费留在 Sapling 一侧故为正。两处更正都发生在任何正式测量之前；阈值、臂设计与计时口径未改。
-2. **`t_proving` 是估计量，不是直接测量：** mock prover 的 `prepare_circuit` 仍构造真实电路对象，其成本可能与真实 prover 略有差异；这一点用 `sum_proofs` 独立校验（差 0.121%）。
+2. **`t_proving` 是估计量，不是直接测量：** mock prover 的 `prepare_circuit` 仍构造真实电路对象，其成本可能与真实 prover 略有差异；这一点用 `sum_proofs` 独立校验（差 0.113%）。主估计是两组中位之差，不是逐 run 配对差：mock 臂不消耗证明随机数，run 2 起 RNG 流与真实臂分叉（A1/A3 仅 run 1 txid 相同）。
 3. **`t_mock_build` 不能拆成"签名 X ms / 装配 Y ms"：** 它把见证装配、编码、sighash、Spend 授权签名、binding 签名与 bundle 装配合在一起。本文因此只报告"非证明开销 4.83 ms"，不给出未经直接测量的子项拆分。
 4. **不含钱包与网络：** 不含输入选择、手续费估算迭代、note 解密、地址发现、数据库 IO、广播、mempool、打包与确认。
 5. **合成见证：** Merkle 路径为随机节点 + position 0；计算成本与真实 32 层路径同阶，但不代表真实 note 的存在性，也不含 witness 缓存成本。
 6. **单机单批次：** 时间只对该主机、该批次、该亲和性设置有效；跨机比较须重跑。
 7. **A2 没有对应 mock 臂：** 本批次只做了 1t 的 mock 分解，因此 8t 的 `t_proving` 不能按配对差值给出；8t 的证明占比用 `sum_proofs / t_build` 参考（1,175.6 / 1,176.0 = 99.96%），不作为冻结判据。
+8. **评审后修订（2026-10-22 晚，不触碰原始数据）：** (i) 分析脚本的 `t_proving` 主定义由逐 run 配对差改为独立组中位差，编号对齐差保留为诊断（4,287.528 ms，与主估计差 0.34 ms）；(ii) mock 臂的 V5 / 1 spend / 2 outputs / fee / balance / 字节长度现由分析脚本独立复检，不再依赖启动器断言；(iii) 对外表述改为"序列化长度与交易结构一致"，不再使用"交易完全相同"；(iv) CI 新增 `experiments/transaction-smoke` 的 `cargo fmt --check`、`cargo clippy -- -D warnings` 与 `cargo check --locked`。原始 CSV、参数指纹、二进制 SHA-256 与全部冻结阈值均未改动。
 
 ---
 
@@ -288,7 +294,7 @@ python scripts\analyze_tx_construct_experiment.py
 |---|---|
 | 批次标签 | `tx_construct_20261022` |
 | batch_id | A1 `1792650753956` / A2 `1792650808950` / A3 `1792650843767` |
-| 实验代码提交 | `39d0214bd736f728e050d765b7e8edb9df708a6e`（干净工作树） |
+| 实验代码提交 | `39d0214bd736f728e050d765b7e8edb9df708a6e`（干净工作树；该提交是数据采集版本，后续仅格式化与分析口径修订，未重跑） |
 | 二进制 SHA-256 | `836f0cd6c292eee7c8f21f5eb83cb5c3c7b8ad1bba8d2a6a101332ded1a76794` |
 | spend 参数 SHA-256 | `8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13` |
 | output 参数 SHA-256 | `2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db88570e3f3fb0e4` |
@@ -309,7 +315,7 @@ python scripts\analyze_tx_construct_experiment.py
 ## 11. 结论
 
 1. **一笔 1 spend + 2 outputs 的 Sapling 交易，单线程本地构造 + 序列化中位 4.29 s；8 线程（P 核）1.18 s，加速 3.65×。**
-2. **构造时间几乎全部是 Groth16 证明：配对估计 99.88%；sighash、Spend 授权签名、binding 签名、bundle 装配与序列化合计约 5 ms（0.11%）。**
+2. **构造时间几乎全部是 Groth16 证明：独立组估计 99.89%；sighash、Spend 授权签名、binding 签名、bundle 装配与序列化合计约 5 ms（0.11%）。**
 3. **在证明内部，Spend 一份占 77.4%，两份 Output 各占约 11.2% / 11.3%。** 交易形状每增加一个 Spend，边际成本约 3.3 s（1t）；增加一个 Output 约 0.48 s（1t）。
 4. **序列化本身可忽略（0.02 ms），验证约 10 ms 且不属于构造时间。**
 5. 这些数字是**本地构造时间**，不是上链确认时间；见证为合成状态，不含钱包与网络路径。跨机、跨形状外推须重测。
