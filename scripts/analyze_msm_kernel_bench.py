@@ -97,7 +97,7 @@ def paired_stats(blocks_a, blocks_b):
         "iqr_like": scale,
         "ci_lo": lo,
         "ci_hi": hi,
-        "half_width_pct": 100.0 * max(abs(lo - center), abs(hi - center)),
+        "half_width_ms": max(abs(lo - center), abs(hi - center)),
     }
 
 
@@ -154,6 +154,8 @@ def main() -> int:
     # --- M gates: A/A paired differences -----------------------------------
     print()
     print("=== M gates: A/A paired differences (same implementation, two labels) ===")
+    print("(the ic load is a reference load of section 2.1: its absolute cost is ~1 ms,")
+    print(" so its relative CI is timer-noise dominated and it does not gate)")
     aa_rows = []
     m_gate_pass = True
     for suffix, (arm_a, arm_b) in AA_PAIRS.items():
@@ -167,14 +169,16 @@ def main() -> int:
             if stats is None:
                 continue
             scale = median(medians[suffix][key_a].values())
-            half_pct = 100.0 * stats["half_width_pct"] / scale if scale else float("nan")
-            ok = half_pct <= M_GATE_HALF_WIDTH_PCT
+            half_pct = 100.0 * stats["half_width_ms"] / scale if scale else float("nan")
+            gates = load != "ic"
+            ok = (not gates) or (half_pct <= M_GATE_HALF_WIDTH_PCT)
             m_gate_pass = m_gate_pass and ok
             print(
                 f"{suffix} load={load} blocks={stats['blocks']} "
                 f"median_diff_ms={stats['median_diff']:.4f} "
                 f"ci95=[{stats['ci_lo']:.4f},{stats['ci_hi']:.4f}] "
-                f"half_width_pct={half_pct:.3f} gate={'PASS' if ok else 'FAIL'} (<= {M_GATE_HALF_WIDTH_PCT}%)"
+                f"half_width_pct={half_pct:.3f} gate={'PASS' if ok else 'FAIL'}"
+                f"{'' if gates else ' (reference load, not gating)'} (<= {M_GATE_HALF_WIDTH_PCT}%)"
             )
             aa_rows.append(
                 {
