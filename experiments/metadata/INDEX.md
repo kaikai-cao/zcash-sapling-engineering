@@ -9,6 +9,15 @@
 > **Advisor-facing synthesis:** [`docs/sapling_proving_optimization_final_report_zh.md`](../../docs/sapling_proving_optimization_final_report_zh.md)
 > (2026-10-18) — the mainline report over the material indexed here.
 >
+> **Next-phase research status (2026-10-23):** the a–g campaign and the Stage 2–6 /
+> synthesis-scoping lines are closed; the next phase turns to MSM inner-loop
+> algorithms and curve arithmetic. Research plan:
+> [`docs/msm_kernel_research_plan_20261023.md`](../../docs/msm_kernel_research_plan_20261023.md);
+> literature survey:
+> [`docs/msm_literature_survey_20261023.md`](../../docs/msm_literature_survey_20261023.md).
+> Experiment branch `experiment/msm-kernel-20261023` (from `4454c53`); production
+> defaults unchanged; pre-registration required before any new measurement.
+>
 > **File classes in this repository** — do not merge these roles:
 >
 > | Class | Location | Rule |
