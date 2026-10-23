@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 sapling-crypto = { git = "https://github.com/zcash/sapling-crypto", rev = "88a7946b4a3066787776e11f0a502654167e022d", features = ["circuit"] }
 bls12_381 = "0.9"
+ff = "0.14"
 group = "0.14"
 jubjub = "0.11"
 rand = { version = "0.10", features = ["std_rng"] }

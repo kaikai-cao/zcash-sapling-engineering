@@ -739,6 +739,7 @@ dependencies = [
  "bellman",
  "blake2b_simd",
  "bls12_381",
+ "ff",
  "groth16",
  "group",
  "jubjub",

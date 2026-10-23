@@ -1,0 +1,1 @@
+fft_arith_bench threads=1 log_num_threads=0 mode=all
