@@ -1526,6 +1526,13 @@ manifest/log 以 `.failed_launch` 保留）、以及 Output/交易逐批日志�
 `_b1` 覆盖（raw CSV 和 campaign 日志完整，测量行未丢失）。完整记录见
 `experiments/metadata/sapling_msm_adaptive_stage1b_results_20261022.md`。
 
+合并后的探索性同进程复核（`msm_window_bench`，8t `0x5555`，c=10–13，
+forward/reverse，n=131071，signed，reps=7）进一步显示：两次顺序下 c=12 最低，
+c=11 相对 c=13 为 +1.6%/+6.3%，**没有内在优势**；两次运行的绝对漂移 10–16%
+大于窗口差异。该结果与 Stage 1b 的 `C4/C0=0.999` 一致，支持“c=11 的 Stage 0
+优势不可复现”。它只是机制证据，不是正式实验，不授权默认切换；记录见
+`experiments/metadata/sapling_msm_adaptive_stage1c_mechanism_note_20261023.md`。
+
 一手记录：`experiments/metadata/sapling_msm_adaptive_stage1b_results_20261022.md`；
 预注册：`experiments/metadata/sapling_msm_adaptive_stage1b_preregistration_20261022.md`；
 manifest：`experiments/metadata/msm_adaptive_manifest_msm_adaptive_20261022.csv`；

@@ -293,3 +293,11 @@ powershell -ExecutionPolicy Bypass -File scripts\run_msm_adaptive_campaign.ps1 -
 ## 10. 验收表与冻结阈值未改动声明
 
 本次没有修改 Stage 1b 预注册的 P1–P6 阈值、样本量、比较方向或 A1–A10。分析器只修正了 P5 的展示词（`REGRESSION_OR_UNCERTAIN` → `NOT_CERTIFIED`），因为点估计没有回归方向；这不改变任何数值或判定边界。所有原始 CSV 未被覆盖；pilot、smoke、失败启动和正式 44 批分离存放。
+
+---
+
+## 11. 合并后机制复核（探索性，2026-10-23）
+
+为判断 Stage 0 的 c=11 优势是否来自窗口选择本身，`msm_window_bench` 在同一进程、8t `0x5555` 下对 c=10/11/12/13 做了 forward/reverse 两次顺序测量（n=131,071，signed，reps=7）。结果：forward 的 c=13/c=11/c=12 分别为 270.372/274.621/262.940 ms；reverse 为 298.613/317.262/295.556 ms。**两次都是 c=12 最低，c=11 相对 c=13 为 +1.6%/+6.3%，没有内在优势**；两次运行的绝对值漂移 10–16%，比窗口间差异更大。这与 Stage 1b 的 `C1/C0=1.019`、`C4/C0=0.999` 一致，进一步支持“Stage 0 c=11 657.81 ms 不可复现”的结论。
+
+该复核是**探索性机制证据，不是正式实验、不设阈值、不授权默认切换**；它使用 synthetic fixture，不含完整 proof 和真实 H-query 数据。完整记录与限制见 [`sapling_msm_adaptive_stage1c_mechanism_note_20261023.md`](sapling_msm_adaptive_stage1c_mechanism_note_20261023.md)。

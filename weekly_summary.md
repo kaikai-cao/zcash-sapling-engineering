@@ -749,6 +749,13 @@ Stage 1a 的 pilot 发现全局自适应会让 Output 变慢、全窗口切分�
 执行偏差（Stage 1a pilot、尾切 smoke、首次启动标签长度失败、Output/交易逐批日志被
 同名 `_b1` 覆盖但 raw CSV 完整）均在结果文档中保留。
 
+合并后的探索性机制复核（`msm_window_bench`，8t `0x5555`，c=10–13，
+forward/reverse，n=131071，signed，reps=7）进一步发现：两次顺序下 c=12 最低，
+c=11 相对 c=13 为 **+1.6% / +6.3%**，没有内在优势；两次运行的绝对漂移
+**10–16%** 反而大于窗口差异。该结果与 `C4/C0=0.999` 一致，支持“Stage 0 的
+c=11 优势不可复现”。它只是机制证据，不是正式实验，不授权默认切换；记录见
+`experiments/metadata/sapling_msm_adaptive_stage1c_mechanism_note_20261023.md`。
+
 产物：预注册 `experiments/metadata/sapling_msm_adaptive_stage1b_preregistration_20261022.md`；
 结果 `experiments/metadata/sapling_msm_adaptive_stage1b_results_20261022.md`；
 manifest `experiments/metadata/msm_adaptive_manifest_msm_adaptive_20261022.csv`；
