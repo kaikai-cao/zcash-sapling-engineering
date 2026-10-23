@@ -1,0 +1,9 @@
+[1/4] msm_c12_pilot_20261023_c0_b1 C0 window_c= min_n=0
+[2/4] msm_c12_pilot_20261023_c1_b2 C1 window_c=12 min_n=16384
+[3/4] msm_c12_pilot_20261023_c1_b3 C1 window_c=12 min_n=16384
+[4/4] msm_c12_pilot_20261023_c0_b4 C0 window_c= min_n=0
+
+=== Stage 2 c=12 pilot complete ===
+Manifest: D:\Research\zcash-sapling-engineering\experiments\metadata\msm_c12_pilot_manifest_msm_c12_pilot_20261023.csv
+Campaign log: D:\Research\zcash-sapling-engineering\experiments\raw\logs\msm_c12_pilot_20261023_campaign.log
+Next: run scripts/analyze_msm_c12_pilot.py against this manifest.
