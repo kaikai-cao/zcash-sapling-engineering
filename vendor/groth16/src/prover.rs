@@ -12,7 +12,7 @@ use bellman::{Circuit, ConstraintSystem, Index, LinearCombination, SynthesisErro
 
 use bellman::domain::{EvaluationDomain, Scalar};
 
-use bellman::multiexp::{profile_timestamp_ns, DensityTracker, FullDensity, multiexp};
+use bellman::multiexp::{DensityTracker, FullDensity, multiexp, profile_timestamp_ns};
 
 use bellman::multicore::Worker;
 
@@ -81,6 +81,95 @@ fn g16_synth_capacity_probe_enabled() -> bool {
         std::env::var("SAPLING_G16_SYNTH_CAPACITY_PROBE")
             .map(|value| value == "1")
             .unwrap_or(false)
+    })
+}
+
+/// Whether the QAP sub-stage timing probe is enabled.
+///
+/// Gated by `SAPLING_QAP_STAGE_PROBE=1`. The existing `G16_STAGE_PROFILE`
+/// treats the whole QAP/FFT region as one phase, which hides whether the
+/// remaining cost is in the three inverse FFTs, the three coset FFTs, or the
+/// O(n) element-wise passes. This probe is exploratory instrumentation only:
+/// it does not change any arithmetic and is off by default.
+fn g16_qap_stage_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_QAP_STAGE_PROBE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+/// Whether the exploratory concurrent A/B/C QAP transform is enabled.
+///
+/// Gated by `SAPLING_QAP_CONCURRENT_ABC=1`. The three inverse FFTs (and the
+/// three coset FFTs) are independent, but the baseline executes them one after
+/// another on the same Rayon pool. This switch overlaps each group to test
+/// whether the per-FFT parallel efficiency is poor enough that three smaller
+/// concurrent transforms beat three full-pool transforms. It is off by default
+/// and is an experiment, not a production default.
+fn g16_qap_concurrent_abc_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_QAP_CONCURRENT_ABC")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+/// Whether the exploratory three-pool A/B/C QAP transform is enabled.
+///
+/// Gated by `SAPLING_QAP_ABC_POOLS=1`. Unlike the all-thread nested-scope
+/// variant, this assigns one persistent two-thread Rayon pool to each of the
+/// independent `a/b/c` transforms. The single-transform parallel efficiency at
+/// eight threads is low, so three two-thread transforms can have higher
+/// aggregate throughput even though two of the eight logical CPUs stay idle.
+/// It is off by default and is an experiment, not a production default.
+fn g16_qap_abc_pools_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_QAP_ABC_POOLS")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+/// Whether the three A/B/C pools should pipeline `ifft -> coset_fft` per
+/// letter instead of synchronizing between the two transform groups.
+///
+/// Gated by `SAPLING_QAP_ABC_PIPELINE=1` and only meaningful together with
+/// `SAPLING_QAP_ABC_POOLS=1`. It is off by default.
+fn g16_qap_abc_pipeline_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_QAP_ABC_PIPELINE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+#[cfg(feature = "multicore")]
+fn g16_qap_abc_pools() -> &'static [rayon::ThreadPool; 3] {
+    static POOLS: std::sync::OnceLock<[rayon::ThreadPool; 3]> = std::sync::OnceLock::new();
+
+    POOLS.get_or_init(|| {
+        let pools: [rayon::ThreadPool; 3] = std::array::from_fn(|index| {
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(2)
+                .thread_name(move |thread| format!("qap-abc-{index}-{thread}"))
+                .build()
+                .expect("build QAP A/B/C pool")
+        });
+        // Spawn the workers before the first measured proof so pool startup is
+        // not charged to a transform.
+        for pool in &pools {
+            pool.install(|| {});
+        }
+        pools
     })
 }
 
@@ -330,8 +419,7 @@ where
     let r = E::Fr::random(&mut rng);
     let s = E::Fr::random(&mut rng);
 
-    let random_scalars_ms = random_start
-        .map(|start| start.elapsed().as_secs_f64() * 1000.0);
+    let random_scalars_ms = random_start.map(|start| start.elapsed().as_secs_f64() * 1000.0);
 
     let proof = create_proof::<E, C, P>(circuit, params, r, s);
 
@@ -368,7 +456,8 @@ where
         profile_marks[0] = Some(std::time::Instant::now());
         eprintln!(
             "G16_TIMELINE event=proof_body_start proof_id={} t_ns={}",
-            proof_id, profile_timestamp_ns(),
+            proof_id,
+            profile_timestamp_ns(),
         );
     }
 
@@ -404,12 +493,10 @@ where
     if g16_synth_capacity_probe_enabled() {
         let scalar_bytes = std::mem::size_of::<Scalar<E::Fr>>();
         let field_bytes = std::mem::size_of::<E::Fr>();
-        let abc_capacity_bytes = (prover.a.capacity() + prover.b.capacity()
-            + prover.c.capacity())
-            * scalar_bytes;
-        let witness_capacity_bytes = (prover.input_assignment.capacity()
-            + prover.aux_assignment.capacity())
-            * field_bytes;
+        let abc_capacity_bytes =
+            (prover.a.capacity() + prover.b.capacity() + prover.c.capacity()) * scalar_bytes;
+        let witness_capacity_bytes =
+            (prover.input_assignment.capacity() + prover.aux_assignment.capacity()) * field_bytes;
         eprintln!(
             "G16_SYNTH_CAPACITY a_len={} a_cap={} b_len={} b_cap={} c_len={} c_cap={} input_len={} input_cap={} aux_len={} aux_cap={} scalar_bytes={} abc_capacity_bytes={} witness_capacity_bytes={} live_bytes={}",
             prover.a.len(),
@@ -440,42 +527,221 @@ where
 
     // QAP polynomial transforms and H-query exponent preparation.
     let h_exponents = {
+        let qap_probe = g16_qap_stage_probe_enabled();
+        #[cfg(feature = "multicore")]
+        let qap_abc_pools = g16_qap_abc_pools_enabled();
+        #[cfg(not(feature = "multicore"))]
+        let qap_abc_pools = false;
+        let qap_abc_pipeline = g16_qap_abc_pipeline_enabled();
+        #[cfg(feature = "multicore")]
+        let abc_pools = qap_abc_pools.then(g16_qap_abc_pools);
+        let mut qap_marks: [Option<std::time::Instant>; 14] = [None; 14];
+        if qap_probe {
+            qap_marks[0] = Some(std::time::Instant::now());
+        }
+
         let mut a = EvaluationDomain::from_coeffs(prover.a)?;
         let mut b = EvaluationDomain::from_coeffs(prover.b)?;
         let mut c = EvaluationDomain::from_coeffs(prover.c)?;
+        if qap_probe {
+            qap_marks[1] = Some(std::time::Instant::now());
+        }
         g16_mem_phase_boundary("qap_domains_built");
-        a.ifft(&worker);
-        a.coset_fft(&worker);
-        b.ifft(&worker);
-        b.coset_fft(&worker);
-        c.ifft(&worker);
-        c.coset_fft(&worker);
+        let qap_concurrent = g16_qap_concurrent_abc_enabled();
+        if qap_abc_pools {
+            #[cfg(feature = "multicore")]
+            {
+                let pools = abc_pools.expect("QAP ABC pools initialized");
+                if qap_abc_pipeline {
+                    // Pipeline per letter: a's coset can start as soon as a's
+                    // ifft finishes, without waiting for b/c's ifft.
+                    let worker_ref = &worker;
+                    std::thread::scope(|scope| {
+                        let a = &mut a;
+                        let b = &mut b;
+                        let c = &mut c;
+                        scope.spawn(move || {
+                            pools[0].install(|| {
+                                a.ifft(worker_ref);
+                                a.coset_fft(worker_ref);
+                            })
+                        });
+                        scope.spawn(move || {
+                            pools[1].install(|| {
+                                b.ifft(worker_ref);
+                                b.coset_fft(worker_ref);
+                            })
+                        });
+                        scope.spawn(move || {
+                            pools[2].install(|| {
+                                c.ifft(worker_ref);
+                                c.coset_fft(worker_ref);
+                            })
+                        });
+                    });
+                    if qap_probe {
+                        qap_marks[2] = Some(std::time::Instant::now());
+                    }
+                } else {
+                    let worker_ref = &worker;
+                    std::thread::scope(|scope| {
+                        let a = &mut a;
+                        let b = &mut b;
+                        let c = &mut c;
+                        scope.spawn(move || pools[0].install(|| a.ifft(worker_ref)));
+                        scope.spawn(move || pools[1].install(|| b.ifft(worker_ref)));
+                        scope.spawn(move || pools[2].install(|| c.ifft(worker_ref)));
+                    });
+                    if qap_probe {
+                        qap_marks[2] = Some(std::time::Instant::now());
+                    }
+                    let worker_ref = &worker;
+                    std::thread::scope(|scope| {
+                        let a = &mut a;
+                        let b = &mut b;
+                        let c = &mut c;
+                        scope.spawn(move || pools[0].install(|| a.coset_fft(worker_ref)));
+                        scope.spawn(move || pools[1].install(|| b.coset_fft(worker_ref)));
+                        scope.spawn(move || pools[2].install(|| c.coset_fft(worker_ref)));
+                    });
+                    if qap_probe {
+                        qap_marks[3] = Some(std::time::Instant::now());
+                    }
+                }
+            }
+        } else if qap_concurrent {
+            // The three transforms are independent. Use nested Rayon scopes
+            // so their shuffle/copy phases can overlap on the shared pool.
+            let worker_ref = &worker;
+            worker.scope(0, |scope, _| {
+                let a = &mut a;
+                let b = &mut b;
+                let c = &mut c;
+                scope.spawn(move |_| a.ifft(worker_ref));
+                scope.spawn(move |_| b.ifft(worker_ref));
+                scope.spawn(move |_| c.ifft(worker_ref));
+            });
+            if qap_probe {
+                qap_marks[2] = Some(std::time::Instant::now());
+            }
+            let worker_ref = &worker;
+            worker.scope(0, |scope, _| {
+                let a = &mut a;
+                let b = &mut b;
+                let c = &mut c;
+                scope.spawn(move |_| a.coset_fft(worker_ref));
+                scope.spawn(move |_| b.coset_fft(worker_ref));
+                scope.spawn(move |_| c.coset_fft(worker_ref));
+            });
+            if qap_probe {
+                qap_marks[3] = Some(std::time::Instant::now());
+            }
+        } else {
+            a.ifft(&worker);
+            if qap_probe {
+                qap_marks[2] = Some(std::time::Instant::now());
+            }
+            a.coset_fft(&worker);
+            if qap_probe {
+                qap_marks[3] = Some(std::time::Instant::now());
+            }
+            b.ifft(&worker);
+            if qap_probe {
+                qap_marks[4] = Some(std::time::Instant::now());
+            }
+            b.coset_fft(&worker);
+            if qap_probe {
+                qap_marks[5] = Some(std::time::Instant::now());
+            }
+            c.ifft(&worker);
+            if qap_probe {
+                qap_marks[6] = Some(std::time::Instant::now());
+            }
+            c.coset_fft(&worker);
+            if qap_probe {
+                qap_marks[7] = Some(std::time::Instant::now());
+            }
+        }
         g16_mem_phase_boundary("qap_ffts_done");
 
         a.mul_assign(&worker, &b);
         drop(b);
+        if qap_probe {
+            qap_marks[8] = Some(std::time::Instant::now());
+        }
         g16_mem_phase_boundary("qap_mul_ab_done");
         a.sub_assign(&worker, &c);
         drop(c);
+        if qap_probe {
+            qap_marks[9] = Some(std::time::Instant::now());
+        }
         g16_mem_phase_boundary("qap_sub_c_done");
         a.divide_by_z_on_coset(&worker);
+        if qap_probe {
+            qap_marks[10] = Some(std::time::Instant::now());
+        }
         a.icoset_fft(&worker);
+        if qap_probe {
+            qap_marks[11] = Some(std::time::Instant::now());
+        }
         g16_mem_phase_boundary("qap_divide_icoset_done");
         let mut a = a.into_coeffs();
         let a_len = a.len() - 1;
         a.truncate(a_len);
+        if qap_probe {
+            qap_marks[12] = Some(std::time::Instant::now());
+        }
         g16_mem_phase_boundary("qap_into_coeffs_done");
         let h_source_len = a.len();
         let h_source_elem_size = a
             .first()
             .map(|element| std::mem::size_of_val(element))
             .unwrap_or(0);
-        Arc::new(collect_conversion(
+        let result = Arc::new(collect_conversion(
             "h_exponents",
             h_source_len,
             h_source_elem_size,
             a.into_iter().map(|s| s.0.into()),
-        ))
+        ));
+        if qap_probe {
+            qap_marks[13] = Some(std::time::Instant::now());
+            let duration = |start: usize, end: usize| {
+                qap_marks[start]
+                    .zip(qap_marks[end])
+                    .map(|(start, end)| end.duration_since(start).as_secs_f64() * 1000.0)
+                    .unwrap_or(f64::NAN)
+            };
+            eprintln!(
+                "G16_QAP_STAGE proof_id={} mode={} domains_ms={:.3} a_ifft_ms={:.3} a_coset_ms={:.3} b_ifft_ms={:.3} b_coset_ms={:.3} c_ifft_ms={:.3} c_coset_ms={:.3} mul_ab_ms={:.3} sub_c_ms={:.3} divide_z_ms={:.3} icoset_ms={:.3} into_coeffs_ms={:.3} h_exponents_ms={:.3} total_ms={:.3}",
+                proof_id,
+                if qap_abc_pools {
+                    if qap_abc_pipeline {
+                        "pipeline"
+                    } else {
+                        "pools"
+                    }
+                } else if qap_concurrent {
+                    "concurrent"
+                } else {
+                    "sequential"
+                },
+                duration(0, 1),
+                duration(1, 2),
+                duration(2, 3),
+                duration(3, 4),
+                duration(4, 5),
+                duration(5, 6),
+                duration(6, 7),
+                duration(7, 8),
+                duration(8, 9),
+                duration(9, 10),
+                duration(10, 11),
+                duration(11, 12),
+                duration(12, 13),
+                duration(0, 13),
+            );
+        }
+        result
     };
 
     if profile {
@@ -484,7 +750,12 @@ where
     g16_mem_phase_boundary("qap_fft_h_exponent_prep");
 
     // This call can include synchronous fallback work inside Worker::compute.
-    let h = multiexp(&worker, params.get_h(h_exponents.len())?, FullDensity, h_exponents);
+    let h = multiexp(
+        &worker,
+        params.get_h(h_exponents.len())?,
+        FullDensity,
+        h_exponents,
+    );
 
     if profile {
         profile_marks[4] = Some(std::time::Instant::now());
@@ -605,7 +876,8 @@ where
         profile_marks[6] = Some(std::time::Instant::now());
         eprintln!(
             "G16_TIMELINE event=wait_and_assembly_start proof_id={} t_ns={}",
-            proof_id, profile_timestamp_ns(),
+            proof_id,
+            profile_timestamp_ns(),
         );
     }
     g16_mem_phase_boundary("proof_scalar_terms");
