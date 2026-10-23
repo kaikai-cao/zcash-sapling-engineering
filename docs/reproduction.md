@@ -13,7 +13,9 @@ were produced under this procedure's conventions:
 - Single-thread runs **affinity-pinned to LP0** (unpinned single-thread times are
   bimodal by core placement, up to 2.6× — see README §17)
 - Switch state recorded per batch; the certified configuration has **no switch
-  variables set** (both defaults are `1` since 2026-10-18)
+  variables set** (three defaults are `1` since 2026-10-18:
+  `SAPLING_MSM_SIGNED_DIGITS`, `SAPLING_MSM_LAZY_RECODING`,
+  `SAPLING_FFT_SERIAL_SINGLE_THREAD`)
 
 ## 0. Toolchain
 
@@ -60,6 +62,40 @@ experiments\prover-smoke\target\release\msm_window_bench.exe
 # Expected: exit code 0, "correctness=cross_recoding c=13 ok",
 #           "correctness=lazy_equals_materialised c=2..20 ok", "MSM_WINDOW_BENCH=DONE".
 ```
+
+## 2.1 MSM kernel benchmark (Phase C - parameter-free, no Sapling params needed)
+
+The Phase C benchmark compares the vendored bellman MSM path against the blst
+library on identical deterministic inputs (H-query G1 n=131,071 as the primary
+load, plus four more). Its correctness layer is portable; its timings are
+host-specific (reference values below are from the 2026-10-23 measurement host).
+
+```powershell
+# Build (the harness gains the blst crate with its no-threads feature;
+# needs network for the crates.io fetch)
+cargo build --release --locked --manifest-path experiments/prover-smoke/Cargo.toml
+
+# Diagnostic smoke: one block, no raw CSV written; expect correctness_summary ok=1
+$env:MSM_KB_BLOCKS = '1'
+experiments\prover-smoke\target\release\msm_kernel_bench.exe
+
+# Full round (two conditions 0x5555/8t and 0x1/1t, ABBA-balanced arm order,
+# affinity pinned with read-back, binary hash and logs recorded):
+#   writes experiments/raw/csv/<tag>_{8t,1t,correctness}.csv and the logs
+powershell -ExecutionPolicy Bypass -File scripts\run_msm_kernel_bench.ps1
+
+# Frozen analysis (paired bootstrap 95% CI, M and P1 gates); regenerates
+# results/tables/msm_kernel_bench_<tag>_{summary,aa}.csv byte-identically
+python scripts\analyze_msm_kernel_bench.py
+```
+
+Reference values (Windows 11, i7-14700, exe a9192ccd, 2026-10-23): correctness
+52/52 per round (bellman vs blst group equality on every load, naive n=8,
+in-block checksum stability); 1t A/A paired-difference 95% CI half widths
+0.25-1.29%; **P1 = bellman_1t / blst_1t on H-query G1 = 1.9063
+(CI95 [1.8999, 1.9110])**. Full design, deviations and gates:
+`experiments/metadata/sapling_msm_kernel_stagec_preregistration_20261023.md` and
+`experiments/metadata/sapling_msm_kernel_stagec_results_20261023.md`.
 
 ## 3. Real-proof reproduction (needs parameter files)
 
