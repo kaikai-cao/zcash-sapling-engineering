@@ -2,7 +2,7 @@
 
 **文档类型：** 面向导师的结项研究报告（合成文档）
 **日期：** 2026-10-18
-**代码与数据基线：** 实验代码与数据冻结基线：`main` @ `e4a28ed`；`sapling-crypto 0.9.0`（`88a7946b…`）；`vendor/bellman 0.15.0`、`vendor/groth16 0.2.0`（含本研究插桩）。后续主分支提交（至 `7e51ca0`）仅用于报告与复现文档收尾，未改动任何实验数值；实验数值仍以各目标的一手结果文档及原始数据为准。
+**代码与数据基线：** 实验代码与数据冻结基线：`main` @ `e4a28ed`；`sapling-crypto 0.9.0`（`88a7946b…`）；`vendor/bellman 0.15.0`、`vendor/groth16 0.2.0`（含本研究插桩）。后续主分支提交（至 `7e51ca0`）仅用于报告与复现文档收尾，未改动任何实验数值；实验数值仍以各目标的一手结果文档及原始数据为准。2026-10-23 结项整理将 MSM 内核预研阶段 A/B/C 的文档、基准、脚本与原始数据合并进 `main`（合并提交 `207a296`），同样未改动任何 a–g 实验数值。
 **测量环境：** Windows 11、Intel Core i7-14700（8 P-core + 12 E-core）、32 GB RAM、Rust 1.98.1、Release、Groth16 + BLS12-381
 **证据原则：** 本报告只作合成与解释；每个结论都指向可独立复核的结果文档与原始数据（见 §8 索引）。优化结论均来自**预注册冻结后**才产生的测量，原始数据一个字节未动。
 
@@ -147,7 +147,7 @@
 | 层 | 状态 | 证据 |
 |---|---|---|
 | 同主机独立复现（干净 checkout、全新构建、不设任何开关） | **通过** | 门禁一致；台账 5/5；峰值 86,184,600 B vs 认证 86,184,607 B（**−7 B**，分配器粒度内）；prove ≈3,233 ms。 [`sapling_independent_reproduction_20261018.md`](../experiments/metadata/sapling_independent_reproduction_20261018.md) |
-| 参数无关 CI（fmt/clippy、库测试、构建、两个门禁） | **双 OS 绿** | Ubuntu CI 5/5 job（合并后 main）；Windows 本机等价复跑全过。 [`ci.yml`](../.github/workflows/ci.yml) |
+| 参数无关 CI（fmt/clippy、库测试、构建、交易 crate 检查、两个门禁） | **双 OS 绿** | Ubuntu CI 6/6 job（合并后 main；第六个 job 于 2026-10-22 增加）；Windows 本机等价复跑全过。 [`ci.yml`](../.github/workflows/ci.yml) |
 | 跨指令集摘要一致性 | **通过** | 同一提交三档构建（`x86-64` / `x86-64-v2` / `native`），FFT 门禁 12/12 摘要逐字节一致 |
 | 跨 OS 摘要一致性 | **通过** | CI 日志打印的摘要集与 Windows 捕获 12/12 逐字节一致且顺序相同（run 39116177753） |
 | **换物理机器的真实证明复现** | **开放** | 需另一台机器：门禁 + Spend 证明/验证/大小 + 多次 prove 峰值统计 + 工具链/OS/CPU/参数哈希/commit。预期内存与正确性数字可移植、计时不可移植；记录实际偏差而非要求一致。规程：[`reproduction.md`](reproduction.md) §4 |
@@ -165,6 +165,7 @@
 
 
 > **2026-10-22 更新（Stage 0）：** 交易 baseline 之后的 44 批诊断显示，8t 的损失不能只归因于 SMT（Spend `0xFFFF`→`0x5555` 为 4.22%，90% CI 跨 0；H2 部分支持）；H-query 窗口尾部被支持（`c=12`/`c=13` 的 `ns_per_add` R=0.8047，90% CI 上界 0.8465），且本负载实际 8t prove 最好的是 `c=11`（W=24，100% 尾部，657.81 ms，5.07×）。因此“继续微调窗口”不是无依据的 target h，而应作为**单独预注册的 Stage 1 自适应窗口/窗口内切分**（`W mod P` 感知、带 bucket 内存上限）来检验；8t `0x5555` 作为控制，16t 不推荐。详见 [`sapling_msm_scaling_diagnosis_results_20261022.md`](../experiments/metadata/sapling_msm_scaling_diagnosis_results_20261022.md)。
+> **2026-10-23 更新（MSM 内核预研阶段 A–C 与结项）：** 战役结项后转入 MSM 内层算法与曲线算术预研，完成三个阶段并做结项整理（[结项文档](msm_kernel_project_closeout_20261023.md)）。**阶段 A** 冻结研究状态（已认证优化及数据入口、已关闭路线及失败原因、生产配置、下一轮候选与 Go/No-Go 判据）；**阶段 B** 完成文献对照（Fan et al. JoC 2025 的最优桶集合 + endomorphism、SimdMSM TCHES 2025 依赖 AVX-512 IFMA——本机 i7-14700 仅有 AVX2，实现与加速比均不可移植、blst 的 Booth 重编码/xyzz 桶/批量仿射转换、2026 固定基预印本仅覆盖小 MSM）；**阶段 C** 建成同输入 MSM 内核基准（H-query G1 n=131,071 等 5 个负载，fixture 与计时分离）并与 blst 库单线程对照，两轮独立复现均通过预冻结门禁：**bellman 单线程 H-query G1 全 MSM 耗时为 blst 的 1.9063 倍（CI95 [1.8999, 1.9110]，P1 = GO）**；单位成本探针将差距完全归于 fill 点加公式（同一「模型操作」分母下 bellman ≈482 ns/操作、blst ≈253 ns/操作；bellman Jacobian 混合加探针实测 477 ns/数字，与 482 一致；域运算层无差距 16.29 vs 20.38 ns，reduce 层无差距）。**口径修正：** §2.1 与 §5 的「算术地板」应读作**本管线 vendored bellman 的实现级单位成本地板**——同等操作数下，成熟实现于同一主机达到约一半的单位成本。这不否定任何 a–g 认证结果（它们全部在 bellman 路径上测得且仍然成立），但「无进一步时间优化目标」的陈述范围仅限已关闭的调参路线（窗口、线程、释放方式）。阶段 D 候选（xyzz 桶 fill 内核，默认关闭、独立配置）已文档化但**未实施**；如需继续，须另立预注册，不在本次结项范围内。
 
 ## 8. 证据索引（本报告数字的出处）
 
@@ -177,6 +178,7 @@
 | 结项侦察（内存/时间地板） | `experiments/metadata/sapling_default_{stage_decomposition,time_profile}_20261018.md` |
 | 复现规程与跨配置/跨 OS 验证 | [`docs/reproduction.md`](reproduction.md)、`experiments/metadata/sapling_{independent,cross_config}_reproduction_20261018.md` |
 | MSM 多核扩展膝点（Stage 0） | [`sapling_msm_scaling_diagnosis_results_20261022.md`](../experiments/metadata/sapling_msm_scaling_diagnosis_results_20261022.md)；报告 §26；INDEX |
+| MSM 内核预研阶段 A/B/C 与 2026-10-23 结项 | [`msm_kernel_research_plan_20261023.md`](msm_kernel_research_plan_20261023.md)、[`msm_literature_survey_20261023.md`](msm_literature_survey_20261023.md)、`experiments/metadata/sapling_msm_kernel_stagec_{preregistration,results}_20261023.md`、[`msm_kernel_project_closeout_20261023.md`](msm_kernel_project_closeout_20261023.md) |
 | 原始测量数据（从不覆盖） | `experiments/raw/csv/`、`experiments/raw/logs/` |
 | 周度过程记录 | [`weekly_summary.md`](../weekly_summary.md) §13–§19 |
 

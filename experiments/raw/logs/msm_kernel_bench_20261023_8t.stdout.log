@@ -1,0 +1,35 @@
+﻿bench=msm_kernel_bench rayon_threads=8 blocks=8 runs=3 seed=0x5a17e5b3a5e2d10c arms=["bellman_8t_A", "bellman_8t_B", "blst_1t"]
+fixture load=h_query curve=G1 n=131071 bases_ms=2560.781 bellman_exponents_ms=5.469 blst_convert_ms=52.597 bases_bytes=13631384 exponent_bytes=5242840 blst_scratch_bytes=786432
+correctness load=h_query curve=G1 n=131071 check=bellman_vs_blst_bytes ok=1
+correctness load=h_query curve=G1 n=131071 check=bellman_vs_blst_roundtrip ok=1
+correctness load=h_query curve=G1 n=131071 check=checksum_stable ok=1
+correctness load=h_query curve=G1 n=131071 check=checksum_stable ok=1
+correctness load=h_query curve=G1 n=131071 check=checksum_stable ok=1
+fixture load=l_query curve=G1 n=98638 bases_ms=2286.846 bellman_exponents_ms=2.600 blst_convert_ms=43.556 bases_bytes=10258352 exponent_bytes=3945520 blst_scratch_bytes=786432
+correctness load=l_query curve=G1 n=98638 check=bellman_vs_blst_bytes ok=1
+correctness load=l_query curve=G1 n=98638 check=bellman_vs_blst_roundtrip ok=1
+correctness load=l_query curve=G1 n=98638 check=checksum_stable ok=1
+correctness load=l_query curve=G1 n=98638 check=checksum_stable ok=1
+correctness load=l_query curve=G1 n=98638 check=checksum_stable ok=1
+fixture load=ab_aux curve=G1 n=98638 bases_ms=2311.454 bellman_exponents_ms=2.702 blst_convert_ms=42.531 bases_bytes=10258352 exponent_bytes=3945520 blst_scratch_bytes=786432
+correctness load=ab_aux curve=G1 n=98638 check=bellman_vs_blst_bytes ok=1
+correctness load=ab_aux curve=G1 n=98638 check=bellman_vs_blst_roundtrip ok=1
+correctness load=ab_aux curve=G1 n=98638 check=checksum_stable ok=1
+correctness load=ab_aux curve=G1 n=98638 check=checksum_stable ok=1
+correctness load=ab_aux curve=G1 n=98638 check=checksum_stable ok=1
+fixture load=g2_aux curve=G2 n=98638 bases_ms=2436.897 bellman_exponents_ms=3.514 blst_convert_ms=103.438 bases_bytes=19727600 exponent_bytes=3945520 blst_scratch_bytes=1572864
+correctness load=g2_aux curve=G2 n=98638 check=bellman_vs_blst_bytes ok=1
+correctness load=g2_aux curve=G2 n=98638 check=bellman_vs_blst_roundtrip ok=1
+correctness load=g2_aux curve=G2 n=98638 check=checksum_stable ok=1
+correctness load=g2_aux curve=G2 n=98638 check=checksum_stable ok=1
+correctness load=g2_aux curve=G2 n=98638 check=checksum_stable ok=1
+fixture load=ic curve=G1 n=8 bases_ms=0.190 bellman_exponents_ms=0.001 blst_convert_ms=0.011 bases_bytes=832 exponent_bytes=320 blst_scratch_bytes=384
+correctness load=ic curve=G1 n=8 check=bellman_vs_blst_bytes ok=1
+correctness load=ic curve=G1 n=8 check=bellman_vs_blst_roundtrip ok=1
+correctness load=ic curve=G1 n=8 check=naive_n8 ok=1
+correctness load=ic curve=G1 n=8 check=checksum_stable ok=1
+correctness load=ic curve=G1 n=8 check=checksum_stable ok=1
+correctness load=ic curve=G1 n=8 check=checksum_stable ok=1
+correctness_summary ok=1
+MSM_KERNEL_BENCH=DONE
+

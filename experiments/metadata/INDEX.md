@@ -3,11 +3,32 @@
 > One table per research thread: where the conclusion lives, where the raw
 > evidence lives, and what the current verdict is. Generated 2026-10-18 for the
 > closed optimization campaign (targets a–g) and the measurement programme;
-> the transaction-construction row was added 2026-10-22 and the Stage 2–5 /
-> synthesis-scoping rows through 2026-10-23.
+> the transaction-construction row was added 2026-10-22, the Stage 2–5 /
+> synthesis-scoping rows through 2026-10-23, and the MSM-kernel Phase C row
+> on 2026-10-23.
 >
 > **Advisor-facing synthesis:** [`docs/sapling_proving_optimization_final_report_zh.md`](../../docs/sapling_proving_optimization_final_report_zh.md)
 > (2026-10-18) — the mainline report over the material indexed here.
+>
+> **Next-phase research status (2026-10-23):** the a–g campaign and the Stage 2–6 /
+> synthesis-scoping lines are closed; the next phase turns to MSM inner-loop
+> algorithms and curve arithmetic. Research plan:
+> [`docs/msm_kernel_research_plan_20261023.md`](../../docs/msm_kernel_research_plan_20261023.md);
+> literature survey:
+> [`docs/msm_literature_survey_20261023.md`](../../docs/msm_literature_survey_20261023.md).
+> Experiment branch `experiment/msm-kernel-20261023` (from `4454c53`) was
+> fast-forwarded into `main` at the 2026-10-23 closeout (merge `207a296`);
+> production defaults unchanged; pre-registration required before any new
+> measurement.
+>
+> **Phase C complete (2026-10-23):** A/A calibration + MSM kernel benchmark vs blst
+> (pre-registration `sapling_msm_kernel_stagec_preregistration_20261023.md`, results
+> `sapling_msm_kernel_stagec_results_20261023.md`). Verdict: **P1 = GO** — bellman
+> single-thread H-query G1 MSM is 1.90× blst (R = 1.9063, CI95 [1.8999, 1.9110],
+> reproduced over two independent rounds); unit-cost probe attributes the gap to the
+> fill-layer point-add formula (bellman Jacobian mixed add 477 ns/digit vs blst's
+> internal xyzz path ≈ 253 ns/digit), not to field arithmetic or the reduce stage.
+> Next: Phase D candidate pre-registration (xyzz bucket fill kernel, default-off).
 >
 > **File classes in this repository** — do not merge these roles:
 >
@@ -52,10 +73,11 @@ Protocol: [`sapling_optimization_validation_protocol_20261017.md`](sapling_optim
 | **QAP/FFT sub-stage scoping (2026-10-23)** | exploratory note `sapling_qap_fft_scoping_note_20261023.md`; no pre-registration/threshold; report §30 | `experiments/metadata/qap_stage_probe_manifest_20261023.csv`; `experiments/metadata/qap_partitioned_scouting_manifest_20261023.csv`; `experiments/raw/csv/sapling_qap_stage_probe_20261023_*`; `experiments/raw/logs/sapling_qap_stage_probe_20261023_*`; `results/tables/sapling_qap_stage_probe_*_20261023.csv` | **exploratory only; no formal Stage 4, no default change**: QAP median 115.268 ms; seven FFTs **105.598 ms (91.6%)**; all-8-thread concurrent A/B/C unstable (pooled descriptive −3.4% QAP / −0.6% body); balanced 3×2 pool+pipeline ABBA QAP **118.803 → 96.424 ms (−18.84%)**, prove **716.308 → 688.440 ms (−3.89%)**, no-reversal pass (max 690.794 < min 702.498) but below 5%; later three-arm −5.09% is order-confounded and not used; 130/130 proof rows verified; QAP/FFT scheduling/partitioning line closed |
 | **FFT arithmetic scoping (Stage 5 pre-study, 2026-10-23)** | pre-registration `sapling_fft_arith_scoping_preregistration_20261023.md`; results `sapling_fft_arith_scoping_results_20261023.md`; report §31 | `experiments/metadata/fft_arith_scoping_manifest_sapling_fft_arith_scoping_radix4_20261023.csv`; `experiments/metadata/fft_arith_scoping_manifest_sapling_fft_arith_scoping_20261023.csv`; `experiments/raw/csv/sapling_fft_arith_scoping_radix4_20261023_*`; `experiments/raw/logs/sapling_fft_arith_scoping_radix4_20261023_*`; `results/tables/sapling_fft_arith_scoping_radix4_20261023_summary.csv` | **MARGINAL; FFT arithmetic line closed, no formal Stage 5, no default change**: precomputed-twiddle A bit-exact; 1t 2^17 **45.809 → 29.490 ms (1.553×)**, 1t 2^14 **4.424 → 2.991 ms (1.479×)**; 8t full transform **14.980 → 12.021 ms (1.246×)**, conditional radix-4 B **12.063 ms (1.242×)**; both below frozen **1.25×** S3 gate; 234/234 decision-set correctness rows exact; `0x5555` mask and missing runtime op counter documented as deviations |
 | **Circuit-synthesis sub-stage scoping (2026-10-23)** | exploratory note `sapling_synthesis_scoping_note_20261023.md`; no pre-registration/threshold; report §32 | `experiments/raw/csv/sapling_spend_stage_profile_{1792728844494,1792728878993,1792729158774}.csv`; `experiments/raw/logs/sapling_spend_combined_profile_20261023_121334_581.stderr.log`, `..._121413_335.stderr.log`, `..._121848_856.stderr.log`; `experiments/metadata/sapling_spend_combined_profile_{1792728844494,1792728878993,1792729158774}.md` | **NO_GO; synthesis line closed, no formal Stage 6, no default change**: 8t `0x5555`, 5 proofs/arm; clean probe-on synthesis **119.437 ms** / body **641.695 ms** / A/B/C `eval` **14.384/5.091/10.211 ms** (total **29.744 ms**, **4.63% body**); probe-off synthesis **103.396 ms** / body **643.080 ms**; probe adds ~**16 ms**; attribution batch synthesis **129.980 ms** / body **643.390 ms**, `alloc` **54.266 ms**, `enforce` **57.897 ms** (LC **12.947 ms**, `eval` **29.827 ms**, other **15.724 ms**), residual **17.817 ms**; no single prover-side component ≥5%; 15/15 proofs verified |
+| **MSM kernel Phase C: A/A calibration + blst control (2026-10-23)** | pre-registration `sapling_msm_kernel_stagec_preregistration_20261023.md`; results `sapling_msm_kernel_stagec_results_20261023.md` | `experiments/raw/csv/msm_kernel_bench_20261023_{8t,1t}.csv`, `..._v2_*` (24-block reproduction), `..._correctness.csv`; `experiments/raw/logs/msm_kernel_bench_20261023_*`, `msm_arith_probe_20261023.stdout.log`; `results/tables/msm_kernel_bench_20261023_{summary,aa}.csv`, `..._v2_*` | **P1 = GO; Phase D kernel candidate approved**: new `msm_kernel_bench` (same deterministic fixture, 5 loads incl. H-query G1 n=131,071; bellman production path 1t/8t under two labels vs blst `no-threads` single-thread control); correctness 52/52 + 52/52; 1t A/A half widths 0.25–1.29% (PASS); 8t only reference (h_query 0.97% at 24 blocks; small loads ~3%); **P1 = bellman_1t/blst_1t on H-query = 1.9063 (CI95 [1.8999, 1.9110]), reproduced** (round 1: 1.9005); unit-cost probe: field layer no gap (16.29 vs 20.38 ns), fill Jacobian mixed add **477 ns/digit** vs blst internal xyzz ≈ 253 ns/digit back-computed, reduce no gap → gap attributed to fill point-add formula; candidate: xyzz bucket fill kernel, default-off — documented for future separately-approved work; not implemented at the 2026-10-23 closeout (see [closeout](../../docs/msm_kernel_project_closeout_20261023.md)) |
 
 ## Reproducing
 
-- **Parameter-free checks (CI):** `.github/workflows/ci.yml` — fmt/clippy on the study crate, vendored-crate compile + library tests, release build, and the two deterministic gates (FFT path digests across switch states; MSM signed/unsigned + lazy/materialised equality). Status 2026-10-18: green on the merged `main` (Ubuntu runners) and re-verified locally on Windows; the gates job prints the certified digest set for cross-platform comparison.
+- **Parameter-free checks (CI):** `.github/workflows/ci.yml` — fmt/clippy on the study crate, vendored-crate compile + library tests, release build, and the two deterministic gates (FFT path digests across switch states; MSM signed/unsigned + lazy/materialised equality). Status 2026-10-18: green on the merged `main` (Ubuntu runners) and re-verified locally on Windows; the gates job prints the certified digest set for cross-platform comparison. Re-verified at the 2026-10-23 closeout (PR #17): 6/6 jobs success (runs 39950401559 / 39950481873), plus a local re-run of both gates on Windows (see [`docs/msm_kernel_project_closeout_20261023.md`](../../docs/msm_kernel_project_closeout_20261023.md)).
 - **Real-proof reproduction (needs ~51 MB Sapling parameter files, not in-repo):** [`docs/reproduction.md`](../../docs/reproduction.md).
 - **Analysis scripts:** `scripts/analyze_*.py` (per-target statistics, byte-identical to the committed derived tables) and `scripts/run_*.ps1` (campaign drivers). `scripts/README.md` records which scripts are historical one-offs.
 
