@@ -1,0 +1,30 @@
+metric,scope,n,value,threshold,status,note
+median_ms,1t,1024,0.209,,,impl=baseline; pooled=0.208800; min=0.201100; max=0.474700; n=144
+median_ms,1t,1024,0.1973,,,impl=cand_radix2_precomputed; pooled=0.192050; min=0.182300; max=0.683400; n=72
+median_ms,1t,1024,0.2618,,,impl=mirror_onfly; pooled=0.253600; min=0.242400; max=0.447700; n=72
+median_ms,1t,8192,2.07765,,,impl=baseline; pooled=2.061000; min=1.986000; max=2.915400; n=144
+median_ms,1t,8192,1.39825,,,impl=cand_radix2_precomputed; pooled=1.409200; min=1.331800; max=2.135800; n=72
+median_ms,1t,8192,2.16475,,,impl=mirror_onfly; pooled=2.173200; min=2.065000; max=2.847100; n=72
+median_ms,1t,16384,4.4244,,,impl=baseline; pooled=4.416750; min=4.264400; max=12.793500; n=144
+median_ms,1t,16384,2.99085,,,impl=cand_radix2_precomputed; pooled=2.927200; min=2.779100; max=4.005200; n=72
+median_ms,1t,16384,4.5365,,,impl=mirror_onfly; pooled=4.565300; min=4.402900; max=7.624000; n=72
+median_ms,1t,131072,45.80905,,,impl=baseline; pooled=45.813700; min=44.041400; max=55.647100; n=144
+median_ms,1t,131072,29.49025,,,impl=cand_radix2_precomputed; pooled=29.385500; min=28.112900; max=38.464900; n=72
+median_ms,1t,131072,46.51675,,,impl=mirror_onfly; pooled=46.578200; min=45.174200; max=50.494800; n=72
+median_ms,8t,131072,14.9803,,,impl=baseline; pooled=14.937250; min=12.817700; max=28.205600; n=216
+median_ms,8t,131072,12.02085,,,impl=cand_radix2_precomputed; pooled=12.079050; min=10.540200; max=20.041500; n=72
+median_ms,8t,131072,12.0627,,,impl=cand_radix4_precomputed; pooled=12.235150; min=10.637200; max=20.952600; n=72
+median_ms,8t,131072,14.57935,,,impl=mirror_onfly; pooled=14.482650; min=12.566000; max=25.605200; n=72
+control_ratio,harness,,,<=10% deviation,PASS,1t/n=16384:0.9753; 1t/n=131072:0.9848; 8t/n=131072:1.0275
+correctness,all,,0,0 mismatches,PASS,
+checksum_consistency,all,,0,0 inconsistent groups,PASS,
+op_count_ratio,1t,16384,0.571363,<=0.60 (static),PASS,baseline=229376; candidate=131057; runtime counter not instrumented
+op_count_ratio,1t,131072,0.558815,<=0.60 (static),PASS,baseline=2228224; candidate=1245166; runtime counter not instrumented
+table_bytes_1t,1t,131072,2097152,2621440,PASS,largest per-stage table
+table_bytes_8t_shared,8t,131072,524256,2621440,PASS,shared 2^14 full table; private per thread=0
+S1_speedup,1t,131072,1.553363,1.3,GO,baseline / candidate A
+S2_speedup,1t,16384,1.479312,1.25,GO,baseline / candidate A
+S3_radix2_speedup,8t,131072,1.246193,1.25,MARGINAL,baseline / candidate A; includes shuffle/copy
+S3_radix4_speedup,8t,131072,1.24187,1.25,MARGINAL,baseline / conditional candidate B; includes shuffle/copy
+S3_speedup,8t,131072,1.246193,1.25,MARGINAL,best of candidate A and conditional B
+overall,all,,MARGINAL,GO requires C0-C3 and S1-S3 GO,MARGINAL,MARGINAL may test candidate B under the same frozen gates

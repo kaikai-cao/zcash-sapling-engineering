@@ -1,0 +1,27 @@
+﻿tag=sapling_fft_arith_scoping_radix4_20261023
+head=e41f1f858139eae747bc167c01895a49cfbd5086
+prereg_sha256=0148d93569505e9ea50d9163f517692cbc3cf7cdcd1b300f20a57cca66235d47
+binary_sha256=a997593b62f0f001efc6b74a5475e4346b34f98b1eed0dc8ffb3e99e1404c152
+rustc=rustc 1.98.1 (48a229cea 2026-09-01)
+cargo=cargo 1.98.1 (797e8a9bc 2026-08-05)
+logical_processors=28
+batches=9
+8t_primary_mask=0x5555 (deviation from prereg 0xFFFF; Stage 4 matched)
+batch arm=1t batch=1 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=2 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=3 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=4 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=5 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=6 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=7 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=8 affinity=0x1 exit=0 rows=156
+batch arm=1t batch=9 affinity=0x1 exit=0 rows=156
+batch arm=8t batch=1 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=2 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=3 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=4 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=5 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=6 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=7 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=8 affinity=0x5555 exit=0 rows=68
+batch arm=8t batch=9 affinity=0x5555 exit=0 rows=68
