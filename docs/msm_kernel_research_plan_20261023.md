@@ -41,7 +41,10 @@
 
 ## 3. 当前生产配置与实验环境
 
-- **代码状态**：main = `a705f508d1e8a6d01b7b7136f7564ccf8633ca0a`（PR #17，MSM 内核预研阶段 A–C 结项合入；此前阶段 A 冻结时的基线为 `4454c53`，已过时）；CI 6 job 全绿。
+- **代码状态**（两项分列，避免把历史基线误写为最新提交）：
+  - 当前 main HEAD：`6b482896cb355ad3b9588f793c7af294809932ba`（PR #18，纯文档状态同步，无代码改动）；
+  - 阶段 C 测量及生产代码基线：`a705f508d1e8a6d01b7b7136f7564ccf8633ca0a`（PR #17，阶段 A–C 结项合入；阶段 C 全部测量均在该基线上的生产代码完成）；更早的阶段 A 冻结基线 `4454c53` 已过时。
+- CI 6 job 全绿（PR #18 的 pull_request 运行与合并后 main 的 push 运行均 6/6 success）。
 - **主机**：Intel Core i7-14700（8 P-core + 12 E-core，28 线程；Intel ARK 官方指令集规格为 SSE4.1 / SSE4.2 / AVX2，**不含 AVX-512**）；32 GB 内存；Windows 11；Rust 1.98.1；release 构建。
 - **协议栈**：Groth16 / BLS12-381；sapling-crypto 0.9.0（锁定 `88a7946b…`）；本地 vendor/bellman 0.15.0 与 vendor/groth16 0.2.0。
 - **主测试条件**：8 P 核固定亲和性（`0xFFFF` 或 `0x5555` 按实验预设），`RAYON_NUM_THREADS=8`；预热 + 多次正式测量取中位数。

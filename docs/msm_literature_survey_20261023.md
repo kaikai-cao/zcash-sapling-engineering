@@ -30,7 +30,7 @@
 
 - AVX512-IFMA 实例化六种点加引擎（三种坐标系统 × G1/G2）；无写冲突架构 + 任务级/循环级并行 + 三层缓冲；点去重与 "Three-Stage" 内存优化。
 - 结果：AVX-MSM 对 Pippenger 最高 27.86×（BLS12-381 / RELIC）；AVX-ZK 集成 libsnark 后对 libsnark 11.53×–20.26×。
-- **硬件约束（关键）**：依赖 AVX-512 IFMA；i7-14700 官方规格只有 AVX2（Intel ARK 页明示指令集扩展为 SSE4.1 / SSE4.2 / AVX2），因此**实现与加速比均不可直接移植**。可借鉴的是与硬件无关的思想（点去重、内存分级），但 Sapling H-query 的点基本互异，点去重收益存疑，需在阶段 C 用真实输入分布验证。
+- **硬件约束（关键）**：依赖 AVX-512 IFMA；i7-14700 官方规格只有 AVX2（Intel ARK 页明示指令集扩展为 SSE4.1 / SSE4.2 / AVX2），因此**实现与加速比均不可直接移植**。可借鉴的是与硬件无关的思想（点去重、内存分级），但 Sapling H-query 的点基本互异，点去重收益尚未单独确认；若后续将该方向列为候选，应使用真实 Sapling 查询的输入分布进行验证。
 - artifact：`github.com/oooldmoon/SimdMSM`（GPL-3.0；许可证有传染性，仅作参考，勿并入 vendor）。
 
 ### 2.3 blst 的批量点累加实现（src/multi_scalar.c，2026-10-23 读取核查）
