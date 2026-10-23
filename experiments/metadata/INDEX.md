@@ -77,7 +77,7 @@ Protocol: [`sapling_optimization_validation_protocol_20261017.md`](sapling_optim
 
 ## Reproducing
 
-- **Parameter-free checks (CI):** `.github/workflows/ci.yml` — fmt/clippy on the study crate, vendored-crate compile + library tests, release build, and the two deterministic gates (FFT path digests across switch states; MSM signed/unsigned + lazy/materialised equality). Status 2026-10-18: green on the merged `main` (Ubuntu runners) and re-verified locally on Windows; the gates job prints the certified digest set for cross-platform comparison.
+- **Parameter-free checks (CI):** `.github/workflows/ci.yml` — fmt/clippy on the study crate, vendored-crate compile + library tests, release build, and the two deterministic gates (FFT path digests across switch states; MSM signed/unsigned + lazy/materialised equality). Status 2026-10-18: green on the merged `main` (Ubuntu runners) and re-verified locally on Windows; the gates job prints the certified digest set for cross-platform comparison. Re-verified at the 2026-10-23 closeout (PR #17): 6/6 jobs success (runs 39950401559 / 39950481873), plus a local re-run of both gates on Windows (see [`docs/msm_kernel_project_closeout_20261023.md`](../../docs/msm_kernel_project_closeout_20261023.md)).
 - **Real-proof reproduction (needs ~51 MB Sapling parameter files, not in-repo):** [`docs/reproduction.md`](../../docs/reproduction.md).
 - **Analysis scripts:** `scripts/analyze_*.py` (per-target statistics, byte-identical to the committed derived tables) and `scripts/run_*.ps1` (campaign drivers). `scripts/README.md` records which scripts are historical one-offs.
 
