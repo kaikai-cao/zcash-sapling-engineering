@@ -211,8 +211,8 @@ try {
         $env:SAPLING_OVERLAP_ARM = $(if ($item.Arm -eq 'S0') { 'seq' } else { 'conc2' })
 
         $started = Get-UtcNow
-        $stdoutPath = Join-Path $logDir "${item.Label}.stdout.log"
-        $stderrPath = Join-Path $logDir "${item.Label}.stderr.log"
+        $stdoutPath = Join-Path $logDir ("{0}.stdout.log" -f $item.Label)
+        $stderrPath = Join-Path $logDir ("{0}.stderr.log" -f $item.Label)
         foreach ($path in @($stdoutPath, $stderrPath)) {
             if (Test-Path -LiteralPath $path) {
                 throw "Refusing to overwrite existing batch log: $path"
