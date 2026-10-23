@@ -525,6 +525,15 @@ if (-not [string]::IsNullOrWhiteSpace($rawWindowOverride)) {
     $windowOverride = [int]$rawWindowOverride
 }
 
+$windowMinN = 0
+$rawWindowMinN = [Environment]::GetEnvironmentVariable('SAPLING_MSM_WINDOW_MIN_N', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($rawWindowMinN)) {
+    if ($rawWindowMinN -notmatch '^\d+$') {
+        throw "Invalid SAPLING_MSM_WINDOW_MIN_N: $rawWindowMinN"
+    }
+    $windowMinN = [int]$rawWindowMinN
+}
+
 $adaptiveWindow = $false
 $rawAdaptiveWindow = [Environment]::GetEnvironmentVariable('SAPLING_MSM_ADAPTIVE_WINDOW', 'Process')
 if (-not [string]::IsNullOrWhiteSpace($rawAdaptiveWindow)) {
@@ -582,7 +591,7 @@ function Get-ExpectedAdaptiveWindow {
 function Get-ExpectedWindow {
     param([hashtable]$Query)
 
-    if ($null -ne $windowOverride) {
+    if ($null -ne $windowOverride -and [int]$Query.Count -ge $windowMinN) {
         return $windowOverride
     }
     if ($signedRecoding -and $adaptiveWindow -and [int]$Query.Count -ge 16384) {
@@ -982,6 +991,8 @@ $report = @"
 - Run data label: $RunDataLabel
 - Branch counters: $BranchCounters
 - Fine-grained MSM inner-stage timing: $InnerStageTiming
+- Explicit MSM window override: $(if ($null -ne $windowOverride) { $windowOverride } else { 'default' })
+- Explicit MSM window minimum exponent count: $windowMinN
 - Force async worker: $($ForceAsyncWorker.IsPresent)
 - Processor affinity mask: $AffinityMask
 - Processor affinity readback: 0x$('{0:X}' -f $effectiveAffinity)
