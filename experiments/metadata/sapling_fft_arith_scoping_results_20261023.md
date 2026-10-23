@@ -28,10 +28,16 @@ radix-4 为 **1.242×**，没有补上差距。按预注册规则，本轮为 **
 | 批次 | 每个 tag 9 个 1t 批 + 9 个 8t 批；每批 3 次预热、9 次计时、丢弃 run 1，ABBA 交替 |
 | 1t 亲和性 | `0x1`，`RAYON_NUM_THREADS=1`，`SAPLING_FFT_SERIAL_SINGLE_THREAD=1` |
 | 8t 亲和性 | `0x5555`，`RAYON_NUM_THREADS=8`（与 Stage 4 的 8t 口径一致；见 §6 偏差） |
-| 判定集 HEAD | `e41f1f858139eae747bc167c01895a49cfbd5086` |
+| 判定集测量 HEAD | `e41f1f858139eae747bc167c01895a49cfbd5086` |
 | 判定集二进制 | `a997593b62f0f001efc6b74a5475e4346b34f98b1eed0dc8ffb3e99e1404c152` |
 | 复现集二进制 | `05337c088443093c3f11fe29f1e391f5649ac86a96eef01bccf3853740241d5c` |
 | 编译器 | `rustc 1.98.1 (48a229cea 2026-09-01)` |
+
+判定集测量完成后，源码只追加了 crate 级 clippy allow（`assign_op_pattern`、
+`explicit_counter_loop`、`manual_is_multiple_of`、`unusual_byte_groupings`），
+目的是保持 baseline/mirror 的逐行表达式；kernel 表达式没有改写。因此当前分支
+HEAD 会晚于测量 HEAD，但正式 raw 对应的二进制仍是 `a997…`，本轮不重跑、不覆盖
+raw，也不把新构建的二进制冒充测量二进制。
 
 测量代码是独立 bench 二进制
 `experiments/prover-smoke/src/bin/fft_arith_bench.rs`；它不链接进证明器，不修改
@@ -155,6 +161,11 @@ FFT 84.7 ms、QAP 94.4 ms（约 −18% QAP、body 约 −2.9%）。这只说明�
    合并。8t 的 S3 点估计仍应视为对系统负载敏感的区间，而不是精确常数。
 6. **未改生产代码/默认值：** `vendor/bellman/src/domain.rs` 未修改；
    `SAPLING_QAP_*`、MSM 窗口等实验开关保持原默认；没有生成证明或交易。
+7. **测量后 clippy-only 变更：** 正式 raw 完成后，bench 源码只加了 crate 级
+   `allow` 以保留 baseline/mirror 的逐行表达式，并让 CI 的 `-D warnings` 通过；
+   kernel 代码没有改写。当前分支 HEAD 晚于测量 HEAD，测量二进制仍是
+   `a997…`；没有重跑正式集、没有覆盖 raw。重跑本地 correctness 检查仍为
+   8t 14/14、1t 12/12 exact。
 
 ---
 

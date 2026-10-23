@@ -19,6 +19,16 @@
 //! `SAPLING_FFT_SERIAL_SINGLE_THREAD=1` so the production baseline is the
 //! in-place serial FFT.
 
+// This harness deliberately keeps the production kernel's expression forms so
+// that the baseline and mirror paths stay line-for-line comparable.  Rewriting
+// them only to satisfy style lints would weaken that comparison.
+#![allow(
+    clippy::assign_op_pattern,
+    clippy::explicit_counter_loop,
+    clippy::manual_is_multiple_of,
+    clippy::unusual_byte_groupings
+)]
+
 use bellman::domain::{EvaluationDomain, Scalar as DomainScalar};
 use bellman::multicore::Worker;
 use bls12_381::Scalar;
