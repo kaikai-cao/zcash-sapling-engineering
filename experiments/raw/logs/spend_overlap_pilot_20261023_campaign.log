@@ -1,0 +1,18 @@
+﻿Stage 3 independent Spend overlap pilot
+tag=spend_overlap_pilot_20261023
+head=4950c98d17efb576b6262d0f2b6464d19b30e76d
+prereg=experiments/metadata/sapling_spend_overlap_pilot_preregistration_20261023.md
+prereg_sha256=15758a3a6b1412c317188d62b33815f1008805fb6d6465a389086568488deaf9
+binary=D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\spend_overlap_pilot.exe
+binary_sha256=a8b06e1181d7c060a3bec0b971f3c205770e2bf74f3608f86c050a5e53584df1
+params=D:\Research\zcash-params\sapling-spend.params
+params_sha256=8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13
+proofs=8
+warmups=1
+prebuild_stdout=D:\Research\zcash-sapling-engineering\experiments\raw\logs\spend_overlap_pilot_20261023_prebuild.stdout.log
+prebuild_stderr=D:\Research\zcash-sapling-engineering\experiments\raw\logs\spend_overlap_pilot_20261023_prebuild.stderr.log
+start=2026-10-23T01:57:06.2844866Z
+
+end=2026-10-23T01:57:06.2969455Z
+failed=False
+rows=0
