@@ -406,6 +406,8 @@ The positive control is decisive for interpretation: **`C4/C0 = 0.999`** (90% CI
 
 **Verdict: Stage 1b is negative; no default changed.** The Stage 0 `c=11` 657.81 ms result was a cross-campaign point estimate and did not survive the same-campaign control (formal `C4` 679.60 ms, `C0` 680.24 ms). The executable experiment paths remain available only through explicit environment variables. The result document records the Stage 1a pilot, the pre-batch launch failure, the smoke/excluded batches, and the Output/transaction per-batch log-overwrite caveat.
 
+A post-merge exploratory same-process check (`msm_window_bench`, 8t `0x5555`, c=10–13, forward and reverse order) also found no intrinsic `c=11` advantage: c=11 was 1.6%/6.3% slower than c=13, while c=12 was 1.0–2.8% faster. The absolute run-to-run drift (10–16%) was larger than the window differences. This is mechanism evidence only, not a new formal experiment or a default-change authorisation; see [`sapling_msm_adaptive_stage1c_mechanism_note_20261023.md`](experiments/metadata/sapling_msm_adaptive_stage1c_mechanism_note_20261023.md).
+
 Results: [`sapling_msm_adaptive_stage1b_results_20261022.md`](experiments/metadata/sapling_msm_adaptive_stage1b_results_20261022.md); pre-registration: [`sapling_msm_adaptive_stage1b_preregistration_20261022.md`](experiments/metadata/sapling_msm_adaptive_stage1b_preregistration_20261022.md); manifest: [`msm_adaptive_manifest_msm_adaptive_20261022.csv`](experiments/metadata/msm_adaptive_manifest_msm_adaptive_20261022.csv); runner: [`run_msm_adaptive_campaign.ps1`](scripts/run_msm_adaptive_campaign.ps1); analysis: [`analyze_msm_adaptive_experiment.py`](scripts/analyze_msm_adaptive_experiment.py).
 
 ## 8. Source-Level Stage and MSM Profiling
