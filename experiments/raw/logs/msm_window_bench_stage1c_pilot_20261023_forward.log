@@ -1,0 +1,67 @@
+bench=msm_window n=131071 reps=7 rayon_threads=8 windows=[10, 11, 12, 13] sweep_signed=1
+fixture bases=131071 exponents=131071 build_ms=2558.4 base_bytes=13631384 exponent_bytes=5242840
+probe=add_single_acc n=131071 median_ms=59.207 ns_per_add=451.7
+probe=add_rand_bucket c=8 buckets=255 bucket_array_bytes=36720 median_ms=60.021 ns_per_add=457.9
+probe=add_rand_bucket c=10 buckets=1023 bucket_array_bytes=147312 median_ms=62.703 ns_per_add=478.4
+probe=add_rand_bucket c=12 buckets=4095 bucket_array_bytes=589680 median_ms=59.038 ns_per_add=450.4
+correctness=naive_prefix c=1 signed=1 lazy=0 ok
+correctness=naive_prefix c=1 signed=1 lazy=1 ok
+correctness=naive_prefix c=3 signed=1 lazy=0 ok
+correctness=naive_prefix c=3 signed=1 lazy=1 ok
+correctness=naive_prefix c=5 signed=1 lazy=0 ok
+correctness=naive_prefix c=5 signed=1 lazy=1 ok
+correctness=naive_prefix c=8 signed=1 lazy=0 ok
+correctness=naive_prefix c=8 signed=1 lazy=1 ok
+correctness=naive_prefix c=1 signed=0 lazy=0 ok
+correctness=naive_prefix c=1 signed=0 lazy=1 ok
+correctness=naive_prefix c=3 signed=0 lazy=0 ok
+correctness=naive_prefix c=3 signed=0 lazy=1 ok
+correctness=naive_prefix c=5 signed=0 lazy=0 ok
+correctness=naive_prefix c=5 signed=0 lazy=1 ok
+correctness=naive_prefix c=8 signed=0 lazy=0 ok
+correctness=naive_prefix c=8 signed=0 lazy=1 ok
+correctness=naive_n8 signed=1 lazy=0 ok
+correctness=naive_n8 signed=1 lazy=1 ok
+correctness=naive_n8 signed=0 lazy=0 ok
+correctness=naive_n8 signed=0 lazy=1 ok
+probe=msm c=10 signed=1 chunks=26 buckets=512 modelled_ops=3434470 bucket_array_bytes=73728 median_ms=333.078 ns_per_modelled_op=97.0
+correctness=cross_recoding c=10 ok
+probe=msm c=11 signed=1 chunks=24 buckets=1024 modelled_ops=3194856 bucket_array_bytes=147456 median_ms=274.621 ns_per_modelled_op=86.0
+correctness=c11s1_equals_c10strue ok
+correctness=cross_recoding c=11 ok
+probe=msm c=12 signed=1 chunks=22 buckets=2048 modelled_ops=2973674 bucket_array_bytes=294912 median_ms=262.940 ns_per_modelled_op=88.4
+correctness=c12s1_equals_c10strue ok
+correctness=cross_recoding c=12 ok
+probe=msm c=13 signed=1 chunks=20 buckets=4096 modelled_ops=2785260 bucket_array_bytes=589824 median_ms=270.372 ns_per_modelled_op=97.1
+correctness=c13s1_equals_c10strue ok
+correctness=cross_recoding c=13 ok
+correctness=builtin_equals_c10strue signed=1 ok
+correctness=builtin_equals_c10strue signed=0 ok
+correctness=lazy_equals_materialised c=2 ok
+correctness=lazy_equals_materialised c=3 ok
+correctness=lazy_equals_materialised c=4 ok
+correctness=lazy_equals_materialised c=5 ok
+correctness=lazy_equals_materialised c=6 ok
+correctness=lazy_equals_materialised c=7 ok
+correctness=lazy_equals_materialised c=8 ok
+correctness=lazy_equals_materialised c=9 ok
+correctness=lazy_equals_materialised c=10 ok
+correctness=lazy_equals_materialised c=11 ok
+correctness=lazy_equals_materialised c=12 ok
+correctness=lazy_equals_materialised c=13 ok
+correctness=lazy_equals_materialised c=14 ok
+correctness=lazy_equals_materialised c=15 ok
+correctness=lazy_equals_materialised c=16 ok
+correctness=lazy_equals_materialised c=17 ok
+correctness=lazy_equals_materialised c=18 ok
+correctness=lazy_equals_materialised c=19 ok
+correctness=lazy_equals_materialised c=20 ok
+probe=msm_lazy c=10 lazy=0 median_ms=429.308
+probe=msm_lazy c=10 lazy=1 median_ms=387.174
+probe=msm_lazy c=11 lazy=0 median_ms=352.675
+probe=msm_lazy c=11 lazy=1 median_ms=331.964
+probe=msm_lazy c=12 lazy=0 median_ms=379.464
+probe=msm_lazy c=12 lazy=1 median_ms=442.137
+probe=msm_lazy c=13 lazy=0 median_ms=379.073
+probe=msm_lazy c=13 lazy=1 median_ms=332.145
+MSM_WINDOW_BENCH=DONE
