@@ -119,6 +119,60 @@ fn g16_qap_concurrent_abc_enabled() -> bool {
     })
 }
 
+/// Whether the exploratory three-pool A/B/C QAP transform is enabled.
+///
+/// Gated by `SAPLING_QAP_ABC_POOLS=1`. Unlike the all-thread nested-scope
+/// variant, this assigns one persistent two-thread Rayon pool to each of the
+/// independent `a/b/c` transforms. The single-transform parallel efficiency at
+/// eight threads is low, so three two-thread transforms can have higher
+/// aggregate throughput even though two of the eight logical CPUs stay idle.
+/// It is off by default and is an experiment, not a production default.
+fn g16_qap_abc_pools_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_QAP_ABC_POOLS")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+/// Whether the three A/B/C pools should pipeline `ifft -> coset_fft` per
+/// letter instead of synchronizing between the two transform groups.
+///
+/// Gated by `SAPLING_QAP_ABC_PIPELINE=1` and only meaningful together with
+/// `SAPLING_QAP_ABC_POOLS=1`. It is off by default.
+fn g16_qap_abc_pipeline_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *ENABLED.get_or_init(|| {
+        std::env::var("SAPLING_QAP_ABC_PIPELINE")
+            .map(|value| value == "1")
+            .unwrap_or(false)
+    })
+}
+
+#[cfg(feature = "multicore")]
+fn g16_qap_abc_pools() -> &'static [rayon::ThreadPool; 3] {
+    static POOLS: std::sync::OnceLock<[rayon::ThreadPool; 3]> = std::sync::OnceLock::new();
+
+    POOLS.get_or_init(|| {
+        let pools: [rayon::ThreadPool; 3] = std::array::from_fn(|index| {
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(2)
+                .thread_name(move |thread| format!("qap-abc-{index}-{thread}"))
+                .build()
+                .expect("build QAP A/B/C pool")
+        });
+        // Spawn the workers before the first measured proof so pool startup is
+        // not charged to a transform.
+        for pool in &pools {
+            pool.install(|| {});
+        }
+        pools
+    })
+}
+
 /// Reports the live bytes and the peak watermark since the previous boundary,
 /// then re-arms the watermark at the current live value.
 ///
@@ -474,6 +528,13 @@ where
     // QAP polynomial transforms and H-query exponent preparation.
     let h_exponents = {
         let qap_probe = g16_qap_stage_probe_enabled();
+        #[cfg(feature = "multicore")]
+        let qap_abc_pools = g16_qap_abc_pools_enabled();
+        #[cfg(not(feature = "multicore"))]
+        let qap_abc_pools = false;
+        let qap_abc_pipeline = g16_qap_abc_pipeline_enabled();
+        #[cfg(feature = "multicore")]
+        let abc_pools = qap_abc_pools.then(g16_qap_abc_pools);
         let mut qap_marks: [Option<std::time::Instant>; 14] = [None; 14];
         if qap_probe {
             qap_marks[0] = Some(std::time::Instant::now());
@@ -487,7 +548,68 @@ where
         }
         g16_mem_phase_boundary("qap_domains_built");
         let qap_concurrent = g16_qap_concurrent_abc_enabled();
-        if qap_concurrent {
+        if qap_abc_pools {
+            #[cfg(feature = "multicore")]
+            {
+                let pools = abc_pools.expect("QAP ABC pools initialized");
+                if qap_abc_pipeline {
+                    // Pipeline per letter: a's coset can start as soon as a's
+                    // ifft finishes, without waiting for b/c's ifft.
+                    let worker_ref = &worker;
+                    std::thread::scope(|scope| {
+                        let a = &mut a;
+                        let b = &mut b;
+                        let c = &mut c;
+                        scope.spawn(move || {
+                            pools[0].install(|| {
+                                a.ifft(worker_ref);
+                                a.coset_fft(worker_ref);
+                            })
+                        });
+                        scope.spawn(move || {
+                            pools[1].install(|| {
+                                b.ifft(worker_ref);
+                                b.coset_fft(worker_ref);
+                            })
+                        });
+                        scope.spawn(move || {
+                            pools[2].install(|| {
+                                c.ifft(worker_ref);
+                                c.coset_fft(worker_ref);
+                            })
+                        });
+                    });
+                    if qap_probe {
+                        qap_marks[2] = Some(std::time::Instant::now());
+                    }
+                } else {
+                    let worker_ref = &worker;
+                    std::thread::scope(|scope| {
+                        let a = &mut a;
+                        let b = &mut b;
+                        let c = &mut c;
+                        scope.spawn(move || pools[0].install(|| a.ifft(worker_ref)));
+                        scope.spawn(move || pools[1].install(|| b.ifft(worker_ref)));
+                        scope.spawn(move || pools[2].install(|| c.ifft(worker_ref)));
+                    });
+                    if qap_probe {
+                        qap_marks[2] = Some(std::time::Instant::now());
+                    }
+                    let worker_ref = &worker;
+                    std::thread::scope(|scope| {
+                        let a = &mut a;
+                        let b = &mut b;
+                        let c = &mut c;
+                        scope.spawn(move || pools[0].install(|| a.coset_fft(worker_ref)));
+                        scope.spawn(move || pools[1].install(|| b.coset_fft(worker_ref)));
+                        scope.spawn(move || pools[2].install(|| c.coset_fft(worker_ref)));
+                    });
+                    if qap_probe {
+                        qap_marks[3] = Some(std::time::Instant::now());
+                    }
+                }
+            }
+        } else if qap_concurrent {
             // The three transforms are independent. Use nested Rayon scopes
             // so their shuffle/copy phases can overlap on the shared pool.
             let worker_ref = &worker;
@@ -592,7 +714,13 @@ where
             eprintln!(
                 "G16_QAP_STAGE proof_id={} mode={} domains_ms={:.3} a_ifft_ms={:.3} a_coset_ms={:.3} b_ifft_ms={:.3} b_coset_ms={:.3} c_ifft_ms={:.3} c_coset_ms={:.3} mul_ab_ms={:.3} sub_c_ms={:.3} divide_z_ms={:.3} icoset_ms={:.3} into_coeffs_ms={:.3} h_exponents_ms={:.3} total_ms={:.3}",
                 proof_id,
-                if qap_concurrent {
+                if qap_abc_pools {
+                    if qap_abc_pipeline {
+                        "pipeline"
+                    } else {
+                        "pools"
+                    }
+                } else if qap_concurrent {
                     "concurrent"
                 } else {
                     "sequential"
