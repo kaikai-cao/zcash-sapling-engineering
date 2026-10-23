@@ -69,7 +69,10 @@ fn bench<F: FnMut()>(name: &str, ops_per_pass: usize, mut body: F) {
         let elapsed_ns = start.elapsed().as_secs_f64() * 1e9;
         samples.push(elapsed_ns / ops_per_pass as f64);
     }
-    println!("probe={name} ops_per_pass={ops_per_pass} ns_per_op={:.2}", median(&mut samples));
+    println!(
+        "probe={name} ops_per_pass={ops_per_pass} ns_per_op={:.2}",
+        median(&mut samples)
+    );
 }
 
 /// Deterministic base vector: consecutive multiples of the generator.
@@ -176,8 +179,12 @@ fn main() {
     });
     let mut fa = blst_fp::default();
     let mut fb = blst_fp::default();
-    let bytes_a: Vec<u8> = (0..48u8).map(|i| i.wrapping_mul(7).wrapping_add(1)).collect();
-    let bytes_b: Vec<u8> = (0..48u8).map(|i| i.wrapping_mul(13).wrapping_add(5)).collect();
+    let bytes_a: Vec<u8> = (0..48u8)
+        .map(|i| i.wrapping_mul(7).wrapping_add(1))
+        .collect();
+    let bytes_b: Vec<u8> = (0..48u8)
+        .map(|i| i.wrapping_mul(13).wrapping_add(5))
+        .collect();
     unsafe {
         blst::blst_fp_from_bendian(&mut fa, bytes_a.as_ptr());
         blst::blst_fp_from_bendian(&mut fb, bytes_b.as_ptr());

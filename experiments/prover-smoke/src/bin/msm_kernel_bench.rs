@@ -5,25 +5,32 @@
 //! This binary only applies the frozen design; it defines no gates.
 //!
 //! Design summary (see the pre-registration for the full text):
-//!   * Loads (same deterministic fixture for both implementations):
-//!       h_query  G1 n=131,071 dense                (primary)
-//!       l_query  G1 n=98,638   Zero/One density 0.777
-//!       ab_aux   G1 n=98,638   Zero/One density 0.777
-//!       g2_aux   G2 n=98,638   Zero/One density 0.852
-//!       ic       G1 n=8        dense
-//!   * Arms per process (RAYON_NUM_THREADS selects the condition):
-//!       8t process (0x5555): bellman_8t_A, bellman_8t_B, blst_1t
-//!       1t process (0x1):    bellman_1t_A, bellman_1t_B, blst_1t
-//!     bellman runs the production path (shipped defaults, built-in window rule);
-//!     blst runs with the crate's `no-threads` feature (max_count() == 1).
-//!   * A/A: the two bellman arms are the same implementation under two labels;
-//!     the paired difference estimates measurement-system uncertainty.
-//!   * Blocks: 1 warm + 3 measured runs per arm per block; arm order per block is
-//!     drawn from a frozen xorshift seed with a prefix-balance rejection rule
-//!     (any prefix keeps the two bellman labels within one occurrence).
-//!   * Correctness: C1 bellman vs blst (group equality via serialized bytes plus a
-//!     round-trip diagnostic), C2 the two bellman arms agree (checksum), C3 the
-//!     n=8 load matches naive double-and-add, C4 in-block checksum stability.
+//!
+//! ```text
+//! Loads (same deterministic fixture for both implementations):
+//!   h_query  G1 n=131,071 dense                (primary)
+//!   l_query  G1 n=98,638   Zero/One density 0.777
+//!   ab_aux   G1 n=98,638   Zero/One density 0.777
+//!   g2_aux   G2 n=98,638   Zero/One density 0.852
+//!   ic       G1 n=8        dense
+//!
+//! Arms per process (RAYON_NUM_THREADS selects the condition):
+//!   8t process (0x5555): bellman_8t_A, bellman_8t_B, blst_1t
+//!   1t process (0x1):    bellman_1t_A, bellman_1t_B, blst_1t
+//! bellman runs the production path (shipped defaults, built-in window rule);
+//! blst runs with the crate's `no-threads` feature (max_count() == 1).
+//!
+//! A/A: the two bellman arms are the same implementation under two labels;
+//! the paired difference estimates measurement-system uncertainty.
+//!
+//! Blocks: 1 warm + 3 measured runs per arm per block; arm order per block is
+//! drawn from a frozen xorshift seed with a prefix-balance rejection rule
+//! (any prefix keeps the two bellman labels within one occurrence).
+//!
+//! Correctness: C1 bellman vs blst (group equality via serialized bytes plus a
+//! round-trip diagnostic), C2 the two bellman arms agree (checksum), C3 the
+//! n=8 load matches naive double-and-add, C4 in-block checksum stability.
+//! ```
 //!
 //! Deviation record (constraint discovered at implementation time, also to be
 //! recorded in the results document): the pre-registration text lists five arms
@@ -86,11 +93,36 @@ struct LoadSpec {
 
 fn load_specs() -> Vec<LoadSpec> {
     vec![
-        LoadSpec { name: "h_query", curve: Curve::G1, n: 131_071, zero_one_fraction: None },
-        LoadSpec { name: "l_query", curve: Curve::G1, n: 98_638, zero_one_fraction: Some(G1_AUX_ZERO_ONE) },
-        LoadSpec { name: "ab_aux", curve: Curve::G1, n: 98_638, zero_one_fraction: Some(G1_AUX_ZERO_ONE) },
-        LoadSpec { name: "g2_aux", curve: Curve::G2, n: 98_638, zero_one_fraction: Some(G2_AUX_ZERO_ONE) },
-        LoadSpec { name: "ic", curve: Curve::G1, n: 8, zero_one_fraction: None },
+        LoadSpec {
+            name: "h_query",
+            curve: Curve::G1,
+            n: 131_071,
+            zero_one_fraction: None,
+        },
+        LoadSpec {
+            name: "l_query",
+            curve: Curve::G1,
+            n: 98_638,
+            zero_one_fraction: Some(G1_AUX_ZERO_ONE),
+        },
+        LoadSpec {
+            name: "ab_aux",
+            curve: Curve::G1,
+            n: 98_638,
+            zero_one_fraction: Some(G1_AUX_ZERO_ONE),
+        },
+        LoadSpec {
+            name: "g2_aux",
+            curve: Curve::G2,
+            n: 98_638,
+            zero_one_fraction: Some(G2_AUX_ZERO_ONE),
+        },
+        LoadSpec {
+            name: "ic",
+            curve: Curve::G1,
+            n: 8,
+            zero_one_fraction: None,
+        },
     ]
 }
 
@@ -220,7 +252,8 @@ fn build_g1_fixture(spec: &LoadSpec, seed: u64) -> (G1Fixture, FixtureTimings) {
     let scalars = build_scalars(spec.n, spec.zero_one_fraction, seed);
 
     let start = Instant::now();
-    let exponents: Arc<Vec<Exponent<Scalar>>> = Arc::new(scalars.iter().map(Exponent::from).collect());
+    let exponents: Arc<Vec<Exponent<Scalar>>> =
+        Arc::new(scalars.iter().map(Exponent::from).collect());
     let bellman_exponents_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     let start = Instant::now();
@@ -230,7 +263,11 @@ fn build_g1_fixture(spec: &LoadSpec, seed: u64) -> (G1Fixture, FixtureTimings) {
         let mut affine = blst_p1_affine::default();
         let bytes = base.to_uncompressed();
         let err = unsafe { blst::blst_p1_deserialize(&mut affine, bytes.as_ptr()) };
-        assert_eq!(err, blst::BLST_ERROR::BLST_SUCCESS, "blst_p1_deserialize failed");
+        assert_eq!(
+            err,
+            blst::BLST_ERROR::BLST_SUCCESS,
+            "blst_p1_deserialize failed"
+        );
         let mut point = blst_p1::default();
         unsafe { blst::blst_p1_from_affine(&mut point, &affine) };
         blst_points.push(point);
@@ -240,8 +277,17 @@ fn build_g1_fixture(spec: &LoadSpec, seed: u64) -> (G1Fixture, FixtureTimings) {
     let blst_convert_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     (
-        G1Fixture { bases, exponents, blst_affines, scalar_bytes },
-        FixtureTimings { bases_ms, bellman_exponents_ms, blst_convert_ms },
+        G1Fixture {
+            bases,
+            exponents,
+            blst_affines,
+            scalar_bytes,
+        },
+        FixtureTimings {
+            bases_ms,
+            bellman_exponents_ms,
+            blst_convert_ms,
+        },
     )
 }
 
@@ -254,7 +300,8 @@ fn build_g2_fixture(spec: &LoadSpec, seed: u64) -> (G2Fixture, FixtureTimings) {
     let scalars = build_scalars(spec.n, spec.zero_one_fraction, seed);
 
     let start = Instant::now();
-    let exponents: Arc<Vec<Exponent<Scalar>>> = Arc::new(scalars.iter().map(Exponent::from).collect());
+    let exponents: Arc<Vec<Exponent<Scalar>>> =
+        Arc::new(scalars.iter().map(Exponent::from).collect());
     let bellman_exponents_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     let start = Instant::now();
@@ -264,7 +311,11 @@ fn build_g2_fixture(spec: &LoadSpec, seed: u64) -> (G2Fixture, FixtureTimings) {
         let mut affine = blst_p2_affine::default();
         let bytes = base.to_uncompressed();
         let err = unsafe { blst::blst_p2_deserialize(&mut affine, bytes.as_ptr()) };
-        assert_eq!(err, blst::BLST_ERROR::BLST_SUCCESS, "blst_p2_deserialize failed");
+        assert_eq!(
+            err,
+            blst::BLST_ERROR::BLST_SUCCESS,
+            "blst_p2_deserialize failed"
+        );
         let mut point = blst_p2::default();
         unsafe { blst::blst_p2_from_affine(&mut point, &affine) };
         blst_points.push(point);
@@ -274,8 +325,17 @@ fn build_g2_fixture(spec: &LoadSpec, seed: u64) -> (G2Fixture, FixtureTimings) {
     let blst_convert_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     (
-        G2Fixture { bases, exponents, blst_affines, scalar_bytes },
-        FixtureTimings { bases_ms, bellman_exponents_ms, blst_convert_ms },
+        G2Fixture {
+            bases,
+            exponents,
+            blst_affines,
+            scalar_bytes,
+        },
+        FixtureTimings {
+            bases_ms,
+            bellman_exponents_ms,
+            blst_convert_ms,
+        },
     )
 }
 
@@ -283,10 +343,7 @@ fn build_g2_fixture(spec: &LoadSpec, seed: u64) -> (G2Fixture, FixtureTimings) {
 // MSM runners. The elapsed time is measured by the caller around these calls.
 // ---------------------------------------------------------------------------
 
-fn run_bellman_g1(
-    worker: &Worker,
-    fixture: &G1Fixture,
-) -> G1Projective {
+fn run_bellman_g1(worker: &Worker, fixture: &G1Fixture) -> G1Projective {
     multiexp(
         worker,
         (Arc::clone(&fixture.bases), 0),
@@ -301,10 +358,7 @@ fn run_blst_g1(fixture: &G1Fixture) -> blst_p1 {
     fixture.blst_affines.mult(&fixture.scalar_bytes, NBITS)
 }
 
-fn run_bellman_g2(
-    worker: &Worker,
-    fixture: &G2Fixture,
-) -> G2Projective {
+fn run_bellman_g2(worker: &Worker, fixture: &G2Fixture) -> G2Projective {
     multiexp(
         worker,
         (Arc::clone(&fixture.bases), 0),
@@ -405,6 +459,19 @@ struct Recorder {
     path: PathBuf,
 }
 
+/// One raw-CSV row; a struct keeps `Recorder::row` under the argument lint.
+struct Row<'a> {
+    load: &'a str,
+    curve: Curve,
+    n: usize,
+    arm: &'a str,
+    block: usize,
+    run: usize,
+    phase: &'a str,
+    elapsed_ms: f64,
+    checksum: u64,
+}
+
 impl Recorder {
     fn open(path: PathBuf) -> Self {
         if !path.exists() {
@@ -416,13 +483,27 @@ impl Recorder {
                 .append(true)
                 .open(&path)
                 .expect("create raw csv");
-            writeln!(handle, "load,curve,n,arm,block,run,phase,elapsed_ms,checksum")
-                .expect("write csv header");
+            writeln!(
+                handle,
+                "load,curve,n,arm,block,run,phase,elapsed_ms,checksum"
+            )
+            .expect("write csv header");
         }
         Self { path }
     }
 
-    fn row(&self, load: &str, curve: Curve, n: usize, arm: &str, block: usize, run: usize, phase: &str, elapsed_ms: f64, checksum: u64) {
+    fn row(&self, row: Row<'_>) {
+        let Row {
+            load,
+            curve,
+            n,
+            arm,
+            block,
+            run,
+            phase,
+            elapsed_ms,
+            checksum,
+        } = row;
         let mut handle = OpenOptions::new()
             .append(true)
             .open(&self.path)
@@ -487,7 +568,8 @@ fn main() {
     let runs = env_usize("MSM_KB_RUNS", DEFAULT_RUNS);
     let seed = env_u64("MSM_KB_SEED", DEFAULT_SEED);
     let csv_path = std::env::var("MSM_KB_CSV").ok().map(PathBuf::from);
-    let rayon_threads = std::env::var("RAYON_NUM_THREADS").unwrap_or_else(|_| "default".to_string());
+    let rayon_threads =
+        std::env::var("RAYON_NUM_THREADS").unwrap_or_else(|_| "default".to_string());
     let single_thread = rayon_threads.trim() == "1";
 
     // Arm set: the condition (process) decides which bellman labels exist.
@@ -506,8 +588,14 @@ fn main() {
 
     let recorder = csv_path.as_ref().map(|path| Recorder::open(path.clone()));
     let correctness_path = csv_path.as_ref().map(|path| {
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("msm_kernel_bench");
-        let stem = stem.strip_suffix("_8t").or_else(|| stem.strip_suffix("_1t")).unwrap_or(stem);
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("msm_kernel_bench");
+        let stem = stem
+            .strip_suffix("_8t")
+            .or_else(|| stem.strip_suffix("_1t"))
+            .unwrap_or(stem);
         path.with_file_name(format!("{stem}_correctness.csv"))
     });
     let correctness = correctness_path
@@ -567,7 +655,20 @@ fn main() {
                     }
                 }
 
-                run_load_g1(&spec, &fixture, &worker, &arms, blocks, runs, seed, &recorder, &correctness, &mut all_correctness_ok);
+                run_load_g1(
+                    &spec,
+                    &fixture,
+                    &worker,
+                    &RunCtx {
+                        arms: &arms,
+                        blocks,
+                        runs,
+                        seed,
+                        recorder: &recorder,
+                        correctness: &correctness,
+                    },
+                    &mut all_correctness_ok,
+                );
             }
             Curve::G2 => {
                 let (fixture, timings) = build_g2_fixture(&spec, fixture_seed);
@@ -596,7 +697,20 @@ fn main() {
                     rec.check(load, curve, n, "bellman_vs_blst_roundtrip", roundtrip);
                 }
 
-                run_load_g2(&spec, &fixture, &worker, &arms, blocks, runs, seed, &recorder, &correctness, &mut all_correctness_ok);
+                run_load_g2(
+                    &spec,
+                    &fixture,
+                    &worker,
+                    &RunCtx {
+                        arms: &arms,
+                        blocks,
+                        runs,
+                        seed,
+                        recorder: &recorder,
+                        correctness: &correctness,
+                    },
+                    &mut all_correctness_ok,
+                );
             }
         }
     }
@@ -612,34 +726,50 @@ fn main() {
     println!("MSM_KERNEL_BENCH=DONE");
 }
 
+/// Shared per-load run configuration (keeps `run_load_*` under the argument lint).
+struct RunCtx<'a> {
+    arms: &'a [&'static str],
+    blocks: usize,
+    runs: usize,
+    seed: u64,
+    recorder: &'a Option<Recorder>,
+    correctness: &'a Option<CorrectnessRecorder>,
+}
+
 fn run_load_g1(
     spec: &LoadSpec,
     fixture: &G1Fixture,
     worker: &Worker,
-    arms: &[&'static str],
-    blocks: usize,
-    runs: usize,
-    seed: u64,
-    recorder: &Option<Recorder>,
-    correctness: &Option<CorrectnessRecorder>,
+    ctx: &RunCtx<'_>,
     all_ok: &mut bool,
 ) {
     let (load, curve, n) = (spec.name, spec.curve, spec.n);
-    let mut arm_checksums: std::collections::HashMap<&str, Vec<u64>> = std::collections::HashMap::new();
+    let mut arm_checksums: std::collections::HashMap<&str, Vec<u64>> =
+        std::collections::HashMap::new();
 
-    for block in 0..blocks {
-        for arm in arm_order(block, arms, seed) {
+    for block in 0..ctx.blocks {
+        for arm in arm_order(block, ctx.arms, ctx.seed) {
             // Warm-up run (recorded but not measured).
             let warm = match arm {
                 "blst_1t" => blst_p1_checksum(&run_blst_g1(fixture)),
                 _ => g1_checksum(&run_bellman_g1(worker, fixture)),
             };
-            if let Some(rec) = recorder {
-                rec.row(load, curve, n, arm, block, 0, "warm", 0.0, warm);
+            if let Some(rec) = ctx.recorder {
+                rec.row(Row {
+                    load,
+                    curve,
+                    n,
+                    arm,
+                    block,
+                    run: 0,
+                    phase: "warm",
+                    elapsed_ms: 0.0,
+                    checksum: warm,
+                });
             }
             arm_checksums.entry(arm).or_default().push(warm);
 
-            for run in 1..=runs {
+            for run in 1..=ctx.runs {
                 let start = Instant::now();
                 let checksum = match arm {
                     "blst_1t" => blst_p1_checksum(&run_blst_g1(fixture)),
@@ -647,8 +777,18 @@ fn run_load_g1(
                 };
                 let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
                 black_box(checksum);
-                if let Some(rec) = recorder {
-                    rec.row(load, curve, n, arm, block, run, "measured", elapsed_ms, checksum);
+                if let Some(rec) = ctx.recorder {
+                    rec.row(Row {
+                        load,
+                        curve,
+                        n,
+                        arm,
+                        block,
+                        run,
+                        phase: "measured",
+                        elapsed_ms,
+                        checksum,
+                    });
                 }
                 arm_checksums.entry(arm).or_default().push(checksum);
             }
@@ -659,7 +799,7 @@ fn run_load_g1(
     for (arm, checksums) in &arm_checksums {
         let stable = checksums.windows(2).all(|pair| pair[0] == pair[1]);
         *all_ok &= stable;
-        if let Some(rec) = correctness {
+        if let Some(rec) = ctx.correctness {
             rec.check(load, curve, n, "checksum_stable", stable);
         }
         if !stable {
@@ -672,29 +812,35 @@ fn run_load_g2(
     spec: &LoadSpec,
     fixture: &G2Fixture,
     worker: &Worker,
-    arms: &[&'static str],
-    blocks: usize,
-    runs: usize,
-    seed: u64,
-    recorder: &Option<Recorder>,
-    correctness: &Option<CorrectnessRecorder>,
+    ctx: &RunCtx<'_>,
     all_ok: &mut bool,
 ) {
     let (load, curve, n) = (spec.name, spec.curve, spec.n);
-    let mut arm_checksums: std::collections::HashMap<&str, Vec<u64>> = std::collections::HashMap::new();
+    let mut arm_checksums: std::collections::HashMap<&str, Vec<u64>> =
+        std::collections::HashMap::new();
 
-    for block in 0..blocks {
-        for arm in arm_order(block, arms, seed) {
+    for block in 0..ctx.blocks {
+        for arm in arm_order(block, ctx.arms, ctx.seed) {
             let warm = match arm {
                 "blst_1t" => blst_p2_checksum(&run_blst_g2(fixture)),
                 _ => g2_checksum(&run_bellman_g2(worker, fixture)),
             };
-            if let Some(rec) = recorder {
-                rec.row(load, curve, n, arm, block, 0, "warm", 0.0, warm);
+            if let Some(rec) = ctx.recorder {
+                rec.row(Row {
+                    load,
+                    curve,
+                    n,
+                    arm,
+                    block,
+                    run: 0,
+                    phase: "warm",
+                    elapsed_ms: 0.0,
+                    checksum: warm,
+                });
             }
             arm_checksums.entry(arm).or_default().push(warm);
 
-            for run in 1..=runs {
+            for run in 1..=ctx.runs {
                 let start = Instant::now();
                 let checksum = match arm {
                     "blst_1t" => blst_p2_checksum(&run_blst_g2(fixture)),
@@ -702,8 +848,18 @@ fn run_load_g2(
                 };
                 let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
                 black_box(checksum);
-                if let Some(rec) = recorder {
-                    rec.row(load, curve, n, arm, block, run, "measured", elapsed_ms, checksum);
+                if let Some(rec) = ctx.recorder {
+                    rec.row(Row {
+                        load,
+                        curve,
+                        n,
+                        arm,
+                        block,
+                        run,
+                        phase: "measured",
+                        elapsed_ms,
+                        checksum,
+                    });
                 }
                 arm_checksums.entry(arm).or_default().push(checksum);
             }
@@ -713,7 +869,7 @@ fn run_load_g2(
     for (arm, checksums) in &arm_checksums {
         let stable = checksums.windows(2).all(|pair| pair[0] == pair[1]);
         *all_ok &= stable;
-        if let Some(rec) = correctness {
+        if let Some(rec) = ctx.correctness {
             rec.check(load, curve, n, "checksum_stable", stable);
         }
         if !stable {
