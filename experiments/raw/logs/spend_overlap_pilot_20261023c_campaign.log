@@ -1,0 +1,170 @@
+﻿Stage 3 independent Spend overlap pilot
+tag=spend_overlap_pilot_20261023c
+head=27d3bc577399955f6c71717403790d3969a41453
+prereg=experiments/metadata/sapling_spend_overlap_pilot_preregistration_20261023.md
+prereg_sha256=15758a3a6b1412c317188d62b33815f1008805fb6d6465a389086568488deaf9
+binary=D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\spend_overlap_pilot.exe
+binary_sha256=a8b06e1181d7c060a3bec0b971f3c205770e2bf74f3608f86c050a5e53584df1
+params=D:\Research\zcash-params\sapling-spend.params
+params_sha256=8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13
+proofs=8
+warmups=1
+prebuild_stdout=D:\Research\zcash-sapling-engineering\experiments\raw\logs\spend_overlap_pilot_20261023c_prebuild.stdout.log
+prebuild_stderr=D:\Research\zcash-sapling-engineering\experiments\raw\logs\spend_overlap_pilot_20261023c_prebuild.stderr.log
+start=2026-10-23T01:59:32.0480865Z
+
+=== batch 1: spend_overlap_pilot_20261023c_s0_b1 arm=S0 ===
+batch_id=1792720804759
+arm=seq
+proofs=8
+batch_wall_ms=5255.392
+proof=0 worker=0 start_ms=0.000 end_ms=666.151 prove_ms=666.151 verify_ms=2.847 verified=true
+proof=1 worker=0 start_ms=668.999 end_ms=1306.593 prove_ms=637.594 verify_ms=3.139 verified=true
+proof=2 worker=0 start_ms=1309.732 end_ms=1965.074 prove_ms=655.342 verify_ms=2.821 verified=true
+proof=3 worker=0 start_ms=1967.896 end_ms=2628.570 prove_ms=660.674 verify_ms=2.926 verified=true
+proof=4 worker=0 start_ms=2631.497 end_ms=3275.499 prove_ms=644.002 verify_ms=3.119 verified=true
+proof=5 worker=0 start_ms=3278.619 end_ms=3922.331 prove_ms=643.711 verify_ms=2.917 verified=true
+proof=6 worker=0 start_ms=3925.248 end_ms=4592.123 prove_ms=666.876 verify_ms=2.962 verified=true
+proof=7 worker=0 start_ms=4595.086 end_ms=5252.400 prove_ms=657.315 verify_ms=2.991 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792720804759 batch_wall_ms=5255.392 ===
+
+=== batch 2: spend_overlap_pilot_20261023c_s1_b2 arm=S1 ===
+batch_id=1792720842337
+arm=conc2
+proofs=8
+batch_wall_ms=4558.065
+proof=0 worker=1 start_ms=0.157 end_ms=1149.852 prove_ms=1149.695 verify_ms=2.931 verified=true
+proof=1 worker=0 start_ms=0.192 end_ms=1148.679 prove_ms=1148.486 verify_ms=3.021 verified=true
+proof=2 worker=0 start_ms=1151.701 end_ms=2254.520 prove_ms=1102.819 verify_ms=3.142 verified=true
+proof=3 worker=1 start_ms=1152.784 end_ms=2253.108 prove_ms=1100.323 verify_ms=3.398 verified=true
+proof=4 worker=1 start_ms=2256.507 end_ms=3481.592 prove_ms=1225.085 verify_ms=3.300 verified=true
+proof=5 worker=0 start_ms=2257.663 end_ms=3044.651 prove_ms=786.988 verify_ms=5.016 verified=true
+proof=6 worker=0 start_ms=3049.668 end_ms=4044.820 prove_ms=995.152 verify_ms=3.265 verified=true
+proof=7 worker=1 start_ms=3484.893 end_ms=4554.992 prove_ms=1070.099 verify_ms=3.063 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792720842337 batch_wall_ms=4558.065 ===
+
+=== batch 3: spend_overlap_pilot_20261023c_s1_b3 arm=S1 ===
+batch_id=1792720878936
+arm=conc2
+proofs=8
+batch_wall_ms=4417.656
+proof=0 worker=0 start_ms=0.133 end_ms=1177.885 prove_ms=1177.751 verify_ms=3.526 verified=true
+proof=1 worker=1 start_ms=0.157 end_ms=716.070 prove_ms=715.912 verify_ms=3.128 verified=true
+proof=2 worker=1 start_ms=719.199 end_ms=1720.458 prove_ms=1001.259 verify_ms=3.616 verified=true
+proof=3 worker=0 start_ms=1181.412 end_ms=2288.230 prove_ms=1106.818 verify_ms=4.546 verified=true
+proof=4 worker=1 start_ms=1724.076 end_ms=2811.850 prove_ms=1087.774 verify_ms=3.389 verified=true
+proof=5 worker=0 start_ms=2292.777 end_ms=3364.015 prove_ms=1071.238 verify_ms=3.260 verified=true
+proof=6 worker=1 start_ms=2815.240 end_ms=3903.279 prove_ms=1088.038 verify_ms=5.360 verified=true
+proof=7 worker=0 start_ms=3367.276 end_ms=4412.326 prove_ms=1045.051 verify_ms=5.202 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792720878936 batch_wall_ms=4417.656 ===
+
+=== batch 4: spend_overlap_pilot_20261023c_s0_b4 arm=S0 ===
+batch_id=1792720917001
+arm=seq
+proofs=8
+batch_wall_ms=5479.131
+proof=0 worker=0 start_ms=0.000 end_ms=664.599 prove_ms=664.599 verify_ms=6.579 verified=true
+proof=1 worker=0 start_ms=671.179 end_ms=1451.810 prove_ms=780.630 verify_ms=3.517 verified=true
+proof=2 worker=0 start_ms=1455.328 end_ms=2185.095 prove_ms=729.767 verify_ms=2.905 verified=true
+proof=3 worker=0 start_ms=2188.001 end_ms=2840.500 prove_ms=652.499 verify_ms=3.008 verified=true
+proof=4 worker=0 start_ms=2843.508 end_ms=3516.521 prove_ms=673.012 verify_ms=3.154 verified=true
+proof=5 worker=0 start_ms=3519.676 end_ms=4153.428 prove_ms=633.752 verify_ms=2.894 verified=true
+proof=6 worker=0 start_ms=4156.322 end_ms=4806.474 prove_ms=650.152 verify_ms=3.003 verified=true
+proof=7 worker=0 start_ms=4809.478 end_ms=5476.204 prove_ms=666.726 verify_ms=2.926 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792720917001 batch_wall_ms=5479.131 ===
+
+=== batch 5: spend_overlap_pilot_20261023c_s0_b5 arm=S0 ===
+batch_id=1792720954485
+arm=seq
+proofs=8
+batch_wall_ms=5784.984
+proof=0 worker=0 start_ms=0.000 end_ms=706.656 prove_ms=706.656 verify_ms=3.272 verified=true
+proof=1 worker=0 start_ms=709.929 end_ms=1576.058 prove_ms=866.129 verify_ms=3.053 verified=true
+proof=2 worker=0 start_ms=1579.112 end_ms=2278.713 prove_ms=699.602 verify_ms=3.411 verified=true
+proof=3 worker=0 start_ms=2282.126 end_ms=2924.257 prove_ms=642.131 verify_ms=2.901 verified=true
+proof=4 worker=0 start_ms=2927.158 end_ms=3595.834 prove_ms=668.676 verify_ms=3.177 verified=true
+proof=5 worker=0 start_ms=3599.012 end_ms=4264.933 prove_ms=665.921 verify_ms=2.957 verified=true
+proof=6 worker=0 start_ms=4267.892 end_ms=4934.949 prove_ms=667.058 verify_ms=2.957 verified=true
+proof=7 worker=0 start_ms=4937.907 end_ms=5781.749 prove_ms=843.842 verify_ms=3.235 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792720954485 batch_wall_ms=5784.984 ===
+
+=== batch 6: spend_overlap_pilot_20261023c_s1_b6 arm=S1 ===
+batch_id=1792720994289
+arm=conc2
+proofs=8
+batch_wall_ms=7511.608
+proof=0 worker=0 start_ms=0.171 end_ms=1911.245 prove_ms=1911.074 verify_ms=4.382 verified=true
+proof=1 worker=1 start_ms=0.203 end_ms=1911.321 prove_ms=1911.118 verify_ms=4.366 verified=true
+proof=2 worker=0 start_ms=1915.629 end_ms=3858.287 prove_ms=1942.658 verify_ms=3.757 verified=true
+proof=3 worker=1 start_ms=1915.688 end_ms=3859.250 prove_ms=1943.562 verify_ms=3.627 verified=true
+proof=4 worker=0 start_ms=3862.046 end_ms=5067.454 prove_ms=1205.408 verify_ms=3.898 verified=true
+proof=5 worker=1 start_ms=3862.878 end_ms=5872.358 prove_ms=2009.480 verify_ms=3.482 verified=true
+proof=6 worker=0 start_ms=5071.354 end_ms=6754.633 prove_ms=1683.279 verify_ms=4.848 verified=true
+proof=7 worker=1 start_ms=5875.841 end_ms=7507.350 prove_ms=1631.508 verify_ms=4.221 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792720994289 batch_wall_ms=7511.608 ===
+
+=== batch 7: spend_overlap_pilot_20261023c_s1_b7 arm=S1 ===
+batch_id=1792721030836
+arm=conc2
+proofs=8
+batch_wall_ms=4368.441
+proof=0 worker=0 start_ms=0.103 end_ms=745.685 prove_ms=745.582 verify_ms=3.911 verified=true
+proof=1 worker=1 start_ms=0.145 end_ms=1208.616 prove_ms=1208.471 verify_ms=6.857 verified=true
+proof=2 worker=0 start_ms=749.597 end_ms=1733.766 prove_ms=984.169 verify_ms=7.028 verified=true
+proof=3 worker=1 start_ms=1215.475 end_ms=2287.367 prove_ms=1071.892 verify_ms=3.340 verified=true
+proof=4 worker=0 start_ms=1740.795 end_ms=2806.117 prove_ms=1065.322 verify_ms=3.245 verified=true
+proof=5 worker=1 start_ms=2290.708 end_ms=3353.540 prove_ms=1062.832 verify_ms=3.389 verified=true
+proof=6 worker=0 start_ms=2809.362 end_ms=3873.772 prove_ms=1064.409 verify_ms=3.273 verified=true
+proof=7 worker=1 start_ms=3356.929 end_ms=4365.412 prove_ms=1008.483 verify_ms=3.017 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792721030836 batch_wall_ms=4368.441 ===
+
+=== batch 8: spend_overlap_pilot_20261023c_s0_b8 arm=S0 ===
+batch_id=1792721067851
+arm=seq
+proofs=8
+batch_wall_ms=5176.350
+proof=0 worker=0 start_ms=0.000 end_ms=635.163 prove_ms=635.163 verify_ms=2.974 verified=true
+proof=1 worker=0 start_ms=638.142 end_ms=1285.756 prove_ms=647.615 verify_ms=2.886 verified=true
+proof=2 worker=0 start_ms=1288.643 end_ms=1939.100 prove_ms=650.457 verify_ms=2.845 verified=true
+proof=3 worker=0 start_ms=1941.946 end_ms=2577.250 prove_ms=635.305 verify_ms=2.877 verified=true
+proof=4 worker=0 start_ms=2580.127 end_ms=3211.083 prove_ms=630.955 verify_ms=2.951 verified=true
+proof=5 worker=0 start_ms=3214.035 end_ms=3862.470 prove_ms=648.436 verify_ms=3.117 verified=true
+proof=6 worker=0 start_ms=3865.588 end_ms=4524.430 prove_ms=658.842 verify_ms=3.623 verified=true
+proof=7 worker=0 start_ms=4528.053 end_ms=5173.394 prove_ms=645.340 verify_ms=2.956 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
+
+
+=== exit_code=0 batch_id=1792721067851 batch_wall_ms=5176.350 ===
+
+end=2026-10-23T02:04:27.8677600Z
+failed=False
+rows=8

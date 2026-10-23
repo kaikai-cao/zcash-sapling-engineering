@@ -1,0 +1,14 @@
+batch_id=1792720954485
+arm=seq
+proofs=8
+batch_wall_ms=5784.984
+proof=0 worker=0 start_ms=0.000 end_ms=706.656 prove_ms=706.656 verify_ms=3.272 verified=true
+proof=1 worker=0 start_ms=709.929 end_ms=1576.058 prove_ms=866.129 verify_ms=3.053 verified=true
+proof=2 worker=0 start_ms=1579.112 end_ms=2278.713 prove_ms=699.602 verify_ms=3.411 verified=true
+proof=3 worker=0 start_ms=2282.126 end_ms=2924.257 prove_ms=642.131 verify_ms=2.901 verified=true
+proof=4 worker=0 start_ms=2927.158 end_ms=3595.834 prove_ms=668.676 verify_ms=3.177 verified=true
+proof=5 worker=0 start_ms=3599.012 end_ms=4264.933 prove_ms=665.921 verify_ms=2.957 verified=true
+proof=6 worker=0 start_ms=4267.892 end_ms=4934.949 prove_ms=667.058 verify_ms=2.957 verified=true
+proof=7 worker=0 start_ms=4937.907 end_ms=5781.749 prove_ms=843.842 verify_ms=3.235 verified=true
+CSV_PATH=D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_overlap_pilot_spend_overlap_pilot_20261023c.csv
+SPEND_OVERLAP_PILOT=PASS
