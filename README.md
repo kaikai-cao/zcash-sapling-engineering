@@ -426,6 +426,16 @@ The arm medians were `S0 = 670.908 ms/proof` and `S1 = 560.983 ms/proof`, giving
 
 **Verdict: NO_GO; the independent-proof overlap line is closed; no formal Stage 3 and no default change.** The result document records the first-launch interpolation failure, the PowerShell exit-code exclusion, and the batch-6 anomaly. See [`sapling_spend_overlap_pilot_results_20261023.md`](experiments/metadata/sapling_spend_overlap_pilot_results_20261023.md); pre-registration: [`sapling_spend_overlap_pilot_preregistration_20261023.md`](experiments/metadata/sapling_spend_overlap_pilot_preregistration_20261023.md); manifest: [`spend_overlap_pilot_manifest_spend_overlap_pilot_20261023c.csv`](experiments/metadata/spend_overlap_pilot_manifest_spend_overlap_pilot_20261023c.csv); runner: [`run_spend_overlap_pilot.ps1`](scripts/run_spend_overlap_pilot.ps1); analysis: [`analyze_spend_overlap_pilot.py`](scripts/analyze_spend_overlap_pilot.py).
 
+### 7.12 QAP/FFT sub-stage scoping (2026-10-23)
+
+An exploratory, **not pre-registered** probe split the remaining QAP/FFT phase into its sub-stages and tested one low-risk overlap candidate. The probe (`SAPLING_QAP_STAGE_PROBE=1`) runs five Spend proofs per process at 8 threads / `0x5555`; the concurrent switch (`SAPLING_QAP_CONCURRENT_ABC=1`) runs the three independent `a/b/c` inverse FFTs and the three coset FFTs in nested Rayon scopes. Both switches default off.
+
+The warm QAP median was **115.268 ms**, of which the seven FFTs (three inverse, three coset, one inverse-coset) account for **105.598 ms (91.6%)**; `h_exponents` is 6.077 ms and the remaining O(n) passes are about 3.5 ms. A 5% end-to-end gain (body ≈ 690 ms) would therefore require roughly a **30% QAP reduction** (115 → 80 ms); clearing every non-FFT sub-stage would yield less than 1.5% of the body.
+
+The concurrent A/B/C candidate did not produce a stable gain. In the first A/B pair, sequential QAP was 112.717 ms and concurrent was 113.906 ms (+1.05%); in the reverse pair, concurrent was 108.825 ms and sequential was 123.739 ms, but the sequential arm itself had drifted 9.8% slower than in the first pair, so the apparent 12% gain is not causal. The pooled descriptive medians are 115.268 ms (sequential, n=15) vs 111.365 ms (concurrent, n=10), about **−3.4% QAP / −0.6% body**, still far below the 5% target. All 25 proofs verified.
+
+**Verdict: no formal Stage 4, no default change, and the single-proof QAP/FFT line is closed.** The only remaining direction with the required order of magnitude is an arithmetic FFT rewrite (radix-4/split-radix), which would need its own pre-registered scoping study and correctness gate; the current overlap/scheduling mechanism is exhausted. See [`sapling_qap_fft_scoping_note_20261023.md`](experiments/metadata/sapling_qap_fft_scoping_note_20261023.md), raw data [`experiments/raw/csv/sapling_qap_stage_probe_20261023_*.csv`](experiments/raw/csv), manifest [`qap_stage_probe_manifest_20261023.csv`](experiments/metadata/qap_stage_probe_manifest_20261023.csv), and analysis [`analyze_qap_stage_probe.py`](scripts/analyze_qap_stage_probe.py).
+
 ## 8. Source-Level Stage and MSM Profiling
 
 ### 8.1 Instrumentation approach

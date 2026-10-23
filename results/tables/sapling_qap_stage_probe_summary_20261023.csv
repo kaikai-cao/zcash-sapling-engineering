@@ -1,0 +1,8 @@
+run_label,pair,mode,n,qap_total_median_ms,group_ifft_median_ms,group_coset_median_ms,icoset_median_ms,h_exponents_median_ms,prove_median_ms_runs2to5
+seq_probe,pair0,sequential,5,115.268,45.401,44.472,15.725,6.077,689.497
+seq_pair1,pair1,sequential,5,112.717,44.486,44.310,15.500,6.088,687.799
+abc_pair1,pair1,concurrent,5,113.906,43.065,44.065,16.930,6.223,738.793
+abc_pair2,pair2,concurrent,5,108.825,40.623,42.432,16.013,6.262,711.853
+seq_pair2,pair2,sequential,5,123.739,48.862,49.548,16.791,6.667,832.667
+sequential_summary,all,sequential,15,115.268,,,,,
+concurrent_summary,all,concurrent,10,111.365,,,,,
