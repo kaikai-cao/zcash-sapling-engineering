@@ -33,12 +33,14 @@ enum Variant {
     Baseline,
     Mirror,
     Candidate,
+    CandidateRadix4,
 }
 
 #[derive(Clone, Copy, Debug)]
 enum Kernel {
     Onfly,
     Precomputed,
+    Radix4,
 }
 
 fn bitreverse(mut n: u32, l: u32) -> u32 {
@@ -194,8 +196,120 @@ fn fft_radix2_precomputed_with_table(a: &mut [Scalar], table: &TwiddleTable) {
     }
 }
 
-/// Mirror of the four-step `parallel_fft`, with either the current on-the-fly
-/// serial kernel or the precomputed-twiddle kernel.
+struct Radix4Stage {
+    m: u32,
+    offset: usize,
+}
+
+/// Precomputed twiddles for a radix-4 decimation-in-time transform.
+///
+/// `values` stores, for every stage and every j, the three twiddles
+/// `w^j, w^{2j}, w^{3j}`.  The table has exactly `n - 1` scalars.
+struct Radix4Table {
+    log_n: u32,
+    stages: Vec<Radix4Stage>,
+    values: Vec<Scalar>,
+    i: Scalar,
+}
+
+fn digit_reverse_base4(mut n: u32, digits: u32) -> u32 {
+    let mut r = 0u32;
+    for _ in 0..digits {
+        r = (r << 2) | (n & 3);
+        n >>= 2;
+    }
+    r
+}
+
+fn build_radix4_table(n: usize, omega: &Scalar) -> Radix4Table {
+    let log_n = n.trailing_zeros();
+    assert_eq!(n, 1usize << log_n);
+    assert_eq!(log_n % 2, 0, "radix-4 table requires an even log2(n)");
+
+    let mut stages = Vec::with_capacity((log_n / 2) as usize);
+    let mut values = Vec::with_capacity(n - 1);
+    let mut m = 1u32;
+    while m < n as u32 {
+        stages.push(Radix4Stage {
+            m,
+            offset: values.len(),
+        });
+
+        let w_m = omega.pow_vartime(&[u64::from(n as u32 / (4 * m)), 0, 0, 0]);
+        let mut w = Scalar::one();
+        for _ in 0..m {
+            let w2 = w * w;
+            let w3 = w2 * w;
+            values.push(w);
+            values.push(w2);
+            values.push(w3);
+            w = w * w_m;
+        }
+
+        m *= 4;
+    }
+
+    let i = omega.pow_vartime(&[(n / 4) as u64, 0, 0, 0]);
+
+    Radix4Table {
+        log_n,
+        stages,
+        values,
+        i,
+    }
+}
+
+/// Radix-4 DIT with base-4 digit-reversed input and natural output.
+fn fft_radix4_precomputed_with_table(a: &mut [Scalar], table: &Radix4Table) {
+    let n = a.len() as u32;
+    let log_n = table.log_n;
+    assert_eq!(n, 1u32 << log_n);
+    assert_eq!(log_n % 2, 0);
+
+    let digits = log_n / 2;
+    for k in 0..n {
+        let rk = digit_reverse_base4(k, digits);
+        if k < rk {
+            a.swap(rk as usize, k as usize);
+        }
+    }
+
+    for stage in &table.stages {
+        let m = stage.m;
+        let offset = stage.offset;
+
+        let mut k = 0u32;
+        while k < n {
+            for j in 0..m {
+                let base = offset + 3 * j as usize;
+                let w1 = table.values[base];
+                let w2 = table.values[base + 1];
+                let w3 = table.values[base + 2];
+
+                let a0 = a[(k + j) as usize];
+                let a1 = a[(k + j + m) as usize] * w1;
+                let a2 = a[(k + j + 2 * m) as usize] * w2;
+                let a3 = a[(k + j + 3 * m) as usize] * w3;
+
+                let t0 = a0 + a2;
+                let t1 = a0 - a2;
+                let t2 = a1 + a3;
+                let t3 = a1 - a3;
+                let it3 = table.i * t3;
+
+                a[(k + j) as usize] = t0 + t2;
+                a[(k + j + m) as usize] = t1 + it3;
+                a[(k + j + 2 * m) as usize] = t0 - t2;
+                a[(k + j + 3 * m) as usize] = t1 - it3;
+            }
+            k += 4 * m;
+        }
+    }
+}
+
+/// Mirror of the four-step `parallel_fft`, with the current on-the-fly serial
+/// kernel, the radix-2 precomputed-twiddle kernel, or the conditional radix-4
+/// precomputed-twiddle kernel.
 fn parallel_fft_with_kernel(
     a: &mut [Scalar],
     worker: &Worker,
@@ -212,11 +326,19 @@ fn parallel_fft_with_kernel(
     let new_omega = omega.pow_vartime(&[num_cpus as u64, 0, 0, 0]);
 
     // Build the table once, then share it read-only across all sub-FFTs.
-    let shared_table = match kernel {
-        Kernel::Onfly => None,
+    let shared_radix2 = match kernel {
         Kernel::Precomputed => Some(build_twiddle_table(1usize << log_new_n, &new_omega)),
+        Kernel::Onfly | Kernel::Radix4 => None,
     };
-    let shared_table = shared_table.as_ref();
+    let shared_radix4 = match kernel {
+        Kernel::Radix4 => {
+            assert_eq!(log_new_n % 2, 0, "radix-4 sub-FFT requires even log2(n)");
+            Some(build_radix4_table(1usize << log_new_n, &new_omega))
+        }
+        Kernel::Onfly | Kernel::Precomputed => None,
+    };
+    let shared_radix2 = shared_radix2.as_ref();
+    let shared_radix4 = shared_radix4.as_ref();
 
     worker.scope(0, |scope, _| {
         let a = &*a;
@@ -241,7 +363,10 @@ fn parallel_fft_with_kernel(
                 match kernel {
                     Kernel::Onfly => fft_radix2_onfly(tmp, &new_omega),
                     Kernel::Precomputed => {
-                        fft_radix2_precomputed_with_table(tmp, shared_table.unwrap())
+                        fft_radix2_precomputed_with_table(tmp, shared_radix2.unwrap())
+                    }
+                    Kernel::Radix4 => {
+                        fft_radix4_precomputed_with_table(tmp, shared_radix4.unwrap())
                     }
                 }
             });
@@ -338,6 +463,31 @@ fn candidate_once(
     a
 }
 
+fn candidate_radix4_once(
+    original: &[Scalar],
+    omega: &Scalar,
+    worker: &Worker,
+    threads: usize,
+) -> Option<Vec<Scalar>> {
+    let mut a = original.to_vec();
+    if threads == 1 {
+        let log_n = a.len().trailing_zeros();
+        if log_n % 2 != 0 {
+            return None;
+        }
+        let table = build_radix4_table(a.len(), omega);
+        fft_radix4_precomputed_with_table(&mut a, &table);
+    } else {
+        let log_n = a.len().trailing_zeros();
+        let log_cpus = worker.log_num_threads();
+        if (log_n - log_cpus) % 2 != 0 {
+            return None;
+        }
+        parallel_fft_with_kernel(&mut a, worker, omega, log_n, log_cpus, Kernel::Radix4);
+    }
+    Some(a)
+}
+
 fn checksum(a: &[Scalar]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for value in a {
@@ -381,9 +531,22 @@ fn check_correctness(n: usize, threads: usize, worker: &Worker) {
         u8::from(candidate_bad == 0)
     );
 
-    if mirror_bad != 0 || candidate_bad != 0 {
+    let mut radix4_bad = None;
+    if threads == 8 {
+        if let Some(radix4) = candidate_radix4_once(&original, &omega, worker, threads) {
+            let bad = mismatch_count(&baseline, &radix4);
+            println!(
+                "correctness,cand_radix4_precomputed,{threads},{n},0,0.000,{},{},conditional",
+                checksum(&radix4),
+                u8::from(bad == 0)
+            );
+            radix4_bad = Some(bad);
+        }
+    }
+
+    if mirror_bad != 0 || candidate_bad != 0 || radix4_bad.unwrap_or(0) != 0 {
         eprintln!(
-            "correctness failure: n={n} threads={threads} mirror_bad={mirror_bad} candidate_bad={candidate_bad}"
+            "correctness failure: n={n} threads={threads} mirror_bad={mirror_bad} candidate_bad={candidate_bad} radix4_bad={radix4_bad:?}"
         );
         std::process::exit(3);
     }
@@ -443,6 +606,22 @@ fn time_variant(
             let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
             (elapsed_ms, checksum(&a))
         }
+        Variant::CandidateRadix4 => {
+            let mut a = original.to_vec();
+            let start = Instant::now();
+            if threads == 1 {
+                let log_n = a.len().trailing_zeros();
+                assert_eq!(log_n % 2, 0, "1t radix-4 benchmark requires even log2(n)");
+                let table = build_radix4_table(a.len(), omega);
+                fft_radix4_precomputed_with_table(&mut a, &table);
+            } else {
+                let log_n = a.len().trailing_zeros();
+                let log_cpus = worker.log_num_threads();
+                parallel_fft_with_kernel(&mut a, worker, omega, log_n, log_cpus, Kernel::Radix4);
+            }
+            let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
+            (elapsed_ms, checksum(&a))
+        }
     }
 }
 
@@ -451,6 +630,7 @@ fn variant_name(variant: Variant) -> &'static str {
         Variant::Baseline => "baseline",
         Variant::Mirror => "mirror_onfly",
         Variant::Candidate => "cand_radix2_precomputed",
+        Variant::CandidateRadix4 => "cand_radix4_precomputed",
     }
 }
 
@@ -547,6 +727,16 @@ fn main() {
                 "candidate",
                 &worker,
             );
+            if threads == 8 {
+                bench_pair(
+                    Variant::Baseline,
+                    Variant::CandidateRadix4,
+                    n,
+                    threads,
+                    "candidate_radix4",
+                    &worker,
+                );
+            }
         }
     }
 }

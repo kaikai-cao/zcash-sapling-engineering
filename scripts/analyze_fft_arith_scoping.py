@@ -178,9 +178,14 @@ def main() -> int:
     s1 = speedup(1, 1 << 17, "cand_radix2_precomputed")
     s2 = speedup(1, 1 << 14, "cand_radix2_precomputed")
     s3 = speedup(8, 1 << 17, "cand_radix2_precomputed")
+    has_radix4 = (8, 1 << 17, "cand_radix4_precomputed") in batch_medians
+    s3_radix4 = speedup(8, 1 << 17, "cand_radix4_precomputed") if has_radix4 else float("nan")
+    # Candidate B is conditional: only the better 8t candidate is compared to
+    # the frozen S3 threshold.  Both values remain in the derived table.
+    s3_effective = max(s3, s3_radix4) if has_radix4 else s3
     s1_status = gate_status(s1, (1, 1 << 17))
     s2_status = gate_status(s2, (1, 1 << 14))
-    s3_status = gate_status(s3, (8, 1 << 17))
+    s3_status = gate_status(s3_effective, (8, 1 << 17))
 
     if correctness_bad or checksum_bad or not op_ok or not table_ok:
         overall = "NO_GO"
@@ -235,7 +240,13 @@ def main() -> int:
         f"shared 2^14 full table; private per thread={table_8t_per_thread}")
     add("S1_speedup", "1t", 1 << 17, round(s1, 6), GO[(1, 1 << 17)], s1_status, "baseline / candidate A")
     add("S2_speedup", "1t", 1 << 14, round(s2, 6), GO[(1, 1 << 14)], s2_status, "baseline / candidate A")
-    add("S3_speedup", "8t", 1 << 17, round(s3, 6), GO[(8, 1 << 17)], s3_status, "baseline / candidate A; includes shuffle/copy")
+    add("S3_radix2_speedup", "8t", 1 << 17, round(s3, 6), GO[(8, 1 << 17)],
+        gate_status(s3, (8, 1 << 17)), "baseline / candidate A; includes shuffle/copy")
+    if has_radix4:
+        add("S3_radix4_speedup", "8t", 1 << 17, round(s3_radix4, 6), GO[(8, 1 << 17)],
+            gate_status(s3_radix4, (8, 1 << 17)), "baseline / conditional candidate B; includes shuffle/copy")
+    add("S3_speedup", "8t", 1 << 17, round(s3_effective, 6), GO[(8, 1 << 17)], s3_status,
+        "best of candidate A and conditional B")
     add("overall", "all", "", overall, "GO requires C0-C3 and S1-S3 GO", overall,
         "MARGINAL may test candidate B under the same frozen gates")
 
@@ -249,7 +260,8 @@ def main() -> int:
     print(f"batches={len(manifest_rows)} raw_files={len(raw_paths)}")
     print(f"correctness_rows={len(correctness)} bad={len(correctness_bad)} checksum_bad={len(checksum_bad)}")
     print(f"control_ok={control_ok} op_ok={op_ok} table_ok={table_ok}")
-    print(f"S1={s1:.4f} ({s1_status}) S2={s2:.4f} ({s2_status}) S3={s3:.4f} ({s3_status})")
+    print(f"S1={s1:.4f} ({s1_status}) S2={s2:.4f} ({s2_status}) "
+          f"S3_A={s3:.4f} S3_B={s3_radix4:.4f} S3_best={s3_effective:.4f} ({s3_status})")
     print(f"overall={overall}")
     for threads, n in ((1, 1 << 17), (1, 1 << 14), (8, 1 << 17)):
         if (threads, n, "baseline") not in batch_medians:
@@ -257,10 +269,14 @@ def main() -> int:
         base = primary(threads, n, "baseline")
         cand = primary(threads, n, "cand_radix2_precomputed")
         mirror = primary(threads, n, "mirror_onfly")
-        print(
+        line = (
             f"{threads}t n={n}: baseline={base:.4f} mirror={mirror:.4f} "
             f"candidate={cand:.4f} speedup={base/cand:.4f} control={base/mirror:.4f}"
         )
+        if has_radix4 and (threads, n, "cand_radix4_precomputed") in batch_medians:
+            cand4 = primary(threads, n, "cand_radix4_precomputed")
+            line += f" radix4={cand4:.4f} speedup4={base/cand4:.4f}"
+        print(line)
 
     return 0
 

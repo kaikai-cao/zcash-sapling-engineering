@@ -198,8 +198,12 @@ foreach ($entry in $plan) {
         }
 
         $rows = @(Import-Csv -LiteralPath $rawCsv)
-        $expectedTimeRows = if ($entry.Threads -eq 1) { 4 * 2 * 9 * 2 } else { 1 * 2 * 9 * 2 }
-        $expectedCorrectnessRows = 4 * 3
+        # 1t: four sizes, two pairs (control + candidate A), nine runs,
+        # two implementations.  8t: one size, three pairs (control + A + B),
+        # nine runs, two implementations.  Radix-4 correctness is only emitted
+        # for even four-step sub-FFT sizes (2^13 and 2^17 full domains).
+        $expectedTimeRows = if ($entry.Threads -eq 1) { 4 * 2 * 9 * 2 } else { 1 * 3 * 9 * 2 }
+        $expectedCorrectnessRows = if ($entry.Threads -eq 1) { 4 * 3 } else { 4 * 3 + 2 }
         $timeRows = @($rows | Where-Object { $_.kind -eq 'time' })
         $correctnessRows = @($rows | Where-Object { $_.kind -eq 'correctness' })
         if ($timeRows.Count -ne $expectedTimeRows) {
