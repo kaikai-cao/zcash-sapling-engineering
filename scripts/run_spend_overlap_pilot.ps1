@@ -237,11 +237,13 @@ try {
         } else {
             ''
         }
+        if ($null -eq $text) { $text = '' }
         $errText = if (Test-Path -LiteralPath $stderrPath) {
             (Get-Content -LiteralPath $stderrPath -Raw)
         } else {
             ''
         }
+        if ($null -eq $errText) { $errText = '' }
 
         $batchId = ''
         $match = [regex]::Match($text, '(?m)^batch_id=(\d+)\s*$')
