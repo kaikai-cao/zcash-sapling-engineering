@@ -220,30 +220,34 @@ try {
         }
 
         Write-Host ("[{0}/8] {1} arm={2} proofs={3} warmups={4}" -f $item.Order, $item.Label, $item.Arm, $Proofs, $Warmups)
-        $proc = Start-Process `
-            -FilePath $binary `
-            -WorkingDirectory $RepoRoot `
-            -RedirectStandardOutput $stdoutPath `
-            -RedirectStandardError $stderrPath `
-            -PassThru `
-            -WindowStyle Hidden
-        $proc.ProcessorAffinity = [IntPtr]0x5555
-        $proc.WaitForExit()
-        $exitCode = $proc.ExitCode
-        $ended = Get-UtcNow
 
-        $text = if (Test-Path -LiteralPath $stdoutPath) {
-            (Get-Content -LiteralPath $stdoutPath -Raw)
-        } else {
-            ''
+        # Use System.Diagnostics.Process directly: Start-Process -PassThru without
+        # -Wait does not reliably populate ExitCode on Windows PowerShell 5.1.
+        $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $startInfo.FileName = $binary
+        $startInfo.WorkingDirectory = $RepoRoot
+        $startInfo.UseShellExecute = $false
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $startInfo.CreateNoWindow = $true
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $startInfo
+        if (-not $process.Start()) {
+            throw "Failed to start pilot process: $binary"
         }
+        $process.ProcessorAffinity = [IntPtr]0x5555
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
+        $process.WaitForExit()
+        $text = $stdoutTask.Result
+        $errText = $stderrTask.Result
+        $exitCode = $process.ExitCode
+        $process.Dispose()
         if ($null -eq $text) { $text = '' }
-        $errText = if (Test-Path -LiteralPath $stderrPath) {
-            (Get-Content -LiteralPath $stderrPath -Raw)
-        } else {
-            ''
-        }
         if ($null -eq $errText) { $errText = '' }
+        [IO.File]::WriteAllText($stdoutPath, $text, [System.Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText($stderrPath, $errText, [System.Text.UTF8Encoding]::new($false))
+        $ended = Get-UtcNow
 
         $batchId = ''
         $match = [regex]::Match($text, '(?m)^batch_id=(\d+)\s*$')
