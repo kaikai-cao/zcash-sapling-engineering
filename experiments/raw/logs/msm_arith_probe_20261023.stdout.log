@@ -1,0 +1,10 @@
+﻿probe=g1_mixed_add_bls12_381 ops_per_pass=20000 ns_per_op=477.02
+probe=g1_add_or_double_affine_blst ops_per_pass=20000 ns_per_op=547.86
+probe=g1_double_bls12_381 ops_per_pass=20000 ns_per_op=367.47
+probe=g1_add_or_double_blst ops_per_pass=20000 ns_per_op=464.02
+probe=g1_to_affine_pure_bls12_381 ops_per_pass=20000 ns_per_op=19915.26
+probe=g1s_to_affine_batch_blst ops_per_pass=4096 ns_per_op=158.59
+probe=scalar_mul_bls12_381 ops_per_pass=200000 ns_per_op=16.29
+probe=fp_mul_blst ops_per_pass=200000 ns_per_op=20.38
+ARITH_PROBE=DONE
+

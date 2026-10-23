@@ -20,10 +20,12 @@
 ## 0. 一句话
 
 **当前 bellman 生产路径的单线程点运算成本约为 blst 的 2.0×（H-query G1 全 MSM：1,343.7 ms vs
-707.7 ms，R = 1.9005，95% CI [1.8894, 1.9151]），且 1t 测量系统的不确定性（A/A 配对差 95% CI
-半宽 0.66%–1.29%）明显小于该差距**——按冻结判据 P1 = **GO**，阶段 D 的 bucket-fill 内核候选
-具备值得挖掘的实现级空间；8t 条件的测量噪声（10.6%–24.4%）本身也是一项结论：生产条件的细粒度
-比较不能依赖本设计的 8t 绝对计时。
+707.7 ms，R = 1.9005，95% CI [1.8894, 1.9151]；24 区组复现轮 R = 1.9063 [1.8999, 1.9110]），
+且 1t 测量系统的不确定性（A/A 配对差 95% CI 半宽 0.25%–1.29%）明显小于该差距**——按冻结
+判据 P1 = **GO**。单位成本分解探针进一步定位：差距唯一可归因的层是 **fill 混合加的公式
+实现**（bellman Jacobian madd 477 ns/数字 vs blst xyzz 路径反推 ≈ 253 ns/数字），域运算层与
+reduce 层均无差距；8t 条件的测量噪声（主负载 24 区组 0.97%，中小负载 ~3%）本身也是一项
+结论：生产条件的细粒度比较不能依赖本设计的 8t 绝对计时。
 
 ---
 
@@ -107,28 +109,44 @@ bellman vs blst 群意义往返、每臂校验和稳定}，外加 `ic`（n=8）�
 实现存在明确、可复现、量级约 2× 的单线程差距。该结论不是单一负载的偶然：三个主要 G1 负载一致
 落在 1.90–1.98，G2 为 2.19。
 
-## 5. 差距归因（预注册 §4.4）
+## 5. 差距归因（预注册 §4.4 + 单位成本分解探针）
 
 操作数模型（同一口径）：bellman signed 窗口 c = 13 → chunks = 20、桶 2^12 = 4,096；
 `ops ≈ 20 × (131,071 + 2 × 4,096) ≈ 2.79 M`。blst 窗口规则 `pippenger_window_size(131,071) = 13`，
 单线程 breakdown 后 wnd = 14、ny = 19、桶 2^13 = 8,192；`ops ≈ 19 × (131,071 + 2 × 8,192) ≈ 2.80 M`。
 **两侧操作数相当（1.00×）**，因此 1.90× 的差距来自单位操作成本：
+bellman ≈ 482 ns/窗口数字（全 MSM ÷ 模型 ops），blst ≈ 253 ns/op。
 
-| 口径 | 成本 |
-|---|---:|
-| bellman 每窗口数字（全 MSM ÷ 模型 ops） | ≈ **482 ns** |
-| bellman 每非零数字（fill-only 历史口径，2026-10-18 剖面：1,211.7 ms / 2,620,825） | 462 ns |
-| blst 每模型操作（全 MSM ÷ 模型 ops） | ≈ **253 ns** |
+为定位这一单位成本差来自哪一层，补做了单位成本分解探针（`msm_arith_probe`，单核 0x1，
+exploratory 无门禁；脚本 `scripts/run_msm_arith_probe.ps1`，日志
+`experiments/raw/logs/msm_arith_probe_20261023.stdout.log`）：
 
-单位成本约 1.9× 的差距，对照阶段 B 文献清单，可归于 blst 已知实现技术（均不依赖 AVX-512）：
-**xyzz 桶坐标**（加法比 Jacobian 少一次域乘）、**软件预取**（隐藏桶阵列访问延迟）、
-**批量仿射转换的 reduce**（一次 Montgomery 批量求逆把桶转仿射后走混合加，替代 bellman 的
-桶间倍加）、以及 Booth 重编码带来的更规则的数字流。这与"bellman 桶阵列在 L2 内、算术受限"
-的历史结论一致：差距在算术公式与数据布局，不在内存容量。
+| 层 | bls12_381 crate（bellman 路径） | blst | 比值 | 判读 |
+|---|---:|---:|---|---|
+| 域乘（代理：Scalar×Scalar vs blst_fp_mul） | 16.29 ns | 20.38 ns | 0.80× | **无差距**；blst crate 在该构建下并未更快（无 ADX 收益证据） |
+| fill 混合加（Jacobian 桶 + 仿射点） | **477.02 ns** | 547.86 ns（`blst_p1_add_or_double_affine`，公开 Jacobian API） | 0.87× | 公开 API 无差距；blst 的优势在其 multiexp **内部的 xyzz 路径**（Rust 绑定不暴露） |
+| 倍加 / 全加 | double 367.47 ns；add_or_double 464.02 ns | 464.02 ns | ≈1.0× | 无差距 |
+| 点→仿射 | 单点 19,915 ns（一次域求逆） | 批量 4,096 点 158.59 ns/点（单次批量求逆摊销） | 0.008× | 125× 差距存在，但 bellman 生产 reduce **不用**单点 to_affine，对 H-query 无影响 |
 
-传导估计（仅用于阶段 D 定标，不构成端到端承诺）：fill 占 1t body 的 67.5%；若内核达到 blst 级
-单位成本，理论上界约 body −35%；即使只兑现其中 1/6（≈1.15× 内核），也对应 body ≈ −6%——
-这正是预注册把 P1 GO 线设在 1.15 的依据。**任何端到端数字必须由阶段 E 的完整证明 A/B 验证。**
+**归因结论（更新了阶段 B 文献表项的权重）**：
+
+1. **差距主体在 fill 层的点加公式实现**。bellman 的 Jacobian 混合加实测 477 ns/数字，
+   而 11 次域乘的理论值仅 ≈ 179 ns（11 × 16.29）——约 2.7 倍于纯域乘流水，说明 bls12_381
+   crate 的混合加实现含大量公式外开销（分支、规范化路径）。blst 全 MSM 反推的
+   ≈ 253 ns/数字与其 xyzz 公式（8 乘 + 3 平方 ≈ 202 ns + 调用/循环开销）吻合。
+   两者之比 1.89×，与实测 P1 = 1.90 一致——**fill 层（占 H-query MSM 的 93.5%）即可
+   解释全部差距**。
+2. **域运算层无差距**（探针proxy 显示 bls12_381 的标量乘反而更快）。阶段 B 文献表中
+   "blst 用 ADX 汇编域运算"的猜测在本机构建条件下不成立；候选设计不应指向域运算替换。
+3. **reduce 层无差距**：bellman 桶间倍加（≈ 400 ns/桶 × 163,840 桶 ≈ 65 ms）与 blst 的
+   批量转仿射 + 混合加（≈ 159 ns/点 × 155,648 桶 + 行内混合加 ≈ 64 ms）相当。
+4. **批量求逆转换的 125× 差距是真实的但不落在 H-query 路径上**（bellman 只在 IC/最终
+   转换用单点 to_affine；若未来候选触及 reduce 改写，这是一笔可收割的已知收益）。
+
+传导估计（仅用于阶段 D 定标，不构成端到端承诺）：fill 占 1t body 的 67.5%；若 fill 内核
+达到 blst 级单位成本（477 → ~253 ns/数字，1.89×），理论上界约 body **−35%**；即使只兑现
+其中 1/6（≈1.15× 内核），也对应 body ≈ −6%——这正是预注册把 P1 GO 线设在 1.15 的依据。
+**任何端到端数字必须由阶段 E 的完整证明 A/B 验证。**
 
 ## 6. 判定与下一步
 
@@ -136,17 +154,39 @@ bellman vs blst 群意义往返、每臂校验和稳定}，外加 `ic`（n=8）�
 - C 门禁：52/52 PASS。
 - P1：**GO**（R = 1.9005，CI95 [1.8894, 1.9151]；G1 主负载一致 1.90–1.98，G2 2.19）。
 
-**结论：进入阶段 D。** 按预注册 §4.3 GO 分支，下一动作是写阶段 D 候选预注册：候选为
-bucket-fill 点累加内核（xyzz 坐标 / 预取 / 批量仿射 reduce 中经文献审查且可解释的替代策略），
-默认关闭、独立配置，先在独立内核上过正确性与内核筛选门槛，再接完整 Spend proof 做配对 A/B。
+**结论：进入阶段 D。** 按预注册 §4.3 GO 分支，下一动作是写阶段 D 候选预注册。单位成本分解
+探针（§5）把候选方向收敛为一句话：**bellman fill 循环的 Jacobian 混合加（477 ns/数字）是
+唯一可定位的差距层，blst 的 xyzz 内部路径（≈ 253 ns/数字反推）是已验证的对照锚点；域运算层
+与 reduce 层均无差距。** 候选即将 blst 类 xyzz 桶公式移植进 bellman fill 内核（默认关闭、
+独立配置、正确性以群相等验证），先在独立内核上过筛选门槛，再接完整 Spend proof 做配对 A/B。
 
-**给阶段 E 的测量设计输入**：本设计的 8t 绝对计时无法在合理区组数内达到 1.5%（首轮 8 区组
-15.9%；见 §7 复现轮的缩放数据）。阶段 E 的端到端 A/B 应依赖 1t 级内核筛选结论 + 完整证明
-层面的配对区组/cluster bootstrap，并事前冻结区组数与顺序，不得用 8t 微基准差值替代证明层收益。
+**给阶段 E 的测量设计输入**：本设计的 8t 绝对计时只有在主负载（h_query）且样本量足够
+（24 区组，0.97%）时才达到 1.5%；中小 8t 负载停在 ~3%。阶段 E 的端到端 A/B 应以 1t 级
+内核筛选结论为据，完整证明层面用配对区组/cluster bootstrap 并事前冻结区组数与顺序，
+不得用 8t 微基准差值替代证明层收益。
 
 ## 7. 复现轮（24 区组，独立第二轮）
 
-（待补：`msm_kernel_bench_20261023_v2`，24 区组，验证 P1 复现性与 8t 噪声随样本量的缩放。）
+`msm_kernel_bench_20261023_v2`（exe 同哈希，HEAD `67e9801`，24 区组，其余协议不变）：
+
+| 条件 | 负载 | median_diff (ms) | CI95 (ms) | 半宽 % | 门禁 |
+|---|---|---:|---|---:|---|
+| 1t | h_query | −0.65 | [−3.16, 4.66] | **0.39** | PASS |
+| 1t | l_query | −0.20 | [−1.82, 1.94] | **0.64** | PASS |
+| 1t | ab_aux | +0.38 | [−1.36, 3.14] | **0.82** | PASS |
+| 1t | g2_aux | +0.88 | [−0.55, 2.83] | **0.25** | PASS |
+| 8t | h_query | +0.27 | [−1.70, 2.98] | **0.97** | PASS |
+| 8t | l_query | −1.24 | [−1.76, 0.47] | **2.90** | FAIL |
+| 8t | ab_aux | +0.65 | [−0.38, 2.37] | **2.96** | FAIL |
+| 8t | g2_aux | −1.26 | [−6.64, 2.78] | **3.88** | FAIL |
+
+- **P1 复现**：R = **1.9063**，CI95 [1.8999, 1.9110]（首轮 1.9005 [1.8894, 1.9151]）——
+  两轮独立测量一致，GO 判定稳固。
+- 1t 区组中位：h_query bellman_A 1,363.18 ms / blst 714.99 ms；g2_aux 770.36 / 353.68 ms。
+- 8t h_query（主负载）在 24 区组下达到 0.97%（首轮 8 区组为 15.89%）——噪声随样本量
+  按 ~1/√B 缩放；8t 的中小负载（~70–140 ms 级）仍停在 ~3%，其绝对差值仍不可细用。
+- 结论不变：**1t 是可信的比较条件；8t 绝对计时只作生产量级参考**（8t bellman h_query
+  区组中位 280.0 ms，与历史 8t 剖面同量级）。
 
 ## 8. 与预注册的偏差记录
 
@@ -161,10 +201,16 @@ bucket-fill 点累加内核（xyzz 坐标 / 预取 / 批量仿射 reduce 中经�
 
 ## 9. 数据入口
 
-- 原始：`experiments/raw/csv/msm_kernel_bench_20261023_8t.csv`、`..._1t.csv`、`..._correctness.csv`
-- 日志：`experiments/raw/logs/msm_kernel_bench_20261023_{8t,1t}.{stdout,stderr}.log`
-- 派生：`results/tables/msm_kernel_bench_20261023_summary.csv`、`..._aa.csv`
-- bench：`experiments/prover-smoke/src/bin/msm_kernel_bench.rs`；运行脚本
-  `scripts/run_msm_kernel_bench.ps1`；分析脚本 `scripts/analyze_msm_kernel_bench.py`
+- 原始（轮 1）：`experiments/raw/csv/msm_kernel_bench_20261023_{8t,1t}.csv`、
+  `..._correctness.csv`；日志 `experiments/raw/logs/msm_kernel_bench_20261023_*.log`
+- 原始（轮 2，24 区组）：`experiments/raw/csv/msm_kernel_bench_20261023_v2_{8t,1t}.csv`、
+  `..._v2_correctness.csv`；日志 `experiments/raw/logs/msm_kernel_bench_20261023_v2_*.log`
+- 探针：日志 `experiments/raw/logs/msm_arith_probe_20261023.stdout.log`
+- 派生：`results/tables/msm_kernel_bench_20261023_{summary,aa}.csv`、
+  `results/tables/msm_kernel_bench_20261023_v2_{summary,aa}.csv`
+- 代码：bench `experiments/prover-smoke/src/bin/msm_kernel_bench.rs`；探针
+  `experiments/prover-smoke/src/bin/msm_arith_probe.rs`；运行脚本
+  `scripts/run_msm_kernel_bench.ps1`、`scripts/run_msm_arith_probe.ps1`；分析脚本
+  `scripts/analyze_msm_kernel_bench.py`
 - 上游：预注册 `experiments/metadata/sapling_msm_kernel_stagec_preregistration_20261023.md`；
   计划 `docs/msm_kernel_research_plan_20261023.md`；文献 `docs/msm_literature_survey_20261023.md`
