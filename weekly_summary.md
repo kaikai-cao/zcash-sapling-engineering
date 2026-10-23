@@ -762,3 +762,26 @@ manifest `experiments/metadata/msm_adaptive_manifest_msm_adaptive_20261022.csv`�
 原始数据 `experiments/raw/csv/*msm_adaptive_20261022*`；
 派生表/图 `results/tables/msm_adaptive_*_msm_adaptive_20261022.csv`、
 `results/figures/msm_adaptive_*_msm_adaptive_20261022.png`。
+
+## 26. Stage 2 pilot：真实 Spend 的 c=12 筛选（2026-10-23）
+
+Stage 1c 的同进程 bench 只给出 c=12 可能快 1–3% 的探索信号，不足以切默认值。Stage 2
+pilot 在真实 Sapling Spend 上做了 4 批、2 臂的 go/no-go 筛选：C0 默认，C1 只对
+`n ≥ 16384` 的 MSM 用 c=12；ABBA 顺序，8t `0x5555`，每批 5 个 proof，丢弃 run 1；
+不运行 Output/交易。
+
+| 顺序 | 臂 | 批次中位 (ms) | H-query 中位 (ms) |
+|---:|---|---:|---:|
+| 1 | C0 | 698.611 | 457.175 |
+| 2 | C1 | 703.710 | 454.500 |
+| 3 | C1 | 677.724 | 438.516 |
+| 4 | C0 | 764.098 | 510.787 |
+
+A1–A5 全部通过；C0 臂中位 **731.354 ms**，C1 **690.717 ms**，`R=0.9444`（点估计快
+5.56%），G1 通过。但 C1 最慢批 703.710 ms 高于 C0 最快批 698.611 ms，G2
+（`max(C1) < min(C0)`）失败，差 0.73%，因此按冻结规则判为 **NO_GO**。
+
+**决策：关闭 c=12 窗口线；不启动正式 Stage 2，不切换默认值。** 这不是“c=12 无效”
+的正式证明；4 批下 C0 离散 9.37%，点估计受末批变慢影响，不能作为稳健收益。执行偏差
+（manifest 文件名重复前缀、分析器把 G2 误归 INVALID）已记录并修正，数据未改。完整
+记录见 `experiments/metadata/sapling_msm_c12_pilot_results_20261023.md`。
