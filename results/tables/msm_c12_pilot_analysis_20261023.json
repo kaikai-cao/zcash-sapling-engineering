@@ -1,0 +1,277 @@
+{
+  "status": "NO_GO",
+  "checks": [
+    {
+      "id": "A1_count",
+      "passed": true,
+      "detail": "manifest rows=4"
+    },
+    {
+      "id": "A1_plan",
+      "passed": true,
+      "detail": "arm/label order=[('C0', 'msm_c12_pilot_20261023_c0_b1'), ('C1', 'msm_c12_pilot_20261023_c1_b2'), ('C1', 'msm_c12_pilot_20261023_c1_b3'), ('C0', 'msm_c12_pilot_20261023_c0_b4')]"
+    },
+    {
+      "id": "A1_unique",
+      "passed": true,
+      "detail": "batch_ids=['1792718623882', '1792718665475', '1792718706143', '1792718746987']"
+    },
+    {
+      "id": "A4_head",
+      "passed": true,
+      "detail": "heads={'4c9281c9f5e0a1aae6eb584373945ff2ef3b6ebf'}"
+    },
+    {
+      "id": "A4_prereg",
+      "passed": true,
+      "detail": "prereg_shas={'aaacdaca264ac204b4438618f2a6e2eef22fd17e0189fb631d3796cdd24d841d'}"
+    },
+    {
+      "id": "A4_binary",
+      "passed": true,
+      "detail": "binary_shas={'50d973cbf103da61011286530c3ff31d24b536cb63d10494b0762c1204a8a32b'}"
+    },
+    {
+      "id": "A4_env",
+      "passed": true,
+      "detail": "threads/affinity=[('8', '0x5555'), ('8', '0x5555'), ('8', '0x5555'), ('8', '0x5555')]"
+    },
+    {
+      "id": "A1_exit_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "exit_code=0"
+    },
+    {
+      "id": "A5_raw_exists_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_prover_runs_msm_c12_pilot_20261023_c0_b1.csv"
+    },
+    {
+      "id": "A3_stage_exists_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_stage_profile_1792718623882.csv"
+    },
+    {
+      "id": "A3_msm_exists_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_msm_call_profile_1792718623882.csv"
+    },
+    {
+      "id": "A2_rows_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "rows=5"
+    },
+    {
+      "id": "A2_verified_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "verified=['true', 'true', 'true', 'true', 'true']"
+    },
+    {
+      "id": "A3_msm_rows_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "msm rows=40"
+    },
+    {
+      "id": "A3_windows_msm_c12_pilot_20261023_c0_b1",
+      "passed": true,
+      "detail": "all 40 rows match gate/default"
+    },
+    {
+      "id": "A1_exit_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "exit_code=0"
+    },
+    {
+      "id": "A5_raw_exists_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_prover_runs_msm_c12_pilot_20261023_c1_b2.csv"
+    },
+    {
+      "id": "A3_stage_exists_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_stage_profile_1792718665475.csv"
+    },
+    {
+      "id": "A3_msm_exists_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_msm_call_profile_1792718665475.csv"
+    },
+    {
+      "id": "A2_rows_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "rows=5"
+    },
+    {
+      "id": "A2_verified_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "verified=['true', 'true', 'true', 'true', 'true']"
+    },
+    {
+      "id": "A3_msm_rows_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "msm rows=40"
+    },
+    {
+      "id": "A3_windows_msm_c12_pilot_20261023_c1_b2",
+      "passed": true,
+      "detail": "all 40 rows match gate/default"
+    },
+    {
+      "id": "A1_exit_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "exit_code=0"
+    },
+    {
+      "id": "A5_raw_exists_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_prover_runs_msm_c12_pilot_20261023_c1_b3.csv"
+    },
+    {
+      "id": "A3_stage_exists_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_stage_profile_1792718706143.csv"
+    },
+    {
+      "id": "A3_msm_exists_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_msm_call_profile_1792718706143.csv"
+    },
+    {
+      "id": "A2_rows_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "rows=5"
+    },
+    {
+      "id": "A2_verified_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "verified=['true', 'true', 'true', 'true', 'true']"
+    },
+    {
+      "id": "A3_msm_rows_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "msm rows=40"
+    },
+    {
+      "id": "A3_windows_msm_c12_pilot_20261023_c1_b3",
+      "passed": true,
+      "detail": "all 40 rows match gate/default"
+    },
+    {
+      "id": "A1_exit_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "exit_code=0"
+    },
+    {
+      "id": "A5_raw_exists_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_prover_runs_msm_c12_pilot_20261023_c0_b4.csv"
+    },
+    {
+      "id": "A3_stage_exists_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_stage_profile_1792718746987.csv"
+    },
+    {
+      "id": "A3_msm_exists_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "D:\\Research\\zcash-sapling-engineering\\experiments\\raw\\csv\\sapling_spend_msm_call_profile_1792718746987.csv"
+    },
+    {
+      "id": "A2_rows_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "rows=5"
+    },
+    {
+      "id": "A2_verified_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "verified=['true', 'true', 'true', 'true', 'true']"
+    },
+    {
+      "id": "A3_msm_rows_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "msm rows=40"
+    },
+    {
+      "id": "A3_windows_msm_c12_pilot_20261023_c0_b4",
+      "passed": true,
+      "detail": "all 40 rows match gate/default"
+    },
+    {
+      "id": "G1_ratio",
+      "passed": true,
+      "detail": "R=0.944435 (need <=0.97)"
+    },
+    {
+      "id": "G2_no_reversal",
+      "passed": false,
+      "detail": "C1=[703.7095, 677.7235000000001], C0=[698.611, 764.0975]"
+    }
+  ],
+  "validity_failures": [],
+  "go_failures": [
+    "G2_no_reversal: C1=[703.7095, 677.7235000000001], C0=[698.611, 764.0975]"
+  ],
+  "batch_records": [
+    {
+      "arm": "C0",
+      "label": "msm_c12_pilot_20261023_c0_b1",
+      "batch_id": "1792718623882",
+      "batch_median_ms": 698.611,
+      "prove_ms_runs": [
+        763.476,
+        700.491,
+        692.587,
+        696.731,
+        722.857
+      ],
+      "h_query_median_ms": 457.175
+    },
+    {
+      "arm": "C1",
+      "label": "msm_c12_pilot_20261023_c1_b2",
+      "batch_id": "1792718665475",
+      "batch_median_ms": 703.7095,
+      "prove_ms_runs": [
+        761.021,
+        800.017,
+        725.267,
+        673.409,
+        682.152
+      ],
+      "h_query_median_ms": 454.5
+    },
+    {
+      "arm": "C1",
+      "label": "msm_c12_pilot_20261023_c1_b3",
+      "batch_id": "1792718706143",
+      "batch_median_ms": 677.7235000000001,
+      "prove_ms_runs": [
+        769.793,
+        672.108,
+        674.886,
+        680.561,
+        685.817
+      ],
+      "h_query_median_ms": 438.516
+    },
+    {
+      "arm": "C0",
+      "label": "msm_c12_pilot_20261023_c0_b4",
+      "batch_id": "1792718746987",
+      "batch_median_ms": 764.0975,
+      "prove_ms_runs": [
+        930.697,
+        885.964,
+        782.905,
+        733.356,
+        745.29
+      ],
+      "h_query_median_ms": 510.787
+    }
+  ],
+  "c0_median_ms": 731.35425,
+  "c1_median_ms": 690.7165,
+  "ratio_c1_over_c0": 0.9444349301313283,
+  "go_rule": "R <= 0.97 and max(C1) < min(C0)",
+  "go": false
+}

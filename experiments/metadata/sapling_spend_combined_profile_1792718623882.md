@@ -1,0 +1,103 @@
+# Sapling Spend Combined Stage / MSM Diagnostic Profile
+
+- Circuit: Sapling Spend
+- Batch ID: 1792718623882
+- Runs: 5; verified proofs: 5/5; build: Release; RAYON_NUM_THREADS=8; SAPLING_PROFILE=1
+- Run data label: msm_c12_pilot_20261023_c0_b1
+- Branch counters: enabled
+- Fine-grained MSM inner-stage timing: enabled
+- Explicit MSM window override: default
+- Explicit MSM window minimum exponent count: 0
+- Force async worker: False
+- Processor affinity mask: 21845
+- Processor affinity readback: 0x5555
+- Worker fallback records: 0
+- Forced-async override records: 0
+- Run start: 2026-10-23T09:23:14.5241533+08:00
+- Run end: 2026-10-23T09:23:47.5053281+08:00
+- Repository branch: stage2/msm-c12-pilot
+- Engineering repository HEAD at start: 4c9281c9f5e0a1aae6eb584373945ff2ef3b6ebf
+- Engineering worktree dirty at start: False
+- Engineering worktree status at start: clean
+- Engineering worktree status details: none
+- Untracked output files ignored for cleanliness: True (count: 5)
+- Sapling dependency repository: https://github.com/zcash/sapling-crypto
+- Sapling dependency HEAD: 88a7946b4a3066787776e11f0a502654167e022d
+- Sapling dependency source: git+https://github.com/zcash/sapling-crypto?rev=88a7946b4a3066787776e11f0a502654167e022d#88a7946b4a3066787776e11f0a502654167e022d
+- CPU: Intel(R) Core(TM) i7-14700
+- Installed physical memory (bytes): 34031325184
+- OS: Microsoft Windows 11 家庭版 Insider Preview 中文版 (10.0.26220, build 26220)
+- Rust: rustc 1.98.1 (48a229cea 2026-09-01)
+- Cargo: cargo 1.98.1 (797e8a9bc 2026-08-05)
+
+## Parameter identity
+
+- Parameter path: D:\Research\zcash-params\sapling-spend.params
+- Parameter bytes: 47958396
+- Parameter SHA-256: 8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13
+
+## Instrumented source identity
+
+- vendor/bellman/src/multiexp.rs SHA-256: 98f48fe41040f44f4e88a2819601446caaeb00bd7c61aa43ca4a231b689c9423
+- vendor/bellman/src/multicore.rs SHA-256: fb951f477ae04ea7e2141a24035f2a5d9114458831d56784e5a2b94eec178dd0
+- vendor/groth16/src/prover.rs SHA-256: 43d03f7ebb5c18e4112556c4301e60634edb839caa69fbff319402400e39480e
+- spend_prover_smoke.rs SHA-256: 58859dec0a6872dd4aaa0400922dae737eceb2b7f99fa0e7574a117ec7e22f10
+- Runner SHA-256: 816bcd22f68a2b8aaa572a40e0a25d8b10a9b4548ecd5cf577ce0020e28b37ec
+- Cargo manifest SHA-256: 45910fd1a523bb2d17e6106a23237e53321aa2974174d01df3cf2679febd3e2e
+
+## Result summary
+
+- Outer Prove median (ms): 700.491
+- create_proof_body_ms median (ms): 700.413
+- Per-run ratio sum(MSM elapsed_ms) / create_proof_body_ms median: 394.97%
+- task_start_delay_ms median across MSM calls (ms): 0.052
+- elapsed_ms median across MSM calls (ms): 453.514
+- submit_elapsed_ms median across MSM calls (ms): 0.024
+- MSM inner-stage records: 40 / 40
+- Per-query MSM inner-stage summary rows: 8 / 8
+- Maximum observed concurrent chunk regions within one MSM call: 8
+- Maximum estimated bucket payload for observed concurrency (bytes): 7077888
+
+The inner-stage timing fields distinguish cumulative per-chunk work from wall-clock time. Bucket payload figures are analytical estimates based on active chunk-region instrumentation, not process peak memory.
+
+The three existing MSM timing fields describe different measurement intervals. In particular, submit_elapsed_ms is not an additional disjoint work segment that can be summed with task_start_delay_ms and elapsed_ms. Worker fallback may execute queued work while a submit call is in progress. Treat these values as diagnostic timing fields, not as a mutually exclusive cost decomposition.
+
+The fallback ablation uses the same instrumented source for both conditions. Set -BranchCounters disabled for paired runs so per-slot counter increments do not contaminate the timing comparison. -ForceAsyncWorker suppresses synchronous fallback only when the normal fallback threshold would otherwise be crossed; override records confirm when that intervention was exercised.
+
+The share above is computed per run and then summarized; it is not computed by dividing separately calculated medians. This diagnostic batch is not the frozen formal performance baseline and should not be combined with historical profiling batches.
+
+## Artifacts
+
+- Prover run records: experiments/raw/csv/sapling_spend_prover_runs_msm_c12_pilot_20261023_c0_b1.csv (filtered by this batch ID)
+- Prover run CSV SHA-256: 2175d47f58bdd58d59e5bb456ca940533da7003e081484cd10211ed156adcb4b
+- Stage CSV: experiments/raw/csv/sapling_spend_stage_profile_1792718623882.csv
+- Stage CSV SHA-256: 279b3d6218544241ca8e178db499816cd36f34b6bc0b91ff2e9aa573e8580b28
+- MSM call CSV (includes submit timing): experiments/raw/csv/sapling_spend_msm_call_profile_1792718623882.csv
+- MSM call CSV SHA-256: 362438b2f30a4b5e7a9f6cc31c594cabdfe71f997ec6b3378aaf9f9b793cb507
+- Per-run ratio summary CSV: experiments/raw/csv/sapling_spend_profile_run_summary_1792718623882.csv
+- Per-run ratio summary CSV SHA-256: 3f4103d1f887e137c4adaac9f57f2a967037bf2764aa6a83a3593c7c0f939076
+- MSM inner-stage CSV: experiments/raw/csv/sapling_spend_msm_inner_stage_profile_1792718623882.csv
+- MSM inner-stage CSV SHA-256: c7b340615e69cd961388497c1806861da2f1b826ebba0aa2d2583de0f9b026d7
+- MSM inner-stage per-query summary CSV: experiments/raw/csv/sapling_spend_msm_inner_stage_summary_1792718623882.csv
+- MSM inner-stage per-query summary CSV SHA-256: 9cb0d6c79e0c23756c3480b049b90247f3d9fdada053a8c5fb985ccc537a0577
+- Prover stdout: experiments/raw/logs/sapling_spend_combined_profile_20261023_092313_275.stdout.log
+- Prover stdout SHA-256: 2f058fd3296d7238fa6fb8278084448a5eb7f646d8c833dc263136e4c9f370e6
+- Prover stderr / source instrumentation records: experiments/raw/logs/sapling_spend_combined_profile_20261023_092313_275.stderr.log
+- Prover stderr SHA-256: 31cbf1ef3eb0cbce24c019fe4adef289dbc14ebdd53d19bccd8c3032a91c4beb
+- Build stdout: experiments/raw/logs/sapling_spend_combined_profile_build_20261023_092313_275.stdout.log
+- Build stdout SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- Build stderr: experiments/raw/logs/sapling_spend_combined_profile_build_20261023_092313_275.stderr.log
+- Build stderr SHA-256: 1ff8bbcb4151dc887e69b78a29bc241d5062cba4757aa5f4639926ae712a8181
+
+## Validation
+
+- New raw prover batch rows: 5 / 5
+- MSM call records: 40 / 40
+- Submit timing records: 40 / 40
+- Stage timing records: 5 / 5
+- MSM inner-stage records: 40 / 40
+- MSM inner-stage query summary rows: 8 / 8
+- Proof verification: 5/5 passed
+- Maximum absolute per-run stage-sum minus body timing (ms): 0.001
+
+No algorithm changes were made as part of this run. Results are diagnostic profile data and are not an optimization claim.

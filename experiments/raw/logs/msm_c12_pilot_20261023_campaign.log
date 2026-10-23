@@ -1,0 +1,90 @@
+﻿Stage 2 c=12 pilot
+tag=msm_c12_pilot_20261023
+head=4c9281c9f5e0a1aae6eb584373945ff2ef3b6ebf
+prereg=experiments/metadata/sapling_msm_c12_pilot_preregistration_20261023.md
+prereg_sha256=aaacdaca264ac204b4438618f2a6e2eef22fd17e0189fb631d3796cdd24d841d
+binary=D:\Research\zcash-sapling-engineering\experiments\prover-smoke\target\release\spend_prover_smoke.exe
+binary_sha256=50d973cbf103da61011286530c3ff31d24b536cb63d10494b0762c1204a8a32b
+prebuild_stdout=D:\Research\zcash-sapling-engineering\experiments\raw\logs\msm_c12_pilot_20261023_prebuild.stdout.log
+prebuild_stderr=D:\Research\zcash-sapling-engineering\experiments\raw\logs\msm_c12_pilot_20261023_prebuild.stderr.log
+start=2026-10-23T01:23:12.7229499Z
+
+=== batch 1: msm_c12_pilot_20261023_c0_b1 arm=C0 window_c= min_n=0 ===
+
+=== Spend combined profile complete ===
+Batch ID: 1792718623882
+Outer Prove median: 700.491 ms
+Body median: 700.413 ms
+MSM elapsed/body share median: 394.97%
+Stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_stage_profile_1792718623882.csv
+MSM CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_call_profile_1792718623882.csv
+Per-run summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_profile_run_summary_1792718623882.csv
+MSM inner-stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_profile_1792718623882.csv
+MSM inner-stage query summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_summary_1792718623882.csv
+Fine-grained MSM inner-stage timing: enabled
+Metadata report: D:\Research\zcash-sapling-engineering\experiments\metadata\sapling_spend_combined_profile_1792718623882.md
+Worker fallback records: 0
+Forced-async override records: 0
+All logs are preserved under experiments/raw/logs.
+=== exit_code=0 ===
+
+=== batch 2: msm_c12_pilot_20261023_c1_b2 arm=C1 window_c=12 min_n=16384 ===
+
+=== Spend combined profile complete ===
+Batch ID: 1792718665475
+Outer Prove median: 725.267 ms
+Body median: 725.184 ms
+MSM elapsed/body share median: 397.98%
+Stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_stage_profile_1792718665475.csv
+MSM CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_call_profile_1792718665475.csv
+Per-run summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_profile_run_summary_1792718665475.csv
+MSM inner-stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_profile_1792718665475.csv
+MSM inner-stage query summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_summary_1792718665475.csv
+Fine-grained MSM inner-stage timing: enabled
+Metadata report: D:\Research\zcash-sapling-engineering\experiments\metadata\sapling_spend_combined_profile_1792718665475.md
+Worker fallback records: 0
+Forced-async override records: 0
+All logs are preserved under experiments/raw/logs.
+=== exit_code=0 ===
+
+=== batch 3: msm_c12_pilot_20261023_c1_b3 arm=C1 window_c=12 min_n=16384 ===
+
+=== Spend combined profile complete ===
+Batch ID: 1792718706143
+Outer Prove median: 680.561 ms
+Body median: 680.468 ms
+MSM elapsed/body share median: 382.86%
+Stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_stage_profile_1792718706143.csv
+MSM CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_call_profile_1792718706143.csv
+Per-run summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_profile_run_summary_1792718706143.csv
+MSM inner-stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_profile_1792718706143.csv
+MSM inner-stage query summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_summary_1792718706143.csv
+Fine-grained MSM inner-stage timing: enabled
+Metadata report: D:\Research\zcash-sapling-engineering\experiments\metadata\sapling_spend_combined_profile_1792718706143.md
+Worker fallback records: 0
+Forced-async override records: 0
+All logs are preserved under experiments/raw/logs.
+=== exit_code=0 ===
+
+=== batch 4: msm_c12_pilot_20261023_c0_b4 arm=C0 window_c= min_n=0 ===
+
+=== Spend combined profile complete ===
+Batch ID: 1792718746987
+Outer Prove median: 782.905 ms
+Body median: 782.795 ms
+MSM elapsed/body share median: 388.57%
+Stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_stage_profile_1792718746987.csv
+MSM CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_call_profile_1792718746987.csv
+Per-run summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_profile_run_summary_1792718746987.csv
+MSM inner-stage CSV: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_profile_1792718746987.csv
+MSM inner-stage query summary: D:\Research\zcash-sapling-engineering\experiments\raw\csv\sapling_spend_msm_inner_stage_summary_1792718746987.csv
+Fine-grained MSM inner-stage timing: enabled
+Metadata report: D:\Research\zcash-sapling-engineering\experiments\metadata\sapling_spend_combined_profile_1792718746987.md
+Worker fallback records: 0
+Forced-async override records: 0
+All logs are preserved under experiments/raw/logs.
+=== exit_code=0 ===
+
+end=2026-10-23T01:25:57.8120421Z
+failed=False
+rows=4

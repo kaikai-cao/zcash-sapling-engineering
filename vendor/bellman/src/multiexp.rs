@@ -117,6 +117,40 @@ pub fn set_msm_window_c(c: Option<u32>) {
     MSM_WINDOW_C_OVERRIDE.store(value, Ordering::Relaxed);
 }
 
+// Stage 2 experimental switch: apply the explicit `SAPLING_MSM_WINDOW_C`
+// override only when the MSM has at least this many exponents. The default is
+// 0, so existing users of the override keep the old "apply to every size"
+// behaviour. This lets the experiment change only the large H/L queries while
+// leaving the tiny input MSM on its size-derived window.
+const MSM_WINDOW_MIN_N_DEFAULT: usize = 0;
+static MSM_WINDOW_MIN_N_OVERRIDE: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+fn msm_window_min_n() -> usize {
+    let mut value = MSM_WINDOW_MIN_N_OVERRIDE.load(Ordering::Relaxed);
+    if value == usize::MAX {
+        let parsed = std::env::var("SAPLING_MSM_WINDOW_MIN_N")
+            .ok()
+            .and_then(|raw| raw.trim().parse::<usize>().ok())
+            .unwrap_or(MSM_WINDOW_MIN_N_DEFAULT);
+        let _ = MSM_WINDOW_MIN_N_OVERRIDE.compare_exchange(
+            usize::MAX,
+            parsed,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+        value = MSM_WINDOW_MIN_N_OVERRIDE.load(Ordering::Relaxed);
+    }
+
+    value
+}
+
+/// Programmatic counterpart of `SAPLING_MSM_WINDOW_MIN_N`.
+/// `None` restores the default of applying an explicit window override to all
+/// sizes, preserving the historical behaviour.
+pub fn set_msm_window_min_n(min_n: Option<usize>) {
+    MSM_WINDOW_MIN_N_OVERRIDE.store(min_n.unwrap_or(MSM_WINDOW_MIN_N_DEFAULT), Ordering::Relaxed);
+}
+
 // Stage 1 experimental switch: choose `c` from the tail-aware model in
 // `adaptive_signed_window` instead of the historical operation-count model.
 // It is off by default, so unset environments are bit-for-bit the old path.
@@ -1571,28 +1605,30 @@ where
     S: SourceBuilder<G::Affine>,
 {
     let signed = msm_signed_digits_enabled();
-    let c = msm_window_c_override().unwrap_or_else(|| {
-        if signed {
-            // Balanced-signed digits halve the bucket count at the same width,
-            // so the optimal window is one bit wider than the unsigned rule and
-            // is worth recomputing. Stage 1's opt-in policy also accounts for
-            // the final partial wave on the active worker pool.
-            if msm_adaptive_window_enabled() && exponents.len() >= ADAPTIVE_MIN_EXPONENTS {
-                adaptive_signed_window(
-                    G::Scalar::NUM_BITS as usize,
-                    exponents.len(),
-                    msm_worker_count(),
-                    std::mem::size_of::<G>(),
-                )
+    let c = msm_window_c_override()
+        .filter(|_| exponents.len() >= msm_window_min_n())
+        .unwrap_or_else(|| {
+            if signed {
+                // Balanced-signed digits halve the bucket count at the same width,
+                // so the optimal window is one bit wider than the unsigned rule and
+                // is worth recomputing. Stage 1's opt-in policy also accounts for
+                // the final partial wave on the active worker pool.
+                if msm_adaptive_window_enabled() && exponents.len() >= ADAPTIVE_MIN_EXPONENTS {
+                    adaptive_signed_window(
+                        G::Scalar::NUM_BITS as usize,
+                        exponents.len(),
+                        msm_worker_count(),
+                        std::mem::size_of::<G>(),
+                    )
+                } else {
+                    best_signed_window(G::Scalar::NUM_BITS as usize, exponents.len())
+                }
+            } else if exponents.len() < 32 {
+                3u32
             } else {
-                best_signed_window(G::Scalar::NUM_BITS as usize, exponents.len())
+                (f64::from(exponents.len() as u32)).ln().ceil() as u32
             }
-        } else if exponents.len() < 32 {
-            3u32
-        } else {
-            (f64::from(exponents.len() as u32)).ln().ceil() as u32
-        }
-    });
+        });
     let split = msm_window_split();
 
     if let Some(query_size) = density_map.as_ref().get_query_size() {
