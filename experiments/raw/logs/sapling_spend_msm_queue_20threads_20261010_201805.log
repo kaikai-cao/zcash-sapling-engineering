@@ -1,0 +1,93 @@
+    Finished `release` profile [optimized] target(s) in 0.09s
+     Running `D:\Research\zcash-sapling-engineering-msm-profile\experiments\prover-smoke\target\release\spend_prover_smoke.exe`
+params_read_validate_ms=47479.287
+prepare_vk_ms=2.964
+input_prep_ms=31.430
+BELLMAN_MSM_SUBMIT_PROFILE call_id=1 submit_elapsed_ms=0.025
+BELLMAN_MSM_SUBMIT_PROFILE call_id=2 submit_elapsed_ms=0.007
+BELLMAN_MSM_SUBMIT_PROFILE call_id=3 submit_elapsed_ms=0.003
+BELLMAN_MSM_SUBMIT_PROFILE call_id=4 submit_elapsed_ms=0.009
+BELLMAN_MSM_SUBMIT_PROFILE call_id=5 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=6 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=7 submit_elapsed_ms=0.003
+BELLMAN_MSM_SUBMIT_PROFILE call_id=8 submit_elapsed_ms=0.007
+BELLMAN_MSM_PROFILE call_id=3 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=0.055 elapsed_ms=1.543
+BELLMAN_MSM_PROFILE call_id=8 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.497 elapsed_ms=610.093
+BELLMAN_MSM_PROFILE call_id=4 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.065 elapsed_ms=612.559
+BELLMAN_MSM_PROFILE call_id=6 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.006 elapsed_ms=612.141
+BELLMAN_MSM_PROFILE call_id=2 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=0.024 elapsed_ms=613.061
+BELLMAN_MSM_PROFILE call_id=7 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.008 elapsed_ms=612.539
+BELLMAN_MSM_PROFILE call_id=5 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.050 elapsed_ms=613.394
+BELLMAN_MSM_PROFILE call_id=1 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.047 elapsed_ms=623.817
+run=1, prove_ms=1063.499, verify_ms=5.516, proof_bytes=192, verified=true
+BELLMAN_MSM_SUBMIT_PROFILE call_id=9 submit_elapsed_ms=0.026
+BELLMAN_MSM_SUBMIT_PROFILE call_id=10 submit_elapsed_ms=0.011
+BELLMAN_MSM_SUBMIT_PROFILE call_id=11 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=12 submit_elapsed_ms=0.003
+BELLMAN_MSM_SUBMIT_PROFILE call_id=13 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=14 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=15 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=16 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=15 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.203 elapsed_ms=1.702
+BELLMAN_MSM_PROFILE call_id=14 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.003 elapsed_ms=535.068
+BELLMAN_MSM_PROFILE call_id=12 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.013 elapsed_ms=545.686
+BELLMAN_MSM_PROFILE call_id=16 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.188 elapsed_ms=545.816
+BELLMAN_MSM_PROFILE call_id=10 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=0.034 elapsed_ms=546.738
+BELLMAN_MSM_PROFILE call_id=13 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.008 elapsed_ms=546.997
+BELLMAN_MSM_PROFILE call_id=11 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=0.014 elapsed_ms=547.901
+BELLMAN_MSM_PROFILE call_id=9 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.077 elapsed_ms=559.524
+run=2, prove_ms=908.615, verify_ms=5.934, proof_bytes=192, verified=true
+BELLMAN_MSM_SUBMIT_PROFILE call_id=17 submit_elapsed_ms=0.014
+BELLMAN_MSM_SUBMIT_PROFILE call_id=18 submit_elapsed_ms=0.006
+BELLMAN_MSM_SUBMIT_PROFILE call_id=19 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=20 submit_elapsed_ms=0.006
+BELLMAN_MSM_SUBMIT_PROFILE call_id=21 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=22 submit_elapsed_ms=0.404
+BELLMAN_MSM_SUBMIT_PROFILE call_id=23 submit_elapsed_ms=0.003
+BELLMAN_MSM_SUBMIT_PROFILE call_id=24 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=18 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=0.021 elapsed_ms=563.650
+BELLMAN_MSM_PROFILE call_id=20 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.017 elapsed_ms=564.087
+BELLMAN_MSM_PROFILE call_id=22 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.185 elapsed_ms=564.043
+BELLMAN_MSM_PROFILE call_id=24 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.479 elapsed_ms=564.195
+BELLMAN_MSM_PROFILE call_id=21 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.202 elapsed_ms=565.282
+BELLMAN_MSM_PROFILE call_id=23 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.005 elapsed_ms=565.533
+BELLMAN_MSM_PROFILE call_id=19 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=0.011 elapsed_ms=566.454
+BELLMAN_MSM_PROFILE call_id=17 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.045 elapsed_ms=576.284
+run=3, prove_ms=943.024, verify_ms=6.483, proof_bytes=192, verified=true
+BELLMAN_MSM_SUBMIT_PROFILE call_id=25 submit_elapsed_ms=0.024
+BELLMAN_MSM_SUBMIT_PROFILE call_id=26 submit_elapsed_ms=0.008
+BELLMAN_MSM_SUBMIT_PROFILE call_id=27 submit_elapsed_ms=0.003
+BELLMAN_MSM_SUBMIT_PROFILE call_id=28 submit_elapsed_ms=0.003
+BELLMAN_MSM_SUBMIT_PROFILE call_id=29 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=30 submit_elapsed_ms=0.002
+BELLMAN_MSM_SUBMIT_PROFILE call_id=31 submit_elapsed_ms=0.005
+BELLMAN_MSM_SUBMIT_PROFILE call_id=32 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=31 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.173 elapsed_ms=1.453
+BELLMAN_MSM_PROFILE call_id=30 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.200 elapsed_ms=550.453
+BELLMAN_MSM_PROFILE call_id=26 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=0.028 elapsed_ms=551.784
+BELLMAN_MSM_PROFILE call_id=32 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.147 elapsed_ms=551.369
+BELLMAN_MSM_PROFILE call_id=27 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=0.013 elapsed_ms=553.760
+BELLMAN_MSM_PROFILE call_id=29 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.012 elapsed_ms=553.373
+BELLMAN_MSM_PROFILE call_id=28 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.091 elapsed_ms=557.658
+BELLMAN_MSM_PROFILE call_id=25 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.066 elapsed_ms=572.047
+run=4, prove_ms=923.077, verify_ms=5.873, proof_bytes=192, verified=true
+BELLMAN_MSM_SUBMIT_PROFILE call_id=33 submit_elapsed_ms=0.030
+BELLMAN_MSM_SUBMIT_PROFILE call_id=34 submit_elapsed_ms=0.010
+BELLMAN_MSM_SUBMIT_PROFILE call_id=35 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=36 submit_elapsed_ms=0.005
+BELLMAN_MSM_SUBMIT_PROFILE call_id=37 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=38 submit_elapsed_ms=0.001
+BELLMAN_MSM_SUBMIT_PROFILE call_id=39 submit_elapsed_ms=0.013
+BELLMAN_MSM_SUBMIT_PROFILE call_id=40 submit_elapsed_ms=0.001
+BELLMAN_MSM_PROFILE call_id=39 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.293 elapsed_ms=2.380
+BELLMAN_MSM_PROFILE call_id=38 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.070 elapsed_ms=594.733
+BELLMAN_MSM_PROFILE call_id=34 exponent_count=98638 density_map_size=None window=12 task_start_delay_ms=0.030 elapsed_ms=611.758
+BELLMAN_MSM_PROFILE call_id=36 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.034 elapsed_ms=612.775
+BELLMAN_MSM_PROFILE call_id=40 exponent_count=98638 density_map_size=Some(98638) window=12 task_start_delay_ms=0.269 elapsed_ms=613.226
+BELLMAN_MSM_PROFILE call_id=37 exponent_count=8 density_map_size=Some(8) window=3 task_start_delay_ms=0.109 elapsed_ms=614.050
+BELLMAN_MSM_PROFILE call_id=35 exponent_count=8 density_map_size=None window=3 task_start_delay_ms=0.013 elapsed_ms=614.369
+BELLMAN_MSM_PROFILE call_id=33 exponent_count=131071 density_map_size=None window=12 task_start_delay_ms=0.119 elapsed_ms=626.701
+run=5, prove_ms=985.529, verify_ms=5.311, proof_bytes=192, verified=true
+batch_id=1791634733519
+CSV_PATH=D:\Research\zcash-sapling-engineering-msm-profile\experiments\prover-smoke\../../experiments/raw/csv\sapling_spend_prover_runs_release.csv
+SPEND_PROOF_EXPERIMENT=PASS

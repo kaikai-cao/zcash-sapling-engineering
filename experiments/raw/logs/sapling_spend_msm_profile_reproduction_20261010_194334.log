@@ -1,0 +1,134 @@
+   Compiling typenum v1.20.1
+   Compiling rand_core v0.10.1
+   Compiling subtle v2.6.1
+   Compiling tap v1.0.1
+   Compiling funty v2.0.0
+   Compiling memuse v0.2.2
+   Compiling cfg-if v1.0.5
+   Compiling cpufeatures v0.3.1
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayvec v0.7.8
+   Compiling cmov v0.5.4
+   Compiling either v1.19.0
+   Compiling byteorder v1.5.0
+   Compiling static_assertions v1.1.0
+   Compiling radium v0.7.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling serde_core v1.0.229
+   Compiling num_cpus v1.17.0
+   Compiling log v0.4.34
+   Compiling hex v0.4.3
+   Compiling libm v0.2.16
+   Compiling cpubits v0.1.1
+   Compiling pin-project-lite v0.2.17
+   Compiling tracing-core v0.1.36
+   Compiling num-traits v0.2.19
+   Compiling bech32 v0.11.1
+   Compiling zeroize v1.9.1
+   Compiling thiserror v2.0.21
+   Compiling wyz v0.5.1
+   Compiling getrandom v0.4.3
+   Compiling cpufeatures v0.2.17
+   Compiling lazy_static v1.5.1
+   Compiling corez v0.1.1
+   Compiling incrementalmerkletree v0.9.0
+   Compiling blake2b_simd v1.0.5
+   Compiling blake2s_simd v1.0.5
+   Compiling ctutils v0.4.3
+   Compiling bitvec v1.1.1
+   Compiling tracing v0.1.44
+   Compiling crossbeam-epoch v0.9.21
+   Compiling crossbeam-channel v0.5.17
+   Compiling zcash_spec v0.2.1
+   Compiling zip32 v0.3.0
+   Compiling num-integer v0.1.47
+   Compiling crossbeam-deque v0.8.8
+   Compiling hybrid-array v0.4.15
+   Compiling generic-array v0.14.7
+   Compiling num-bigint v0.5.1
+   Compiling rayon-core v1.13.0
+   Compiling crypto-common v0.2.2
+   Compiling inout v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling rayon v1.12.0
+   Compiling digest v0.10.7
+   Compiling sha2 v0.10.9
+   Compiling cipher v0.5.2
+   Compiling universal-hash v0.6.1
+   Compiling aead v0.6.1
+   Compiling poly1305 v0.9.1
+   Compiling serde v1.0.229
+   Compiling chacha20 v0.10.2
+   Compiling cbc v0.2.1
+   Compiling aes v0.9.3
+   Compiling fpe v0.7.0
+   Compiling rand v0.10.3
+   Compiling chacha20poly1305 v0.11.0
+   Compiling zcash_note_encryption v0.5.1
+   Compiling ff v0.14.0
+   Compiling group v0.14.0
+   Compiling pairing v0.24.0
+   Compiling pasta_curves v0.6.0
+   Compiling bls12_381 v0.9.0
+   Compiling bellman v0.15.0 (D:\Research\zcash-sapling-engineering-msm-profile\vendor\bellman)
+   Compiling jubjub v0.11.1
+   Compiling reddsa v0.6.1
+   Compiling redjubjub v0.9.0
+   Compiling groth16 v0.2.0 (D:\Research\zcash-sapling-engineering-msm-profile\vendor\groth16)
+   Compiling sapling-crypto v0.9.0 (D:\Research\zcash-sapling-crypto)
+   Compiling sapling-output-smoke v0.1.0 (D:\Research\zcash-sapling-engineering-msm-profile\experiments\prover-smoke)
+    Finished `release` profile [optimized] target(s) in 24.99s
+     Running `D:\Research\zcash-sapling-engineering-msm-profile\experiments\prover-smoke\target\release\spend_prover_smoke.exe`
+params_read_validate_ms=46032.394
+prepare_vk_ms=1.706
+input_prep_ms=26.843
+BELLMAN_MSM_PROFILE call_id=1 exponent_count=131071 density_map_size=None window=12 elapsed_ms=3450.729
+BELLMAN_MSM_PROFILE call_id=2 exponent_count=98638 density_map_size=None window=12 elapsed_ms=969.574
+BELLMAN_MSM_PROFILE call_id=3 exponent_count=8 density_map_size=None window=3 elapsed_ms=1.835
+BELLMAN_MSM_PROFILE call_id=4 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=621.941
+BELLMAN_MSM_PROFILE call_id=5 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=1.624
+BELLMAN_MSM_PROFILE call_id=6 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=526.817
+BELLMAN_MSM_PROFILE call_id=7 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=6.260
+BELLMAN_MSM_PROFILE call_id=8 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=1340.868
+run=1, prove_ms=7986.723, verify_ms=5.784, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=9 exponent_count=131071 density_map_size=None window=12 elapsed_ms=3463.424
+BELLMAN_MSM_PROFILE call_id=10 exponent_count=98638 density_map_size=None window=12 elapsed_ms=964.447
+BELLMAN_MSM_PROFILE call_id=11 exponent_count=8 density_map_size=None window=3 elapsed_ms=1.814
+BELLMAN_MSM_PROFILE call_id=12 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=666.907
+BELLMAN_MSM_PROFILE call_id=13 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=1.790
+BELLMAN_MSM_PROFILE call_id=14 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=512.409
+BELLMAN_MSM_PROFILE call_id=15 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=5.729
+BELLMAN_MSM_PROFILE call_id=16 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=1325.387
+run=2, prove_ms=7934.274, verify_ms=5.902, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=17 exponent_count=131071 density_map_size=None window=12 elapsed_ms=3504.258
+BELLMAN_MSM_PROFILE call_id=18 exponent_count=98638 density_map_size=None window=12 elapsed_ms=925.353
+BELLMAN_MSM_PROFILE call_id=19 exponent_count=8 density_map_size=None window=3 elapsed_ms=1.819
+BELLMAN_MSM_PROFILE call_id=20 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=649.873
+BELLMAN_MSM_PROFILE call_id=21 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=1.472
+BELLMAN_MSM_PROFILE call_id=22 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=499.342
+BELLMAN_MSM_PROFILE call_id=23 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=4.137
+BELLMAN_MSM_PROFILE call_id=24 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=1332.442
+run=3, prove_ms=7897.502, verify_ms=5.675, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=25 exponent_count=131071 density_map_size=None window=12 elapsed_ms=2676.105
+BELLMAN_MSM_PROFILE call_id=26 exponent_count=98638 density_map_size=None window=12 elapsed_ms=418.321
+BELLMAN_MSM_PROFILE call_id=27 exponent_count=8 density_map_size=None window=3 elapsed_ms=0.982
+BELLMAN_MSM_PROFILE call_id=28 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=291.492
+BELLMAN_MSM_PROFILE call_id=29 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=1.355
+BELLMAN_MSM_PROFILE call_id=30 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=217.346
+BELLMAN_MSM_PROFILE call_id=31 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=2.166
+BELLMAN_MSM_PROFILE call_id=32 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=601.867
+run=4, prove_ms=5241.174, verify_ms=2.861, proof_bytes=192, verified=true
+BELLMAN_MSM_PROFILE call_id=33 exponent_count=131071 density_map_size=None window=12 elapsed_ms=1529.003
+BELLMAN_MSM_PROFILE call_id=34 exponent_count=98638 density_map_size=None window=12 elapsed_ms=420.116
+BELLMAN_MSM_PROFILE call_id=35 exponent_count=8 density_map_size=None window=3 elapsed_ms=0.950
+BELLMAN_MSM_PROFILE call_id=36 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=295.602
+BELLMAN_MSM_PROFILE call_id=37 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=0.770
+BELLMAN_MSM_PROFILE call_id=38 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=233.993
+BELLMAN_MSM_PROFILE call_id=39 exponent_count=8 density_map_size=Some(8) window=3 elapsed_ms=5.666
+BELLMAN_MSM_PROFILE call_id=40 exponent_count=98638 density_map_size=Some(98638) window=12 elapsed_ms=1519.901
+run=5, prove_ms=4499.504, verify_ms=6.866, proof_bytes=192, verified=true
+batch_id=1791632685376
+CSV_PATH=D:\Research\zcash-sapling-engineering-msm-profile\experiments\prover-smoke\../../experiments/raw/csv\sapling_spend_prover_runs_release.csv
+SPEND_PROOF_EXPERIMENT=PASS

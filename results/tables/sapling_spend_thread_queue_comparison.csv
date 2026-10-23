@@ -1,0 +1,6 @@
+"Threads","BatchId","ProveMedianMs","VerifyMedianMs","ProofBytes","VerifiedRuns","MsmRecords","DelayRecords","SubmitRecords","LongSubmitEvents50ms","MaxSubmitMs","MaxTaskStartDelayMs","LogPath"
+"1","1791634015130","8020.464","7.698","192","5","40","40","40","5","5872.212","5384.655","D:\Research\zcash-sapling-engineering-msm-profile\experiments\raw\logs\sapling_spend_msm_queue_profile_20261010_200606.log"
+"2","1791634566417","3651.495","7.098","192","5","40","40","40","0","1.777","2511.358","D:\Research\zcash-sapling-engineering-msm-profile\experiments\raw\logs\sapling_spend_msm_queue_2threads_20261010_201521.log"
+"4","1791634631946","1029.796","2.9","192","5","40","40","40","0","0.013","641.625","D:\Research\zcash-sapling-engineering-msm-profile\experiments\raw\logs\sapling_spend_msm_queue_4threads_20261010_201624.log"
+"8","1791634682281","687.381","3.035","192","5","40","40","40","0","0.163","1.166","D:\Research\zcash-sapling-engineering-msm-profile\experiments\raw\logs\sapling_spend_msm_queue_8threads_20261010_201717.log"
+"20","1791634733519","943.024","5.873","192","5","40","40","40","0","0.404","0.497","D:\Research\zcash-sapling-engineering-msm-profile\experiments\raw\logs\sapling_spend_msm_queue_20threads_20261010_201805.log"
