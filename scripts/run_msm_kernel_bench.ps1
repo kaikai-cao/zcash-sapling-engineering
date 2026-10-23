@@ -120,9 +120,30 @@ try {
         $startInfo.UseShellExecute = $false
         $startInfo.RedirectStandardOutput = $true
         $startInfo.RedirectStandardError = $true
-        $startInfo.ProcessorAffinity = $cond.Mask
 
         $proc = [System.Diagnostics.Process]::Start($startInfo)
+
+        # Pin affinity on the Process object (not the StartInfo) and read it
+        # back; a mismatch invalidates the condition. The child spends seconds
+        # building fixtures before the first measurement, so the pin lands well
+        # before any timed region.
+        $effectiveAffinity = 0L
+        if ($cond.Mask -ne 0) {
+            try {
+                $proc.ProcessorAffinity = [IntPtr]([int64]$cond.Mask)
+                $effectiveAffinity = [int64]$proc.ProcessorAffinity
+            }
+            catch {
+                $proc.Kill()
+                throw ("Failed to set processor affinity mask {0}: {1}" -f $maskTag, $_.Exception.Message)
+            }
+            if ($effectiveAffinity -ne [int64]$cond.Mask) {
+                $proc.Kill()
+                throw ("Affinity read-back mismatch for mask {0}: got 0x{1:X}" -f $maskTag, $effectiveAffinity)
+            }
+        }
+        Write-Host ("affinity_readback=0x{0:X}" -f $effectiveAffinity)
+
         $stdout = $proc.StandardOutput.ReadToEnd()
         $stderr = $proc.StandardError.ReadToEnd()
         $proc.WaitForExit()
