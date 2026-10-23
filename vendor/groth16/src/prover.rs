@@ -112,6 +112,9 @@ static G16_SYNTH_LC_C_TERMS: std::sync::atomic::AtomicU64 = std::sync::atomic::A
 static G16_SYNTH_EVAL_A_NS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static G16_SYNTH_EVAL_B_NS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static G16_SYNTH_EVAL_C_NS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static G16_SYNTH_LC_BUILD_NS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static G16_SYNTH_ENFORCE_NS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static G16_SYNTH_ALLOC_NS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 fn g16_synth_probe_reset() {
     for counter in [
@@ -124,6 +127,9 @@ fn g16_synth_probe_reset() {
         &G16_SYNTH_EVAL_A_NS,
         &G16_SYNTH_EVAL_B_NS,
         &G16_SYNTH_EVAL_C_NS,
+        &G16_SYNTH_LC_BUILD_NS,
+        &G16_SYNTH_ENFORCE_NS,
+        &G16_SYNTH_ALLOC_NS,
     ] {
         counter.store(0, std::sync::atomic::Ordering::Relaxed);
     }
@@ -139,11 +145,16 @@ fn g16_synth_probe_report(proof_id: usize) {
     let eval_a_ns = load(&G16_SYNTH_EVAL_A_NS);
     let eval_b_ns = load(&G16_SYNTH_EVAL_B_NS);
     let eval_c_ns = load(&G16_SYNTH_EVAL_C_NS);
+    let eval_total_ns = eval_a_ns + eval_b_ns + eval_c_ns;
+    let lc_build_ns = load(&G16_SYNTH_LC_BUILD_NS);
+    let enforce_ns = load(&G16_SYNTH_ENFORCE_NS);
+    let alloc_ns = load(&G16_SYNTH_ALLOC_NS);
+    let other_ns = enforce_ns.saturating_sub(lc_build_ns + eval_total_ns);
 
     eprintln!(
         "G16_SYNTH_PROBE proof_id={} enforce_calls={} alloc_calls={} input_alloc_calls={} \
 lc_a_terms={} lc_b_terms={} lc_c_terms={} eval_a_ms={:.3} eval_b_ms={:.3} eval_c_ms={:.3} \
-eval_total_ms={:.3}",
+eval_total_ms={:.3} lc_build_ms={:.3} enforce_total_ms={:.3} alloc_ms={:.3} other_ms={:.3}",
         proof_id,
         load(&G16_SYNTH_ENFORCE_CALLS),
         load(&G16_SYNTH_ALLOC_CALLS),
@@ -154,7 +165,11 @@ eval_total_ms={:.3}",
         eval_a_ns as f64 / 1_000_000.0,
         eval_b_ns as f64 / 1_000_000.0,
         eval_c_ns as f64 / 1_000_000.0,
-        (eval_a_ns + eval_b_ns + eval_c_ns) as f64 / 1_000_000.0,
+        eval_total_ns as f64 / 1_000_000.0,
+        lc_build_ns as f64 / 1_000_000.0,
+        enforce_ns as f64 / 1_000_000.0,
+        alloc_ns as f64 / 1_000_000.0,
+        other_ns as f64 / 1_000_000.0,
     );
 }
 
@@ -397,10 +412,15 @@ impl<S: PrimeField> ConstraintSystem<S> for ProvingAssignment<S> {
         if g16_synth_stage_probe_enabled() {
             g16_synth_probe_add(&G16_SYNTH_ALLOC_CALLS, 1);
         }
+        let probe_start = g16_synth_stage_probe_enabled().then(std::time::Instant::now);
 
         self.aux_assignment.push(f()?);
         self.a_aux_density.add_element();
         self.b_aux_density.add_element();
+
+        if let Some(start) = probe_start {
+            g16_synth_probe_add(&G16_SYNTH_ALLOC_NS, start.elapsed().as_nanos() as u64);
+        }
 
         Ok(Variable::new_unchecked(Index::Aux(
             self.aux_assignment.len() - 1,
@@ -416,9 +436,14 @@ impl<S: PrimeField> ConstraintSystem<S> for ProvingAssignment<S> {
         if g16_synth_stage_probe_enabled() {
             g16_synth_probe_add(&G16_SYNTH_INPUT_ALLOC_CALLS, 1);
         }
+        let probe_start = g16_synth_stage_probe_enabled().then(std::time::Instant::now);
 
         self.input_assignment.push(f()?);
         self.b_input_density.add_element();
+
+        if let Some(start) = probe_start {
+            g16_synth_probe_add(&G16_SYNTH_ALLOC_NS, start.elapsed().as_nanos() as u64);
+        }
 
         Ok(Variable::new_unchecked(Index::Input(
             self.input_assignment.len() - 1,
@@ -433,10 +458,15 @@ impl<S: PrimeField> ConstraintSystem<S> for ProvingAssignment<S> {
         LB: FnOnce(LinearCombination<S>) -> LinearCombination<S>,
         LC: FnOnce(LinearCombination<S>) -> LinearCombination<S>,
     {
+        let synth_probe = g16_synth_stage_probe_enabled();
+        let enforce_start = synth_probe.then(std::time::Instant::now);
         let a = a(LinearCombination::zero());
         let b = b(LinearCombination::zero());
         let c = c(LinearCombination::zero());
-        let synth_probe = g16_synth_stage_probe_enabled();
+
+        if let Some(start) = enforce_start {
+            g16_synth_probe_add(&G16_SYNTH_LC_BUILD_NS, start.elapsed().as_nanos() as u64);
+        }
 
         if synth_probe {
             g16_synth_probe_add(&G16_SYNTH_ENFORCE_CALLS, 1);
@@ -511,6 +541,10 @@ impl<S: PrimeField> ConstraintSystem<S> for ProvingAssignment<S> {
             eval(&c, None, None, &self.input_assignment, &self.aux_assignment)
         };
         self.c.push(Scalar(c_value));
+
+        if let Some(start) = enforce_start {
+            g16_synth_probe_add(&G16_SYNTH_ENFORCE_NS, start.elapsed().as_nanos() as u64);
+        }
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)
