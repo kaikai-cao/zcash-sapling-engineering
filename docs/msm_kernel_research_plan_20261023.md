@@ -88,7 +88,8 @@
 ## 6. 阶段 C–E 路线图（2026-10-23 同步：A/B/C 已完成，D 尚未实施）
 
 - **阶段 C（已完成，PR #17 合入）**：A/A 测量稳定性校准 → `msm-kernel-bench`（同输入同输出，H-query 优先，计时拆分参数读取/基点转换/预计算/MSM 核心，含 blst 对照实现）→ 性能差距表。结果：1t A/A 半宽 0.25–1.29% 达标（门槛：测量不确定性明显小于 5% 的完整证明收益目标）；**P1 = bellman/blst = 1.9063（CI95 [1.8999, 1.9110]，两轮独立复现）**，差距归于 fill 点加公式。入口：[阶段 C 预注册](../../experiments/metadata/sapling_msm_kernel_stagec_preregistration_20261023.md)、[阶段 C 结果](../../experiments/metadata/sapling_msm_kernel_stagec_results_20261023.md)。
-- **阶段 D（尚未实施；如需继续须另立预注册）**：只实现一个候选内核（当前首选：xyzz 桶 fill 内核，见 §4.1），默认关闭，不动生产默认路径；先在隔离内核做完全一致性测试（零 digit、最大 digit、signed digit、进位边界、单位元、相同/互逆点）。预注册必须包含：具体点加内核选择、测试负载、正确性测试、统计方案、内存上限与停止条件；blst 点加实现非 constant-time，候选进入生产默认路径前须单独评估标量相关分支与访存的侧信道语义。
+- **阶段 D（暂停，不立即实施）**：xyzz 桶 fill 内核（见 §4.1）作为候选仍保留，但当前优先级让位于端到端 Testnet 交易剖析（见下）；如需继续，须另立预注册。只在隔离内核做完全一致性测试（零 digit、最大 digit、signed digit、进位边界、单位元、相同/互逆点）；预注册必须包含：具体点加内核选择、测试负载、正确性测试、统计方案、内存上限与停止条件；blst 点加实现非 constant-time，候选进入生产默认路径前须单独评估标量相关分支与访存的侧信道语义。
+- **端到端 Testnet 交易剖析（当前优先，非 MSM 内核工作）**：研究目标已转向端到端 Testnet 真实转账的耗时与内存剖析（钱包输入准备 → 确认，含证明生成分段），范围界定 [`../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md`](../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md) 与预注册 [`../experiments/metadata/sapling_e2e_testnet_tx_preregistration_20261026.md`](../experiments/metadata/sapling_e2e_testnet_tx_preregistration_20261026.md)。既有 MSM A–C 优化保留为对照基线；本工作不改动生产实现。
 - **阶段 E（未开始）**：正式 A/B、全证明验证、多规模负载扩展与论文可行性判断。
 
 阶段 C 已否证"成熟实现与当前实现接近"的可能：同主机、同线程数下 blst 的单位操作成本约为 bellman 路径的一半（≈253 vs ≈482 ns/模型操作），差距为实现级且可定位。后续候选按 §4 判据执行；一个经过严格验证的 NO_GO 结论同样是有价值的产出。

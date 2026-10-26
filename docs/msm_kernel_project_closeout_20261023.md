@@ -72,8 +72,8 @@
 
 1. **Fan et al. 全文未获取**：eprint 2024/750 被 Cloudflare 拦截，其实验曲线、硬件、加速比与存储代价 4 项细节待核对（文献survey §5 已列）。不影响阶段 C 结论（对照直接使用 blst 源码与实测）。
 2. **8t A/A 噪声未解决**：8t 条件下配对差 CI 半宽在 8 区组时 10.6–24.4%，24 区组仅主负载达标（0.97%），中小负载 ~3%。按冻结规则，8t 绝对计时只作生产参考；细粒度生产条件比较需改进测量设计（更多区组或进程级配对）。
-3. **本地真实输入交易构造与证明基准（外部有效性）仍开放**：范围界定见 [`../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md`](../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md)。把结项时的「换物理主机真实证明复现」与既有本地交易构造实验（2026-10-22，合成 Merkle 状态）统一到「本地真实输入交易构造与证明基准」定位下——覆盖真实 Note/witness 接入、交易构造、证明、序列化、本地验证；**不**覆盖广播/mempool/打包/确认/钱包同步（这些属于单独的后续网络阶段，见该范围文档 §4，不混入本工作）。参数无关层已双 OS 验证；真实 witness 与跨机器内存台账尚未复现。
-4. **阶段 D 候选未实施**：xyzz 桶 fill 内核（默认关闭、独立配置）已在研究计划与阶段 C 结果中文档化；如需继续，须另立预注册，不在本次结项范围。
+3. **端到端 Testnet 真实转账：耗时与内存剖析（下一阶段主动工作）**：研究目标已明确为端到端 Testnet 交易流程的耗时与内存剖析（钱包输入准备 → 确认，含证明生成分段），范围界定 [`../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md`](../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md) 与其预注册 [`../experiments/metadata/sapling_e2e_testnet_tx_preregistration_20261026.md`](../experiments/metadata/sapling_e2e_testnet_tx_preregistration_20261026.md)。本地构造（2026-10-22 合成 Merkle 状态）作为端到端全链路中的一段与对照基线保留；真实链上 note/witness + 网络/确认阶段为本阶段新增覆盖。技术路线以 Zebra + Zallet（Testnet）为优先（zcashd 已于 2026-07 结束支持且不支持 NU6.3）；先做一笔功能验证，再重复测量。**尚未实施**。参数无关层已双 OS 验证；真实 witness 与跨机器内存台账尚未复现。
+4. **MSM Phase D 候选暂停**：xyzz 桶 fill 内核（默认关闭、独立配置）已在研究计划与阶段 C 结果中文档化；但当前优先级让位于端到端 Testnet 交易剖析（见 §5.3），Phase D **暂停、不立即实施**。如后续回到该路线，须另立预注册（含侧信道语义评估），不在本次结项范围。
 5. **rust-toolchain.toml 钉 1.85.0** 与测量工具链 1.98.1 的口径差（见 §4），未改动。
 
 ## 6. 数据入口
