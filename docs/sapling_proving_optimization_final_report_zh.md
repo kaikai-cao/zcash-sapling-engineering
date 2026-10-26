@@ -150,7 +150,7 @@
 | 参数无关 CI（fmt/clippy、库测试、构建、交易 crate 检查、两个门禁） | **双 OS 绿** | Ubuntu CI 6/6 job（合并后 main；第六个 job 于 2026-10-22 增加）；Windows 本机等价复跑全过。 [`ci.yml`](../.github/workflows/ci.yml) |
 | 跨指令集摘要一致性 | **通过** | 同一提交三档构建（`x86-64` / `x86-64-v2` / `native`），FFT 门禁 12/12 摘要逐字节一致 |
 | 跨 OS 摘要一致性 | **通过** | CI 日志打印的摘要集与 Windows 捕获 12/12 逐字节一致且顺序相同（run 39116177753） |
-| **本地真实输入交易构造与证明基准（外部有效性）** | **开放** | 范围界定：[`../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md`](../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md)。覆盖真实 Note/witness 接入 → 交易构造 → 证明 → 序列化 → 本地验证；**不**覆盖广播/mempool/打包/确认/钱包同步（单独后续网络阶段）。预计需另一台机器 + 真实 witness：门禁 + Spend 证明/验证/大小 + 多次 prove 峰值统计 + 工具链/OS/CPU/参数哈希/commit；预期内存与正确性数字可移植、计时不可移植；记录实际偏差而非要求一致。规程：[`reproduction.md`](reproduction.md) §4 |
+| **端到端 Testnet 真实转账：耗时与内存剖析（下一阶段）** | **开放 / 待实施** | 研究目标已明确为端到端 Testnet 交易流程的耗时与内存剖析（钱包输入准备 → 确认，含证明生成分段），范围界定 [`../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md`](../experiments/metadata/sapling_real_input_tx_proving_scoping_note_20261026.md) + 预注册 [`../experiments/metadata/sapling_e2e_testnet_tx_preregistration_20261026.md`](../experiments/metadata/sapling_e2e_testnet_tx_preregistration_20261026.md)。本地构造（2026-10-22 合成 Merkle 状态）为对照基线的一段；真实链上 note/witness + 网络/确认为本阶段新增。技术路线 Zebra + Zallet（Testnet，zcashd 已 EOL 且不支持 NU6.3）；先功能验证再重复测量。预计需 Testnet faucet 资金 + Zebra/Zallet 环境：各阶段耗时与进程内存峰值 + 交易大小 + 版本/commit/主机哈希；计时受网络影响须与本地证明时间分开报告。 |
 
 ---
 
