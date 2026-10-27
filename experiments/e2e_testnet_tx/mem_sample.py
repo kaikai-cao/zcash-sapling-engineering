@@ -32,9 +32,11 @@ def parse_mem_usage(s):
 
 def _to_bytes(tok):
     tok = tok.strip().upper()
-    units = {"B": 1, "KB": 1024, "MB": 1024**2, "GB": 1024**3,
-             "TB": 1024**4, "KIB": 1024, "MIB": 1024**2, "GIB": 1024**3}
-    for suf, mul in units.items():
+    # 必须按后缀长度从长到短匹配，否则 "MIB" 会先被单字母 "B" 命中
+    units = [("KIB", 1024), ("MIB", 1024**2), ("GIB", 1024**3),
+             ("TB", 1024**4), ("GB", 1024**3), ("MB", 1024**2),
+             ("KB", 1024), ("B", 1)]
+    for suf, mul in units:
         if tok.endswith(suf):
             try:
                 return int(float(tok[:-len(suf)].strip()) * mul)
@@ -46,12 +48,12 @@ def _to_bytes(tok):
         return None
 
 
-def sample_once(containers):
+def sample_once(containers, docker_bin="docker"):
     rows = []
     for c in containers:
         try:
             out = subprocess.run(
-                ["docker", "stats", "--no-stream",
+                [docker_bin, "stats", "--no-stream",
                  "--format", "{{.MemUsage}}", c],
                 capture_output=True, text=True, timeout=10)
             used, limit = parse_mem_usage(out.stdout.strip())
@@ -66,6 +68,8 @@ def main():
     p = argparse.ArgumentParser(description="docker 容器内存采样器")
     p.add_argument("--containers", required=True,
                    help="逗号分隔的容器名，如 z3-testnet-zebra-1,z3-testnet-zallet-1")
+    p.add_argument("--docker", default="docker",
+                   help="docker 可执行文件绝对路径（沙箱 PATH 不含 docker 时使用）")
     p.add_argument("--interval", type=float, default=5.0)
     p.add_argument("--duration", type=float, default=0.0,
                    help="采样总时长（秒）；0 = 直到 Ctrl-C")
@@ -78,6 +82,7 @@ def main():
     print("间隔: %.1fs  时长: %s" % (args.interval,
           "直到中断" if args.duration == 0 else "%.0fs" % args.duration))
     print("输出: %s" % args.out)
+    print("docker: %s" % args.docker)
 
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
@@ -87,7 +92,7 @@ def main():
         try:
             while True:
                 ts = time.time()
-                for c, used, limit in sample_once(containers):
+                for c, used, limit in sample_once(containers, args.docker):
                     w.writerow([f"{ts:.3f}", c, used if used is not None else "",
                                 limit if limit is not None else ""])
                 f.flush()
