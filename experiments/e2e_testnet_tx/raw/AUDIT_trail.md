@@ -148,14 +148,19 @@ MANIFEST 的作用：现在报告里的每个数字都绑定到了具体文件�
 | **D. 补齐二进制指纹** | ✅ **已做**（15:44） | 见 §5.2；采集脚本 `z3/wsl/bin_fingerprint.sh` 可重跑 |
 | **E. 运行自动落盘日志** | ✅ **已做**（15:40） | `tee_stdio()` 已自测：stdout + stderr 均入 `run.log` |
 
-**唯一仍然卡住数据安全的只有一件事：推远端。** 两个 commit 目前只在本地 `.git` 里，磁盘坏了同样会丢：
+**A（入库）、D（指纹）、E（日志）均已闭合；仓储状态：已推送远端（2026-10-29 15:47）。**
 
-```bash
-cd /d/Research/zcash-sapling-engineering
-git push origin experiments/e2e-testnet-tx-harness
-```
+| 检查项 | 结果 |
+|---|---|
+| 远端分支 HEAD | `21f1d6d`，与本地 HEAD 一致 |
+| 远端 `raw/` 下文件数 | 69 |
+| **远端对象库回读校验** | **清单 66 条 → 通过 66、哈希不符 0、缺失 0** |
 
-会连带推送此前一直未推的 `04a8423`。
+最后一行是本审计唯一一次**完全绕开本地磁盘**的验证：`MANIFEST.sha256` 和每个被校验文件都取自 `origin/experiments/e2e-testnet-tx-harness` 的对象库（`git cat-file blob`），逐条比对 SHA256。结论：远端存储的字节与清单声明完全一致，`.gitattributes` 的 `-text` 规则在推送链路上确实生效——若 CRLF 被转换，这 66 条必然全数不符。
+
+推送输出仅显示 `71cc965..21f1d6d`，因为 `477216a`/`71cc965` 在更早一次推送时已上远端；`04a8423` 及之前的 `1ad329c` 同批上去。
+
+剩余待定项：§6-B（10-28 旧采样目录）、§6-C（`z3` 侧 `wsl/` 与 `snapshots/` 纳管）。两项均不影响数据安全。
 
 C 的命令（若决定纳管，先在 `D:\Research\z3` 加忽略规则再 add）：
 

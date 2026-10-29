@@ -1,6 +1,6 @@
 # 实验产物哈希清单
 
-> 生成时间：2026-10-29T07:45:27Z（UTC）  
+> 生成时间：2026-10-29T07:47:32Z（UTC）  
 > 文件数：**67**　合计：**13,283,623 B**（12.67 MB）  
 > 校验：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
 
