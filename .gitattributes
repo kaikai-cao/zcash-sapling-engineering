@@ -10,5 +10,8 @@
 # ============================================================================
 experiments/e2e_testnet_tx/raw/** -text
 
+# 历史遗留采样（experiments/raw/e2e_testnet_tx/）同样是原始数据，同样保真
+experiments/raw/** -text
+
 # 哈希清单本身同理（LF 写入，不得转换）
 *.sha256 -text
