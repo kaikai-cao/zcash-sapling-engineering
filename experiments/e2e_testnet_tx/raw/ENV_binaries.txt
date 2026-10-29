@@ -1,0 +1,47 @@
+=== 二进制指纹 2026-10-29T15:44:19+08:00 ===
+host=DESKTOP-GMELEIR  kernel=6.18.54.1-microsoft-standard-WSL2  arch=x86_64
+--- zebrad
+path    : /home/dell/z3-regtest/bin/zebrad
+via     : proc:239435
+sha256  : baf0b2cd31110c7fe7c05809fd7323d07548489be78d31caeccc91e1469cc6a7
+bytes   : 183943408
+mtime   : 2026-10-29 09:32:14.809616882 +0800
+version : zebrad 6.2.3
+glibc   : libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6 (0x00007f021f200000)
+--- zallet
+path    : /home/dell/z3-regtest/bin/zallet
+via     : path:/home/dell/z3-regtest/bin/zallet
+sha256  : 523bf86a14cba2dfb1ea048c3a3d6ccc68bde0dbb92da60d44ce12568dea1c5a
+bytes   : 4956560
+mtime   : 2026-10-29 09:32:15.277616810 +0800
+version : error: failed to run the backend binary `zallet-zebra`: No such file or directory (os error 2) The launcher looks for backend binaries next to itself and then on the PATH.
+glibc   :
+--- zallet-zaino
+path    : /home/dell/z3-regtest/bin/zallet-zaino
+via     : proc:239967
+sha256  : e602e4a3d4e919c155b8f05dae29f0b9311631f167eaf25455166edf268208a7
+bytes   : 108392112
+mtime   : 2026-10-29 09:32:15.237616816 +0800
+version : zallet 0.1.0-beta.3
+glibc   :
+
+--- 采集方式 ---
+脚本: D:\Research\z3\wsl\bin_fingerprint.sh（bash /mnt/d/Research/z3/wsl/bin_fingerprint.sh）
+优先读 /proc/PID/exe（正在运行的进程的真实可执行文件），回退到固定路径并跟随符号链接。
+`command -v zebrad` / `command -v zallet` 返回空——两个二进制不在 PATH 上，
+只能用绝对路径或 /proc/*/exe 采集。这是首轮采集失败（三个空参数报错）的原因。
+
+--- 关键结构发现 ---
+`zallet` 是 launcher（4.9 MB，mtime 09:32:15.27），`zallet-zaino` 是后端实体（108 MB，mtime 09:32:15.23）。
+实际参与全部测量的是 pid 239967 的 `zallet-zaino`；launcher 只做 dispatcher。
+其 --version 报错正说明它按 "backend binary next to itself" 的规则找不到 `zallet-zebra`
+——本部署只装了 zaino 后端，没有 zebra 后端，二者不可互换。
+故报告的版本声明必须绑定 zallet-zaino 的 SHA256，而非 launcher 的。
+
+--- 与测量窗口的时序校验 ---
+zebrad   mtime 09:32:14.81
+zallet-zaino mtime 09:32:15.23
+sapling 首批 sapling_e2e_v1/run_20261029_151727（15:17 启动）
+→ 二进制部署（09:32）早于全部测量（15:17 之后）5 小时 45 分，
+   且期间未重新部署（三份 mtime 均停在 09:32，与进程启动时刻一致）。
+   故本文件记录的哈希覆盖了 29 轮 sapling + 24 轮 pczt 的全部测量。

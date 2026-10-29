@@ -13,14 +13,14 @@
 | 原始测量数据（sapling 29 轮） | ✅ 完整 | `raw/sapling_*/run_*/rounds.csv` |
 | 原始测量数据（pczt 24 轮） | ✅ 完整 | `raw/pczt_*/run_*/rounds.csv` |
 | 内存采样（0.25 s 粒度） | ✅ 完整 | 各 run 的 `memory_timeseries.csv` |
-| 环境指纹 | ⚠️ 部分 | `meta.json` 有 nproc / cpu_model / pids / pools_before |
+| 环境指纹 | ✅ 完整（15:44 补齐二进制哈希） | `meta.json` 有 nproc / cpu_model / pids / pools_before；`raw/ENV_binaries.txt` 有 3 个二进制的 SHA256 |
 | 正式报告 | ✅ 4 份 | `raw/sapling_e2e_v1/REPORT_sapling.md`、`FIT.md`、`raw/pczt_pool_v2/REPORT_v2.md`、`raw/pczt_pool_v1/REPORT.md` |
 | 分析脚本 | ✅ 6 个 | `fit_sapling_e2e_model.py`、`bootstrap_sapling_ci.py`、`sapling_e2e_bench.py`、`make_manifest.py`、`pczt_bench_pool.py`、`analyze_sapling_cost.py` |
 | 基础设施脚本（WSL 侧） | ⚠️ 在磁盘、未进版本库 | `D:\Research\z3\wsl\`（30+ 个 .sh/.py） |
 | 链快照（可复现前置） | ⚠️ 在磁盘、未进版本库 | `D:\Research\z3\snapshots\z3_regtest_h32297_20261029_145710.tar.gz`（13.2 MB） |
-| **哈希清单** | ✅ **本次新增** | `raw/MANIFEST.sha256`（65 条）+ `raw/MANIFEST.md` |
-| **版本库追踪** | ❌ **全部未跟踪** | 见 §2 |
-| **运行日志** | ❌ **不存在** | 无任何 `.log` 文件 |
+| **哈希清单** | ✅ **15:36 新增** | `raw/MANIFEST.sha256`（65 条）+ `raw/MANIFEST.md` |
+| **版本库追踪** | ✅ **15:38 已入库**（`477216a`） | 见 §2.3 |
+| **运行日志** | ⚠️ 已有轮次缺失，新运行自动落盘 | 见缺口 #1 |
 | **失败轮次** | ❌ **未结构化** | `rounds.csv` 只记成功轮，error 列全空 |
 
 ---
@@ -56,6 +56,19 @@
 
 > ⚠️ `identity_local.txt`、`mnemonic_age_local.age`、`real.age` 是 regtest 钱包的密钥材料。它们**不应该**进版本库，但也**不应该只存在磁盘一份**——建议单独加密备份到仓库之外。本次审计未改动、未读取这三个文件。
 
+### 2.3 已解除（2026-10-29 15:38 起）
+
+上述 `zcash-sapling-engineering` 的 9 项未跟踪已全部入库，两个提交：
+
+| commit | 内容 | 文件数 |
+|---|---|---:|
+| `477216a` | 5 批原始数据 + 4 份报告 + 6 个分析脚本 + 哈希清单 + `.gitattributes` | 77 |
+| `71cc965` | `sapling_e2e_bench.py` 内置 `tee_stdio()`，run 目录建好后即写 `run.log` | 2 |
+
+**入库时发现并修掉一个会让留痕直接失效的坑**：仓库 `core.autocrlf=true`，而 `raw/` 下数据是 CRLF、`MANIFEST.sha256` 是 LF。若直接提交，git 会改写行结束符 → 哈希清单交付即失效。已加 `.gitattributes` 对 `raw/**` 禁用文本转换（`-text`），并实测**从 git 对象库读回的 65 个文件字节哈希与清单逐一相同，0 失败**。这一条比清单本身更关键：没有它，清单只是看起来对。
+
+§2.1 / §2.2 保留为审计时点的历史快照，不再代表当前状态。`z3` 侧（`wsl/`、`snapshots/`）仍未纳管，见 §6-C。
+
 ---
 
 ## 3. 真正的缺口（连磁盘都没有）
@@ -65,7 +78,7 @@
 | 1 | ~~**无运行日志**~~ **已在脚本层修复**（2026-10-29 15:40）。此前所有 bench 输出只打印到终端 | 想复核某轮异常（如 2857.7 ms 那个离群点）时，只有 `rounds.csv` 的数字，没有当时上下文 | `sapling_e2e_bench.py` 内置 `tee_stdio()`：run 目录建好后即把 stdout/stderr 同时写入 `run.log`，并记录 `[argv]`。**已有的 24 轮无法补日志** |
 | 2 | **失败轮次未结构化**。`pczt_prove` 的 5 次 `MissingProofGenerationKey`、`gap limit at index 16`、`generate` 8 次假失败，都只有报告里的文字描述 | 报告 §1.2 的"版本缺陷"结论，证据链只能追到会话记录，项目内无独立证据文件 | 见 §4 的 `FAILURES.md`（**事后重建，已明确标注**） |
 | 3 | **中间探针输出未落盘**。`z_viewtransaction` 完整 JSON、`pczt_probe.py` 的结构 dump、`pczt_rca.sh` 的源码搜索结果 | 报告里"`spends`/`outputs` 是顶层数组""`fee` 单位是 ZEC 浮点"这类结构断言，无原始样本 | 可用 `viewtx_probe.py` 对任一笔已确认交易重跑（需要链在跑） |
-| 4 | **二进制指纹未记**。报告写 "Zebra 6.2.3 + zallet v0.1.0-beta.3"，但没有二进制 SHA256 | 若上游重新发布同版本号的构建，无法确认是否同一份 | WSL 内执行 `sha256sum $(command -v zebrad) $(command -v zallet)`，追加进 `meta.json` 或本文件 |
+| 4 | ~~**二进制指纹未记**~~ **已于 15:44 闭合**。报告写 "Zebra 6.2.3 + zallet v0.1.0-beta.3"，原先没有 SHA256 | 若上游重新发布同版本号的构建，无法确认是否同一份 | ✅ 已采集，见 §5.2 + `raw/ENV_binaries.txt`；采集脚本 `z3/wsl/bin_fingerprint.sh` |
 | 5 | 空运行目录 `raw/pczt_pool_v2/run_20261029_150604` | 已在 MANIFEST 标出，无数据损失 | 保留（作为"曾经跑过但立即中断"的记录）比删除更诚实 |
 | 6 | `raw/sapling_smoke/run_20261029_151423` 缺 `summary_by_shape.csv` | 单轮 smoke，脚本早期版本不生成该文件 | 无需补救，`rounds.csv` 完整 |
 
@@ -99,27 +112,69 @@
 2. **`raw/MANIFEST.md`** —— 人读版：按类别统计、run 目录完整性表（含空目录标记）、逐文件 mtime + 哈希前缀、外部资产（13.2 MB 快照的完整 SHA256）单独成节。
 3. **`make_manifest.py`** —— 清单生成器，可重复执行；已排除自身避免自指，支持 `--extra` 纳入仓库外资产。
 4. 本文件 `AUDIT_trail.md`。
+5. **提交入库**（`477216a` / `71cc965`）——见 §2.3。
+6. **`tee_stdio()`**（缺口 #1）—— bench 每次运行自动写 `run.log`。
 
 MANIFEST 的作用：现在报告里的每个数字都绑定到了具体文件的哈希。将来若有人改动某个 `rounds.csv`，`sha256sum -c` 会立刻暴露。
+
+### 5.2 二进制指纹（缺口 #4 已闭合）
+
+采集时间 2026-10-29 15:44:19（UTC+8），WSL2 kernel `6.18.54.1-microsoft-standard-WSL2`，host `DESKTOP-GMELEIR`。
+
+| 角色 | 文件 | 字节 | SHA256 | 版本 |
+|---|---|---:|---|---|
+| 链节点 | `~/z3-regtest/bin/zebrad` | 183,943,408 | `baf0b2cd31110c7f…69cc6a7` | zebrad 6.2.3 |
+| 钱包 launcher | `~/z3-regtest/bin/zallet` | 4,956,560 | `523bf86a14cba2df…68dea1c5a` | —（仅 dispatcher） |
+| 钱包后端（**实际测量对象**） | `~/z3-regtest/bin/zallet-zaino` | 108,392,112 | `e602e4a3d4e919c1…268208a7` | zallet 0.1.0-beta.3 |
+
+完整 64 位哈希、mtime、glibc 版本见 `raw/ENV_binaries.txt`。
+
+**采集过程中查明的两件事：**
+
+1. **`zallet` 不是被测量的进程。** 4.9 MB 的 `zallet` 只是 launcher，真正跑的是 pid 239967 的 `zallet-zaino`（108 MB）。launcher 的 `--version` 报 `failed to run the backend binary 'zallet-zaino'…`，是因为它按"backend binary next to itself"的规则去找 `zallet-zebra`——本部署只装了 zaino 后端。**版本声明必须绑定 `zallet-zaino` 的哈希**；只记 launcher 的哈希无法证明真正参与 prove 的那份二进制。
+2. **`command -v` 在 WSL 里返回空**（两者都不在 PATH）。首轮采集因此把两个空字符串传给了 `sha256sum`，报 `No such file or directory` ×2 + `Command '' not found`。改用 `/proc/PID/exe` 读取真实可执行文件才成功——副产品是这条路径比 PATH 更权威：它直接指向**当时在跑的那份文件**。
+
+**时序校验**：三个二进制的 mtime 均为 09:32（部署时刻），首批 sapling 测量起于 15:17，期间未重新部署 → 本指纹覆盖全部 29 轮 sapling + 24 轮 pczt。
 
 ---
 
 ## 6. 建议的下一步（需你确认）
 
-| 动作 | 说明 | 风险 |
+| 动作 | 状态 | 说明 |
 |---|---|---|
-| **A. 提交到实验分支** | 把 `raw/`（0.11 MB）、6 个脚本、4 份报告提交到 `experiments/e2e-testnet-tx-harness` | 无。数据很小（0.11 MB），完全适合入库 |
-| **B. 处理 `experiments/raw/e2e_testnet_tx/`** | 10-28 的旧采样（26 KB），已被新批次取代 | 建议保留并在 README 标注"历史遗留"，不删 |
-| **C. 把 `z3/wsl/` 脚本纳入版本控制** | 30+ 个脚本是实验基础设施，但 `z3` 是 main 分支 | 需你决定分支策略；`identity_local.txt` 等 3 个密钥文件必须同时加进 `.gitignore` |
-| **D. 补齐二进制指纹** | 需要 WSL 执行一条命令 | 需要你在 WSL 里跑（我这侧 `wsl.exe` 被安全策略阻断） |
-| **E. 后续运行统一落盘日志** | 在 bench 脚本里把 stdout 同时写 `run.log` | 改动小，我可以直接做 |
+| **A. 提交到实验分支** | ✅ **已做**（15:38） | `477216a` + `71cc965`，77 + 2 个文件；已用 `.gitattributes` 防住 CRLF 改写 |
+| **B. 处理 `experiments/raw/e2e_testnet_tx/`** | ⏸ 待你定 | 10-28 的旧采样（26 KB），已被新批次取代。建议保留并标"历史遗留" |
+| **C. `z3/wsl/` 与 `snapshots/` 纳管** | ⏸ 待你定 | 30+ 脚本是实验基础设施；涉及 `main` 分支策略。密钥文件必须同时进 `.gitignore` |
+| **D. 补齐二进制指纹** | ✅ **已做**（15:44） | 见 §5.2；采集脚本 `z3/wsl/bin_fingerprint.sh` 可重跑 |
+| **E. 运行自动落盘日志** | ✅ **已做**（15:40） | `tee_stdio()` 已自测：stdout + stderr 均入 `run.log` |
 
-**D 的命令**（在 WSL 里执行，把输出贴回来我写进 AUDIT）：
+**唯一仍然卡住数据安全的只有一件事：推远端。** 两个 commit 目前只在本地 `.git` 里，磁盘坏了同样会丢：
 
 ```bash
-sha256sum "$(command -v zebrad)" "$(command -v zallet)"; \
-  "$(command -v zebrad)" --version 2>&1 | head -1; \
-  rustc --version 2>/dev/null; uname -a
+cd /d/Research/zcash-sapling-engineering
+git push origin experiments/e2e-testnet-tx-harness
 ```
 
-我倾向先做 **A + E**：A 把现有成果固化进版本库（一次性消除最大风险），E 保证以后不再产生新的"无日志"缺口。C 涉及分支策略，等你定。B 只需加一行标注。
+会连带推送此前一直未推的 `04a8423`。
+
+C 的命令（若决定纳管，先在 `D:\Research\z3` 加忽略规则再 add）：
+
+```bash
+cd /d/Research/z3
+cat >> .gitignore <<'EOF'
+
+# 密钥材料：绝不入库
+identity_local.txt
+mnemonic_age_local.age
+real.age
+
+# 13MB 链快照：不入库，用 make_manifest.py --extra 纳入哈希即可
+snapshots/*.tar.gz
+EOF
+git add .gitignore wsl/
+git commit -m "chore(infra): 纳管 WSL regtest 实验脚本"
+```
+
+另外仍建议：三个密钥文件现在只有磁盘一份，加密备份到仓库外（U 盘 / 密码库）。这个只能你做。
+
+---

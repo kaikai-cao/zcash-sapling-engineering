@@ -1,7 +1,7 @@
 # 实验产物哈希清单
 
-> 生成时间：2026-10-29T07:38:53Z（UTC）  
-> 文件数：**66**　合计：**13,280,537 B**（12.67 MB）  
+> 生成时间：2026-10-29T07:45:27Z（UTC）  
+> 文件数：**67**　合计：**13,283,623 B**（12.67 MB）  
 > 校验：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
 
 ## 按类别
@@ -11,7 +11,8 @@
 | e2e_regtest | 9 | 3,419 |
 | external | 1 | 13,167,422 |
 | pczt | 19 | 56,375 |
-| sapling | 37 | 53,321 |
+| raw-other | 1 | 2,541 |
+| sapling | 37 | 53,866 |
 
 ## 运行目录完整性
 
@@ -35,6 +36,7 @@
 
 | 文件 | 字节 | mtime (UTC) | SHA256（前 16 位） |
 |---|---:|---|---|
+| `raw/ENV_binaries.txt` | 2,541 | 2026-10-29T07:44:42Z | `b8d0c672ae7bd0f7` |
 | `raw/e2e_regtest_v2/run_20261029_142533/memory_timeseries.csv` | 117 | 2026-10-29T06:25:33Z | `24880f834bf21c28` |
 | `raw/e2e_regtest_v2/run_20261029_143529/memory_timeseries.csv` | 199 | 2026-10-29T06:35:29Z | `9eec9a09dd58c2ae` |
 | `raw/e2e_regtest_v2/run_20261029_143529/run_summary.json` | 1,390 | 2026-10-29T06:35:29Z | `dc1485c50c3f947e` |
@@ -82,7 +84,7 @@
 | `raw/sapling_e2e_scale60/run_20261029_151923/summary.csv` | 176 | 2026-10-29T07:19:41Z | `bc39ce4b7b6dedf2` |
 | `raw/sapling_e2e_scale60/run_20261029_151923/summary_by_shape.csv` | 237 | 2026-10-29T07:19:41Z | `414ef13caec5cdba` |
 | `raw/sapling_e2e_v1/FIT.md` | 6,168 | 2026-10-29T07:31:28Z | `e40973dea7ced335` |
-| `raw/sapling_e2e_v1/REPORT_sapling.md` | 17,095 | 2026-10-29T07:34:02Z | `db7538ca31b85a7c` |
+| `raw/sapling_e2e_v1/REPORT_sapling.md` | 17,640 | 2026-10-29T07:45:23Z | `5464e9e60f17ce56` |
 | `raw/sapling_e2e_v1/run_20261029_151727/memory_timeseries.csv` | 6,496 | 2026-10-29T07:18:16Z | `7256c4564f0cc1a9` |
 | `raw/sapling_e2e_v1/run_20261029_151727/meta.json` | 320 | 2026-10-29T07:18:16Z | `0277c69c0a51c9fc` |
 | `raw/sapling_e2e_v1/run_20261029_151727/rounds.csv` | 2,940 | 2026-10-29T07:18:16Z | `10038428bd65182f` |

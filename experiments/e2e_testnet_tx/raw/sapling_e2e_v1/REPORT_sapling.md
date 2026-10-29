@@ -27,11 +27,14 @@
 |---|---|
 | CPU / 线程 | Intel Core i7-14700，**nproc = 28**（P+E 混合核） |
 | 虚拟化 | WSL2，离线 regtest |
-| 节点 | Zebra 6.2.3，RPC `127.0.0.1:18232`（回环免鉴权） |
-| 钱包 | zallet **v0.1.0-beta.3**（当前最新发布），RPC `127.0.0.1:40232` |
+| 节点 | Zebra 6.2.3，RPC `127.0.0.1:18232`（回环免鉴权）；`zebrad` SHA256 `baf0b2cd…69cc6a7` |
+| 钱包 | zallet **v0.1.0-beta.3**（当前最新发布），RPC `127.0.0.1:40232`；实测进程为后端 `zallet-zaino`，SHA256 `e602e4a3…268208a7` |
 | 网络升级 | Overwinter~Canopy 高度 1，NU5~NU6.3 高度 2（全部 active） |
 | 链高（测量区间） | 32395 ~ 32401 |
 | 起始状态 | 快照 `z3_regtest_h32297_*.tar.gz`（13 MB，含链状态 + 钱包库） |
+
+> 二进制指纹完整记录（64 位 SHA256 / 字节数 / mtime / glibc）见 `../ENV_binaries.txt`。采集于 2026-10-29 15:44，三个二进制 mtime 均停在 09:32 部署时刻，早于首批测量（15:17），故指纹覆盖全部 29 轮。
+> 注意 `zallet` 只是 4.9 MB 的 launcher（dispatcher），108 MB 的 `zallet-zaino` 才是执行 prove 的进程——只记 launcher 的哈希不足以证明二进制身份。
 
 ### 1.2 为什么不用 PCZT，改用 `z_sendmany`
 
