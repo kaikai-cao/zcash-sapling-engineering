@@ -27,17 +27,69 @@
   python3 sapling_e2e_bench.py --rounds 6  --amount-zec 40     # 迫使多 spend，拿斜率
 """
 import argparse
+import atexit
 import base64
 import csv
 import http.client
 import json
 import os
 import statistics
+import sys
 import threading
 import time
 
 ZA = ("127.0.0.1", 40232)
 ZB = ("127.0.0.1", 18232)
+
+
+class _Tee:
+    """写入同时送到原流与日志文件。
+
+    存在的理由：本 bench 的输出一旦只留在终端，事后就无法复核某轮异常
+    （例如 extract 放大 20 倍那种离群点）的上下文。留痕审计把「无日志」
+    列为缺口，因此所有运行必须自带 run.log。
+    """
+
+    def __init__(self, stream, fh):
+        self._stream = stream
+        self._fh = fh
+
+    def write(self, data):
+        n = self._stream.write(data)
+        try:
+            self._fh.write(data)
+        except Exception:
+            pass
+        return n
+
+    def flush(self):
+        try:
+            self._stream.flush()
+        except Exception:
+            pass
+        try:
+            self._fh.flush()
+        except Exception:
+            pass
+
+    def isatty(self):
+        fn = getattr(self._stream, "isatty", None)
+        return bool(fn()) if callable(fn) else False
+
+    def fileno(self):
+        return self._stream.fileno()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def tee_stdio(path):
+    """启用后 stdout/stderr 同时写入 path（行缓冲）。返回句柄，退出时自动关闭。"""
+    fh = open(path, "w", encoding="utf-8", buffering=1)
+    sys.stdout = _Tee(sys.stdout, fh)
+    sys.stderr = _Tee(sys.stderr, fh)
+    atexit.register(fh.close)
+    return fh
 COOKIE = os.path.expanduser("~/z3-regtest/data/zallet/.cookie")
 ACCOUNT = "5fd7056a-3e6e-455f-b75d-d80b0556fea9"
 
@@ -380,6 +432,9 @@ def main():
     ts = time.strftime("%Y%m%d_%H%M%S")
     rundir = os.path.join(a.outdir, "run_" + ts)
     os.makedirs(rundir, exist_ok=True)
+    tee_stdio(os.path.join(rundir, "run.log"))
+    print("[log]", os.path.join(rundir, "run.log"))
+    print("[argv]", " ".join(sys.argv))
     print("[out]", rundir)
 
     pids = find_pids()

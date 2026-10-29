@@ -62,7 +62,7 @@
 
 | # | 缺口 | 影响 | 补救 |
 |---|---|---|---|
-| 1 | **无运行日志**。所有 bench 输出只打印到终端，未重定向落盘 | 想复核某轮异常（如 2857.7 ms 那个离群点）时，只有 `rounds.csv` 的数字，没有当时上下文 | 后续运行统一加 `2>&1 \| tee raw/<batch>/run_<ts>/run.log`；已有批次无法补 |
+| 1 | ~~**无运行日志**~~ **已在脚本层修复**（2026-10-29 15:40）。此前所有 bench 输出只打印到终端 | 想复核某轮异常（如 2857.7 ms 那个离群点）时，只有 `rounds.csv` 的数字，没有当时上下文 | `sapling_e2e_bench.py` 内置 `tee_stdio()`：run 目录建好后即把 stdout/stderr 同时写入 `run.log`，并记录 `[argv]`。**已有的 24 轮无法补日志** |
 | 2 | **失败轮次未结构化**。`pczt_prove` 的 5 次 `MissingProofGenerationKey`、`gap limit at index 16`、`generate` 8 次假失败，都只有报告里的文字描述 | 报告 §1.2 的"版本缺陷"结论，证据链只能追到会话记录，项目内无独立证据文件 | 见 §4 的 `FAILURES.md`（**事后重建，已明确标注**） |
 | 3 | **中间探针输出未落盘**。`z_viewtransaction` 完整 JSON、`pczt_probe.py` 的结构 dump、`pczt_rca.sh` 的源码搜索结果 | 报告里"`spends`/`outputs` 是顶层数组""`fee` 单位是 ZEC 浮点"这类结构断言，无原始样本 | 可用 `viewtx_probe.py` 对任一笔已确认交易重跑（需要链在跑） |
 | 4 | **二进制指纹未记**。报告写 "Zebra 6.2.3 + zallet v0.1.0-beta.3"，但没有二进制 SHA256 | 若上游重新发布同版本号的构建，无法确认是否同一份 | WSL 内执行 `sha256sum $(command -v zebrad) $(command -v zallet)`，追加进 `meta.json` 或本文件 |
