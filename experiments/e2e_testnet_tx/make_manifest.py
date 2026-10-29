@@ -7,7 +7,8 @@ make_manifest.py
 
 覆盖范围：
   - raw/ 下全部 run 目录（数据、meta、报告文本）
-  - 本目录下的分析脚本
+  - **本目录下的全部脚本与文档**（fit_*.py、bootstrap_*.py、*.md 等：数字怎么算出来的，
+    必须与数据同等固定；此前只遍历 raw/ 导致 8 个脚本从未被哈希覆盖）
   - 可通过 --extra 追加外部路径（例如 WSL 侧快照 tar.gz）
 
 输出：raw/MANIFEST.sha256（sha256sum 兼容格式，可直接 `sha256sum -c` 校验）
@@ -53,11 +54,21 @@ def walk(root, extra):
         for dirpath, dirnames, filenames in os.walk(base):
             dirnames[:] = [d for d in dirnames if d not in (".git", "__pycache__")]
             for fn in sorted(filenames):
-                # 排除叙述性文档与清单自身：它们会随清单生成而变，纳入会造成自指循环
-                if fn in ("MANIFEST.sha256", "MANIFEST.md", "AUDIT_trail.md"):
+                # 仅排除清单自身：输出文件若被纳入会造成自指（生成→哈希变→再生成）
+                if fn in ("MANIFEST.sha256", "MANIFEST.md"):
                     continue
                 files.append(os.path.join(dirpath, fn))
     return sorted(set(files))
+
+
+def top_level():
+    """本目录下的脚本与文档（不递归）。这些是"数字怎么算出来的"，必须与数据同等固定。"""
+    out = []
+    for fn in sorted(os.listdir(BASE)):
+        p = os.path.join(BASE, fn)
+        if os.path.isfile(p) and fn not in ("MANIFEST.sha256", "MANIFEST.md"):
+            out.append(p)
+    return out
 
 
 def classify(path):
@@ -86,7 +97,8 @@ def main():
     if not os.path.isdir(RAW):
         sys.exit(f"找不到 {RAW}")
 
-    files = walk(RAW, args.extra)
+    files = walk(RAW, args.extra) + top_level()
+    files = sorted(set(files))
     if not files:
         sys.exit("没有可清单化的文件")
 

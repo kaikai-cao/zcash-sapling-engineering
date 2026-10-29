@@ -1,8 +1,23 @@
 # 端到端 Testnet 真实 Sapling 转账 —— 环境搭建与功能验证 Runbook
 
+> ## ⚠️ 状态：本 Runbook 描述的原方案已被偏离，**不要照此执行**
+>
+> 本文档写于 2026-10-26，计划的是 **Testnet + docker z3 栈 + PCZT 四阶段**。
+> 实际执行（2026-10-29）改成了 **WSL2 离线 regtest + `z_sendmany`**，因为 PCZT 的
+> Sapling 分支在 zallet beta.3 上不可用（见 [`raw/FAILURES.md`](raw/FAILURES.md) F2）。
+>
+> 本文中以下表述**已不成立**，阅读时以 [`DEVIATIONS.md`](DEVIATIONS.md) 为准：
+> - §0「Regtest 资金到账后缺少受支持的完整花费路径」→ regtest 实际完全可用
+> - §7「Regtest 不作为完整花费环境：本实验全程用 Testnet」→ 实际全程用 regtest
+> - §0 版本钉定中的 Zallet `v0.1.0-beta.1` → 实际用 `v0.1.0-beta.3`
+>
+> **保留本文的价值**：它记录了原计划的方法论（功能门禁、分阶段计时、一次性成本单列），
+> 这些原则实际都执行了，见 `DEVIATIONS.md` §2。
+>
+
 > 配套：
 > - 范围界定 [`../metadata/sapling_real_input_tx_proving_scoping_note_20261026.md`](../metadata/sapling_real_input_tx_proving_scoping_note_20261026.md)
-> - 预注册（冻结测量方案与门槛）[`../metadata/sapling_e2e_testnet_tx_preregistration_20261026.md`](../metadata/sapling_e2e_testnet_tx_preregistration_20261026.md)
+> - ~~预注册（冻结测量方案与门槛）~~ → **该文件从未创建**；影响评估见 [](DEVIATIONS.md) §0
 > - 测量脚手架：`e2e_tx_bench.py`（分阶段计时 + 内存）、`mem_sample.py`（一次性同步内存）
 >
 > 本 Runbook 把「在 Testnet 上跑通一笔真实 Sapling 转账并完成功能验证门禁」的步骤写清楚，

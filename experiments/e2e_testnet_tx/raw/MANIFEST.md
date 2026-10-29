@@ -1,18 +1,20 @@
 # 实验产物哈希清单
 
-> 生成时间：2026-10-29T07:47:32Z（UTC）  
-> 文件数：**67**　合计：**13,283,623 B**（12.67 MB）  
+> 生成时间：2026-10-29T08:02:13Z（UTC）  
+> 文件数：**80**　合计：**13,436,054 B**（12.81 MB）  
 > 校验：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
 
 ## 按类别
 
 | 类别 | 文件数 | 字节数 |
 |---|---:|---:|
+| doc | 2 | 15,402 |
 | e2e_regtest | 9 | 3,419 |
 | external | 1 | 13,167,422 |
 | pczt | 19 | 56,375 |
-| raw-other | 1 | 2,541 |
+| raw-other | 3 | 24,745 |
 | sapling | 37 | 53,866 |
+| script | 9 | 114,825 |
 
 ## 运行目录完整性
 
@@ -36,7 +38,19 @@
 
 | 文件 | 字节 | mtime (UTC) | SHA256（前 16 位） |
 |---|---:|---|---|
+| `DEVIATIONS.md` | 5,784 | 2026-10-29T08:00:24Z | `820565f7fe8e97c7` |
+| `README_runbook.md` | 9,618 | 2026-10-29T08:01:04Z | `ff8cd66933e1be0a` |
+| `analyze_sapling_cost.py` | 5,969 | 2026-10-29T07:21:00Z | `acb1d5b7c0af8b8e` |
+| `bootstrap_sapling_ci.py` | 4,238 | 2026-10-29T07:33:31Z | `98c922b0b1ac9e50` |
+| `e2e_tx_bench.py` | 20,117 | 2026-10-28T12:19:37Z | `251c421667634474` |
+| `e2e_tx_bench_v2.py` | 19,270 | 2026-10-29T06:37:13Z | `6ebafa52545ab088` |
+| `fit_sapling_e2e_model.py` | 14,466 | 2026-10-29T07:31:23Z | `7a90dad2b09965a9` |
+| `make_manifest.py` | 7,924 | 2026-10-29T08:02:07Z | `0f1a310db3ef1351` |
+| `mem_sample.py` | 3,904 | 2026-10-27T10:10:05Z | `d0ad3c684c33fc8c` |
+| `pczt_bench_pool.py` | 15,957 | 2026-10-29T07:03:43Z | `c2db6c650c536f9a` |
+| `raw/AUDIT_trail.md` | 13,842 | 2026-10-29T08:01:32Z | `13737e8390726730` |
 | `raw/ENV_binaries.txt` | 2,541 | 2026-10-29T07:44:42Z | `b8d0c672ae7bd0f7` |
+| `raw/FAILURES.md` | 8,362 | 2026-10-29T08:00:44Z | `429ad5ccfac0ef91` |
 | `raw/e2e_regtest_v2/run_20261029_142533/memory_timeseries.csv` | 117 | 2026-10-29T06:25:33Z | `24880f834bf21c28` |
 | `raw/e2e_regtest_v2/run_20261029_143529/memory_timeseries.csv` | 199 | 2026-10-29T06:35:29Z | `9eec9a09dd58c2ae` |
 | `raw/e2e_regtest_v2/run_20261029_143529/run_summary.json` | 1,390 | 2026-10-29T06:35:29Z | `dc1485c50c3f947e` |
@@ -102,6 +116,7 @@
 | `raw/sapling_smoke/run_20261029_151423/rounds.csv` | 295 | 2026-10-29T07:14:26Z | `c33437af7bef3c56` |
 | `raw/sapling_smoke/run_20261029_151423/stage_timings.csv` | 95 | 2026-10-29T07:14:26Z | `a9a3e2b6c08cb848` |
 | `raw/sapling_smoke/run_20261029_151423/summary.csv` | 176 | 2026-10-29T07:14:26Z | `074afedb55274b81` |
+| `sapling_e2e_bench.py` | 22,980 | 2026-10-29T07:39:54Z | `e9c29018549b0dae` |
 
 ## 外部资产（不进 MANIFEST.sha256，需单独校验）
 

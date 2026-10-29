@@ -76,7 +76,7 @@
 | # | 缺口 | 影响 | 补救 |
 |---|---|---|---|
 | 1 | ~~**无运行日志**~~ **已在脚本层修复**（2026-10-29 15:40）。此前所有 bench 输出只打印到终端 | 想复核某轮异常（如 2857.7 ms 那个离群点）时，只有 `rounds.csv` 的数字，没有当时上下文 | `sapling_e2e_bench.py` 内置 `tee_stdio()`：run 目录建好后即把 stdout/stderr 同时写入 `run.log`，并记录 `[argv]`。**已有的 24 轮无法补日志** |
-| 2 | **失败轮次未结构化**。`pczt_prove` 的 5 次 `MissingProofGenerationKey`、`gap limit at index 16`、`generate` 8 次假失败，都只有报告里的文字描述 | 报告 §1.2 的"版本缺陷"结论，证据链只能追到会话记录，项目内无独立证据文件 | 见 §4 的 `FAILURES.md`（**事后重建，已明确标注**） |
+| 2 | ~~**失败轮次未结构化**~~ **已补（16:02）**。原状态：`pczt_prove` 的 5 次 `MissingProofGenerationKey`、`gap limit at index 16`、`generate` 8 次假失败，都只有报告里的文字描述 | 报告 §1.2 的"版本缺陷"结论，证据链只能追到会话记录，项目内无独立证据文件 | ✅ `raw/FAILURES.md`（**事后重建，逐条标注证据强度 A/B/C**，12 条） |
 | 3 | **中间探针输出未落盘**。`z_viewtransaction` 完整 JSON、`pczt_probe.py` 的结构 dump、`pczt_rca.sh` 的源码搜索结果 | 报告里"`spends`/`outputs` 是顶层数组""`fee` 单位是 ZEC 浮点"这类结构断言，无原始样本 | 可用 `viewtx_probe.py` 对任一笔已确认交易重跑（需要链在跑） |
 | 4 | ~~**二进制指纹未记**~~ **已于 15:44 闭合**。报告写 "Zebra 6.2.3 + zallet v0.1.0-beta.3"，原先没有 SHA256 | 若上游重新发布同版本号的构建，无法确认是否同一份 | ✅ 已采集，见 §5.2 + `raw/ENV_binaries.txt`；采集脚本 `z3/wsl/bin_fingerprint.sh` |
 | 5 | 空运行目录 `raw/pczt_pool_v2/run_20261029_150604` | 已在 MANIFEST 标出，无数据损失 | 保留（作为"曾经跑过但立即中断"的记录）比删除更诚实 |
@@ -100,7 +100,7 @@
 | 冷启动仅 +142 ms | `raw/pczt_cold_v1/run_20261029_150648/rounds.csv` | ✅ |
 | padding dummy 与真实 spend 同价 | `run_20261029_150438/rounds.csv` 的 `signed` 列 | ✅ |
 | 快照 12 秒可恢复至 32297 | `D:\Research\z3\snapshots\*.tar.gz` + `wsl/snapshot_restore.sh` | ⚠️ 需 WSL |
-| `z_listtransactions` 的 memo bug | 无独立文件，仅报告文字 | ❌ 见缺口 #2/#3 |
+| `z_listtransactions` 的 memo bug | `raw/FAILURES.md` F6（证据等级 C：仅会话记录） | ⚠️ 可重跑 `viewtx_probe.py` 补实测，需链在跑 |
 
 最后一行是唯一"结论存在但证据不在项目内"的条目，已在报告 §4.1 标注为已知工具缺陷、不影响主数据链路。
 
@@ -108,7 +108,7 @@
 
 ## 5. 已完成的补救（本次）
 
-1. **`raw/MANIFEST.sha256`** —— 65 条记录，sha256sum 兼容，`sha256sum -c` 可直接校验；已实测 65/65 通过、0 失败。
+1. **`raw/MANIFEST.sha256`** —— 66 条记录（后随文件增补重生成），sha256sum 兼容，`sha256sum -c` 可直接校验；已实测 66/66 通过（并从远端对象库回读复核）、0 失败。
 2. **`raw/MANIFEST.md`** —— 人读版：按类别统计、run 目录完整性表（含空目录标记）、逐文件 mtime + 哈希前缀、外部资产（13.2 MB 快照的完整 SHA256）单独成节。
 3. **`make_manifest.py`** —— 清单生成器，可重复执行；已排除自身避免自指，支持 `--extra` 纳入仓库外资产。
 4. 本文件 `AUDIT_trail.md`。
@@ -116,6 +116,18 @@
 6. **`tee_stdio()`**（缺口 #1）—— bench 每次运行自动写 `run.log`。
 
 MANIFEST 的作用：现在报告里的每个数字都绑定到了具体文件的哈希。将来若有人改动某个 `rounds.csv`，`sha256sum -c` 会立刻暴露。
+
+### 5.1 后续补充（16:02）
+
+| 文件 | 作用 |
+|---|---|
+| `raw/FAILURES.md` | 12 条失败/异常的结构化重建，逐条标证据强度 A/B/C，含 3 条已纠正的分析错误（冷启动误归因、M1 负截距、陈旧 tip） |
+| `DEVIATIONS.md`（上一级目录） | 方案偏离记录：5 条偏离 + **预注册从未创建**的声明与影响评估，区分确认性/探索性分析 |
+| `README_runbook.md` | 加状态横幅：原 Testnet+PCZT 方案已废弃，三处失效表述逐条指向 `DEVIATIONS.md`；修正指向不存在预注册文件的死链 |
+
+补这三个文件的原因：**仓库里原先同时存在两套互相矛盾的描述**——runbook 说"全程 Testnet、Regtest 不可用"，
+而全部数据都是 Regtest；AUDIT 又引用了一个从未创建的 `FAILURES.md`。这类自相矛盾比缺少文档更危险，
+因为它让人无法判断哪份可信。
 
 ### 5.2 二进制指纹（缺口 #4 已闭合）
 

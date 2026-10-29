@@ -1,14 +1,17 @@
 # ============================================================================
-# 实验原始数据必须字节保真
+# 实验目录必须字节保真
 # ----------------------------------------------------------------------------
-# experiments/e2e_testnet_tx/raw/ 存放测量产物，raw/MANIFEST.sha256 记录的是
-# 这些文件的 SHA256。本仓库 core.autocrlf=true，会在提交/检出时改写行结束符，
-# 使哈希全部失效。因此该目录禁用一切文本转换，按二进制原样存储。
+# experiments/e2e_testnet_tx/ 下既有测量产物，也有"数字怎么算出来的"脚本与报告。
+# raw/MANIFEST.sha256 记录的是这些文件的 SHA256，且现在**同时覆盖脚本与文档**。
+# 本仓库 core.autocrlf=true，会在提交/检出时改写行结束符：
+#   - 数据（raw/**）被改写 → 数据哈希失效
+#   - 脚本（*.py）被改写 → 在 Linux 上克隆后 sha256sum -c 全部报错
+# 故整个目录禁用一切文本转换，按原样存储。
 #
 # 代价：git diff 默认视其为二进制。查看内容差异用
-#     git diff --text experiments/e2e_testnet_tx/raw/<file>
+#     git diff --text experiments/e2e_testnet_tx/<file>
 # ============================================================================
-experiments/e2e_testnet_tx/raw/** -text
+experiments/e2e_testnet_tx/** -text
 
 # 历史遗留采样（experiments/raw/e2e_testnet_tx/）同样是原始数据，同样保真
 experiments/raw/** -text
