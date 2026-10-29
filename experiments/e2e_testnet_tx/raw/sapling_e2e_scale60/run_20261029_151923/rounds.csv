@@ -1,0 +1,5 @@
+round,txid,opid,policy,sapling_spends,sapling_outputs,sapling_proofs,t_spends,t_outputs,tx_size,fee_zat,fee_measured_zat,confirmations,submit,pipeline,mine,sync,total,error
+1,c578e8e8a42878f165e70aa9ca1d0d0df47abe7708efa421afd51a6c54a59287,opid-384a7b4d-1470-42fe-a45b-cca80cb68b66,FullPrivacy,4,2,6,0,0,3434,20000,20000,2,14.7,2993.0,545.8,1562.9,5144.6,
+2,58cfbac55128e2be8f9c45399b2297d7fef6a97d4188350a6d133f7bd365dd3c,opid-54d3df9b-4167-4801-9677-141764f1e9ff,FullPrivacy,4,3,7,0,0,4382,20000,20000,2,14.3,3155.3,551.0,1046.2,4795.3,
+3,42c15c6b2be46a0a998a738bbee5ae1add6f819dd6646eacd5d2c1b12ce8c082,opid-e157051c-f6b5-4c72-b292-0bd6d6560549,FullPrivacy,2,2,4,0,0,2730,10000,10000,2,12.8,1730.9,537.5,1559.8,3866.6,
+4,e51e6df7b0664a20e963242b523ec65a3cc23ca7b756cfd08803aff17e6f9109,opid-e5759f91-f51e-42a1-951d-d57b2ca48287,FullPrivacy,3,3,6,0,0,4030,15000,15000,2,14.3,2445.1,530.7,1042.9,4060.4,

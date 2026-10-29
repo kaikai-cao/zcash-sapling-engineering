@@ -1,0 +1,41 @@
+{
+  "run_id": "run_20261029_143934",
+  "generated_at": "2026-10-29T14:39:34+0800",
+  "rounds": 5,
+  "amount_zec": 10.0,
+  "privacy": "FullPrivacy",
+  "fund_source": "sapling",
+  "mine_per_round": 2,
+  "confirmations": 1,
+  "total_wall_s": 0.3024764910005615,
+  "mem_peak_bytes": {
+    "zebrad": 800763904,
+    "zallet": 212512768
+  },
+  "tx_sizes": [],
+  "txids": [],
+  "recipient": "uregtest1clpgzyvyvtaf569fhst3yv6krnpw3ugq6ht9k8kxfcnqx97hrcyfn4px64k982dstlww8cgzhhgq93dqt8kd0drsqsef9507zcxsl5ne",
+  "errors": [
+    {
+      "round": 1,
+      "error": "RPCError(\"pczt_prove -> {'code': -25, 'message': 'Failed to create Sapling proofs: Prover(MissingProofGenerationKey)'}\")"
+    },
+    {
+      "round": 2,
+      "error": "RPCError(\"pczt_prove -> {'code': -25, 'message': 'Failed to create Sapling proofs: Prover(MissingProofGenerationKey)'}\")"
+    },
+    {
+      "round": 3,
+      "error": "RPCError(\"pczt_prove -> {'code': -25, 'message': 'Failed to create Sapling proofs: Prover(MissingProofGenerationKey)'}\")"
+    },
+    {
+      "round": 4,
+      "error": "RPCError(\"pczt_prove -> {'code': -25, 'message': 'Failed to create Sapling proofs: Prover(MissingProofGenerationKey)'}\")"
+    },
+    {
+      "round": 5,
+      "error": "RPCError(\"pczt_prove -> {'code': -25, 'message': 'Failed to create Sapling proofs: Prover(MissingProofGenerationKey)'}\")"
+    }
+  ],
+  "results": []
+}

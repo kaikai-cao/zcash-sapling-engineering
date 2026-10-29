@@ -1,0 +1,25 @@
+{
+ "args": {
+  "rounds": 4,
+  "send_zec": 3.0,
+  "minconf": 1,
+  "policy": "AllowRevealedAmounts",
+  "fund_source": "orchard",
+  "mine_blocks": 2,
+  "outdir": "/mnt/d/Research/zcash-sapling-engineering/experiments/e2e_testnet_tx/raw/pczt_cold_v1"
+ },
+ "pool": "ironwood",
+ "balances": {
+  "sapling": 10249980000,
+  "ironwood": 2874400000
+ },
+ "pids": {
+  "zebrad": 239435,
+  "zallet": 239967
+ },
+ "timestamp": "20261029_150648",
+ "shape_groups": {
+  "(2, 1)": 3,
+  "(2, 2)": 1
+ }
+}

@@ -113,12 +113,33 @@ def _to_bytes(tok):
         return None
 
 
-class MemorySampler(threading.Thread):
-    """后台线程：按 interval 采样容器内存到 CSV。"""
+def _proc_rss_bytes(pid):
+    """读取 /proc/<pid>/status 的 VmRSS（字节）。原生（非 Docker）内存采样用。"""
+    try:
+        with open("/proc/%s/status" % pid, "r", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("VmRSS:"):
+                    parts = line.split()
+                    return int(parts[1]) * 1024
+    except Exception:
+        return None
+    return None
 
-    def __init__(self, containers, interval, out_csv, stop_event):
+
+class MemorySampler(threading.Thread):
+    """后台线程：按 interval 采样内存到 CSV。
+
+    原生模式（pids 非空）读 /proc/<pid>/status VmRSS；
+    Docker 模式（默认）用 `docker stats`。
+    """
+
+    def __init__(self, containers, interval, out_csv, stop_event, pids=None):
         super().__init__(daemon=True)
-        self.containers = [c.strip() for c in containers.split(",") if c.strip()]
+        self.pids = [p.strip() for p in (pids or "").split(",") if p.strip()]
+        if self.pids:
+            self.containers = ["pid:" + p for p in self.pids]
+        else:
+            self.containers = [c.strip() for c in containers.split(",") if c.strip()]
         self.interval = interval
         self.out_csv = out_csv
         self.stop_event = stop_event
@@ -131,18 +152,30 @@ class MemorySampler(threading.Thread):
             f.flush()
             while not self.stop_event.is_set():
                 ts = time.time()
-                for c in self.containers:
-                    try:
-                        out = subprocess.run(
-                            ["docker", "stats", "--no-stream",
-                             "--format", "{{.MemUsage}}", c],
-                            capture_output=True, text=True, timeout=10)
-                        used, limit = parse_mem_usage(out.stdout.strip())
+                if self.pids:
+                    for pid in self.pids:
+                        try:
+                            used = _proc_rss_bytes(pid)
+                        except Exception as e:
+                            used = None
+                            print("  [mem采样] pid %s 失败: %s" % (pid, e))
                         if used is not None:
-                            w.writerow([f"{ts:.3f}", c, used, limit or ""])
-                            self.rows.append((ts, c, used, limit))
-                    except Exception as e:
-                        print("  [mem采样] %s 失败: %s" % (c, e))
+                            label = "pid:" + pid
+                            w.writerow([f"{ts:.3f}", label, used, ""])
+                            self.rows.append((ts, label, used, None))
+                else:
+                    for c in self.containers:
+                        try:
+                            out = subprocess.run(
+                                ["docker", "stats", "--no-stream",
+                                 "--format", "{{.MemUsage}}", c],
+                                capture_output=True, text=True, timeout=10)
+                            used, limit = parse_mem_usage(out.stdout.strip())
+                            if used is not None:
+                                w.writerow([f"{ts:.3f}", c, used, limit or ""])
+                                self.rows.append((ts, c, used, limit))
+                        except Exception as e:
+                            print("  [mem采样] %s 失败: %s" % (c, e))
                 f.flush()
                 self.stop_event.wait(self.interval)
 
@@ -189,7 +222,7 @@ def run(args):
 
     timings = {}
     stop = threading.Event()
-    sampler = MemorySampler(args.containers, args.sample_interval, mem_csv, stop)
+    sampler = MemorySampler(args.containers, args.sample_interval, mem_csv, stop, pids=args.pids)
     sampler.start()
 
     t_start = time.monotonic()
@@ -237,6 +270,14 @@ def run(args):
             print("  [warn] sendrawtransaction 失败（可能已由 Zallet 广播）: %s" % e)
 
         if txid:
+            # Regtest：广播后挖块把交易纳入区块并驱动确认（regtest 不自动出块）
+            if args.mine_blocks and args.mine_blocks > 0:
+                try:
+                    stage("mine_blocks", lambda: json_rpc_call(
+                        args.zebra_url, "generate", [args.mine_blocks],
+                        auth=_cookie_auth(args.zebra_cookie)), timings)
+                except Exception as e:
+                    print("  [warn] mine_blocks 失败: %s" % e)
             # 等待节点接受（进入 mempool）
             stage("wait_accept", lambda: _poll_until(
                 args.zebra_url, "getmempoolentry", [txid], _truthy,
@@ -373,8 +414,13 @@ def build_arg_parser():
     p.add_argument("--recipient", required=True)
     p.add_argument("--amount", type=int, required=True)
     p.add_argument("--confirmations", type=int, default=2)
+    p.add_argument("--mine-blocks", type=int, default=0,
+                   help="Regtest 专用：广播后挖 N 个块以驱动交易进入区块/确认"
+                        "（regtest 不自动出块，必须显式挖块；默认 0 不挖）")
     p.add_argument("--containers", default="z3-testnet-zebra-1,z3-testnet-zallet-1",
-                   help="docker stats 采样容器名，逗号分隔")
+                   help="docker stats 采样容器名，逗号分隔（Docker 模式）")
+    p.add_argument("--pids", default="",
+                   help="原生模式：逗号分隔的进程 PID，采样其 /proc/<pid>/status VmRSS")
     p.add_argument("--sample-interval", type=float, default=1.0)
     p.add_argument("--outdir", default="../raw/e2e_testnet_tx")
     p.add_argument("--discover", action="store_true",

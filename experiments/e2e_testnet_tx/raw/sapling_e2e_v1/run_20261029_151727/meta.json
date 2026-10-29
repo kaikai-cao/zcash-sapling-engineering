@@ -1,0 +1,18 @@
+{
+ "args": {
+  "rounds": 15,
+  "amount_zec": 3.0,
+  "mine_blocks": 2,
+  "policies": "FullPrivacy,AllowRevealedAmounts",
+  "outdir": "./raw/sapling_e2e_v1"
+ },
+ "pids": {
+  "zebrad": 239435,
+  "zallet": 239967
+ },
+ "pools_before": {
+  "sapling": 11449960000,
+  "ironwood": 1674320000
+ },
+ "timestamp": "20261029_151727"
+}

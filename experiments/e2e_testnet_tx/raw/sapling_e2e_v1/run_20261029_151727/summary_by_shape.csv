@@ -1,0 +1,3 @@
+sapling_spends,sapling_outputs,proofs,n,pipeline_median_ms,pipeline_min_ms,pipeline_max_ms,size
+1,2,3,7,1139.5,1103.5,1253.6,2378
+2,2,4,8,1749.2,1726.8,1817.9,2730

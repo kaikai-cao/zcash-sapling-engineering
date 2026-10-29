@@ -1,0 +1,16 @@
+round,stage,ms
+1,submit,15.2
+1,pipeline,1808.6
+1,mine,532.1
+1,sync,1568.0
+1,total,3957.4
+2,submit,13.0
+2,pipeline,1826.8
+2,mine,530.6
+2,sync,1043.1
+2,total,3446.5
+3,submit,13.3
+3,pipeline,1826.5
+3,mine,526.3
+3,sync,1040.1
+3,total,3440.6

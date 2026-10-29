@@ -1,0 +1,2 @@
+round,txid,opid,policy,sapling_spends,sapling_outputs,tx_size,fee_zat,fee_measured_zat,submit,pipeline,mine,sync,total,error
+1,555f83ece634d7a36036042a83b12e6383181358a7d2c9bf58fd6e8abb92a101,opid-0bc65ea5-03fb-44a7-80f2-7e199cc7155c,FullPrivacy,,,2378,,10000,11.6,1171.3,534.6,1048.4,2790.0,

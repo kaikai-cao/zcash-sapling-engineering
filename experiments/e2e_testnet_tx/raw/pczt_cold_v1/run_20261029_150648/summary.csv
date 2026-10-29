@@ -1,0 +1,9 @@
+stage,n,median_ms,min_ms,max_ms,stdev_ms
+pczt_create,4,30.3,26.1,34.8,4.3
+pczt_sign,4,10.3,9.7,12.2,1.2
+pczt_prove,4,1398.4,1380.2,1537.1,72.9
+pczt_extract,4,37.0,29.1,67.3,16.9
+broadcast,4,170.6,163.2,173.2,4.7
+mine,4,512.7,509.8,517.0,3.5
+confirm,4,0.8,0.8,0.8,0.0
+total_ms,4,2155.5,2145.9,2324.7,86.3

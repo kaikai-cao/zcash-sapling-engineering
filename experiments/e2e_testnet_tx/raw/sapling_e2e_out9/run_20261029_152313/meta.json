@@ -1,0 +1,21 @@
+{
+ "args": {
+  "rounds": 3,
+  "amount_zec": 4.0,
+  "mine_blocks": 2,
+  "policies": "FullPrivacy,AllowRevealedAmounts",
+  "outdir": "./raw/sapling_e2e_out9",
+  "outputs": 8
+ },
+ "pids": {
+  "zebrad": 239435,
+  "zallet": 239967
+ },
+ "pools_before": {
+  "sapling": 11449495000,
+  "ironwood": 1674320000
+ },
+ "nproc": 28,
+ "cpu_model": "Intel(R) Core(TM) i7-14700",
+ "timestamp": "20261029_152313"
+}

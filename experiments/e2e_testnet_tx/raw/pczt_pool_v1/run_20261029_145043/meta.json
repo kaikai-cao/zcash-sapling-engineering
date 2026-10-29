@@ -1,0 +1,21 @@
+{
+ "args": {
+  "rounds": 5,
+  "send_zec": 3.0,
+  "minconf": 1,
+  "policy": "AllowRevealedAmounts",
+  "fund_source": "orchard",
+  "mine_blocks": 2,
+  "outdir": "./raw/pczt_pool_v1"
+ },
+ "pool": "sapling",
+ "balances": {
+  "sapling": 10499980000,
+  "ironwood": 2624920000
+ },
+ "pids": {
+  "zebrad": 16865,
+  "zallet": 23352
+ },
+ "timestamp": "20261029_145043"
+}
