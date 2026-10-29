@@ -40,16 +40,28 @@ def fnum(x):
         return None
 
 
-def load_all(raw_dir):
-    """收集所有批次的成功轮次。"""
+def load_all(raw_dir, require_match=False):
+    """收集所有批次的成功轮次。
+
+    - 自动排除 `_feasibility_gate/` 子目录（确认性门禁数据，绝不与正式样本混合）。
+    - require_match=True 时，仅保留 form_match 与 fee_match 均为真的轮次
+      （用于确认性补测；对 pilot 旧数据无影响，因其无该列且默认关闭）。
+    """
     rows = []
     pat = os.path.join(raw_dir, "**", "rounds.csv")
     for path in sorted(glob(pat, recursive=True)):
+        if "_feasibility_gate" in path:
+            continue
         batch = os.path.basename(os.path.dirname(os.path.dirname(path)))
-        with open(path, newline="") as f:
+        with open(path, newline="", encoding="utf-8-sig") as f:
             for r in csv.DictReader(f):
                 if (r.get("error") or "").strip():
                     continue
+                if require_match:
+                    fm = (r.get("form_match") or "").strip().lower()
+                    fem = (r.get("fee_match") or "").strip().lower()
+                    if fm not in ("true", "1", "yes") or fem not in ("true", "1", "yes"):
+                        continue
                 s = fnum(r.get("sapling_spends"))
                 o = fnum(r.get("sapling_outputs"))
                 p = fnum(r.get("sapling_proofs"))
@@ -133,9 +145,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw-dir", default=os.path.join(BASE, "raw"))
     ap.add_argument("--md", default="")
+    ap.add_argument("--require-match", action="store_true",
+                   help="仅保留 form_match 与 fee_match 均为真的轮次（确认性补测用）")
     args = ap.parse_args()
 
-    rows = load_all(args.raw_dir)
+    rows = load_all(args.raw_dir, args.require_match)
     if not rows:
         sys.exit("没有找到可用的 rounds.csv（检查 --raw-dir）")
     shapes = aggregate(rows)
