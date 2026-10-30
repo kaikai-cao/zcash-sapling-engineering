@@ -57,6 +57,7 @@ import json
 import os
 import random
 import sqlite3
+import shutil
 import subprocess
 import sys
 import time
@@ -147,6 +148,21 @@ DERIVE_RETRYABLE_PATTERNS = (
 # ---------------------------------------------------------------------------
 class StateError(Exception):
     """初始状态核验失败，但可能瞬时（可重试）。"""
+
+
+class StateVerificationError(StateError):
+    """初始状态核验失败，按 §6 6-D 分为 A/B/C 三组（区分「瞬时/可恢复」与「结构性/不可行」）。
+
+    - A 瞬时/环境：链高/Note 清单/余额读取失败（RPC 可能未就绪）—— ⑤，无条件可继续；
+    - B 恢复完整性：清单不完整 / 可花费 Note 数为 0（恢复态本身有问题）—— 五类外·受控恢复，每形态限 1 次；
+    - C 形态不可行：Note 数不足 / 金额边界无法满足（当前 Note 状态无法构造目标形态）—— 五类外·前置可行性，停止。
+    """
+
+    group = None  # "A" | "B" | "C"
+
+    def __init__(self, msg, group):
+        StateError.__init__(self, msg)
+        self.group = group
 
 
 class HeightMismatch(StateError):
@@ -282,6 +298,46 @@ def sha256_file(path):
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _zcashd_binary_sha256():
+    """M8：若执行依赖的编译二进制在 PATH 上可定位，记录其 SHA-256；否则如实返回 None。
+
+    不猜测、不强造二进制哈希——源码 blob SHA（executor_sha256）不替代二进制哈希。
+    """
+    for name in ("zcashd", "zebrad"):
+        p = shutil.which(name)
+        if p:
+            try:
+                return sha256_file(p)
+            except Exception:
+                return None
+    return None
+
+
+def _version_anchors():
+    """M8：执行版本/哈希锚定（如实区分源码 blob SHA 与二进制哈希）。
+
+    返回 dict，含：
+      - executor_sha256：本执行器文件的 SHA-256（源码级锚定）；
+      - git_head：仓库 HEAD（执行版本）；
+      - binary_sha256：若可定位编译二进制则记其 SHA-256，否则 None。
+    """
+    anchors = {}
+    try:
+        anchors["executor_sha256"] = sha256_file(os.path.abspath(__file__))
+    except Exception:
+        anchors["executor_sha256"] = None
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            stderr=subprocess.DEVNULL).decode().strip()
+        anchors["git_head"] = out or None
+    except Exception:
+        anchors["git_head"] = None
+    anchors["binary_sha256"] = _zcashd_binary_sha256()
+    return anchors
 
 
 def restore_snapshot(allow_hash_mismatch=False, allow_script_mismatch=False):
@@ -453,8 +509,8 @@ def note_inventory_detailed():
     if rpc_zat != db_zat:
         bad.append("RPC 余额 %d != DB 总额 %d" % (rpc_zat, db_zat))
     if bad:
-        raise StateError("Note 清单完整性校验失败（清单不完整，停止发交易）：\n  "
-                         + "\n  ".join(bad))
+        raise StateVerificationError("Note 清单完整性校验失败（清单不完整，停止发交易）：\n  "
+                                     + "\n  ".join(bad), "B")
 
     print("[inv] DB 只读清单 OK: %d notes / %d zat | RPC count=%d balance=%d 全部一致 | "
           "高度 %d..%d"
@@ -514,7 +570,7 @@ def verify_state(snap_sha, script_sha, S, O, allow_height_mismatch=False):
     """
     h = height()
     if h is None:
-        raise StateError("无法读取链高（钱包/节点可能未就绪）")
+        raise StateVerificationError("无法读取链高（钱包/节点可能未就绪）", "A")
     if h != SNAPSHOT_TARGET_HEIGHT:
         if allow_height_mismatch:
             print("[verify][warn] 链高=%s 预期 %d（已按 --allow-height-mismatch 继续）" % (h, SNAPSHOT_TARGET_HEIGHT))
@@ -523,20 +579,20 @@ def verify_state(snap_sha, script_sha, S, O, allow_height_mismatch=False):
 
     inv = note_inventory()
     if inv is None:
-        raise StateError("无法读取可花费 Note 清单（RPC 失败），停止以免未知状态")
+        raise StateVerificationError("无法读取可花费 Note 清单（RPC 失败），停止以免未知状态", "A")
     if len(inv) == 0:
-        raise StateError("可花费 Note 数为 0")
+        raise StateVerificationError("可花费 Note 数为 0", "B")
     if len(inv) < S:
-        raise StateError("可花费 Note 数=%d < 目标 S=%d，无法构造目标形态" % (len(inv), S))
+        raise StateVerificationError("可花费 Note 数=%d < 目标 S=%d，无法构造目标形态" % (len(inv), S), "C")
 
     pick = pick_amount_zat(S, O, inv)
     if pick is None:
-        raise StateError("目标 (S=%d,O=%d) 在现有 Note 下无法可靠构造（金额边界无法满足，note 数=%d）"
-                         % (S, O, len(inv)))
+        raise StateVerificationError("目标 (S=%d,O=%d) 在现有 Note 下无法可靠构造（金额边界无法满足，note 数=%d）"
+                                     % (S, O, len(inv)), "C")
 
     bal = sapling_zat()
     if bal is None:
-        raise StateError("无法读取 Sapling 余额")
+        raise StateVerificationError("无法读取 Sapling 余额", "A")
 
     print("[verify] 链高=%s(预期%d) notes=%d sapling余额=%s zat | 金额边界 A+F in (%d, %d]"
           % (h, SNAPSHOT_TARGET_HEIGHT, len(inv), bal,
@@ -598,7 +654,12 @@ def send_frozen(from_ua, amounts, policy, timeout_op=600):
             # timeout 取 900，与 z() 的默认值一致，不改既有轮询行为
             st, perr = z_raw("z_getoperationstatus", [[opid]], timeout=900)
         except _TRANSPORT_EXC as e:
-            # 已拿到 opid = 确定已受理，故 submit_state=submitted（超时不得重发）
+            # 已取得 opid 且本轮轮询调用本身失败（操作仍在钱包侧在途）：属「结果可知性
+            # = submitted」——已知操作已创建且处于确定状态（pending；opid 终态失败 /
+            # 已上链成功同样记 submitted），故 submit_state=submitted。
+            # 注意：submitted 表示「操作已创建且状态可知」，不等于已上链或被网络确认；
+            # 是否真正广播须由 G4 外部裁决核验。仅 opid_timeout（轮询窗口内未确认
+            # 终态、结果不可判定）才是 unknown。
             raise TransportError("stage=status_poll 传输层异常: %s" % type(e).__name__,
                                  stage="status_poll", raw_transport=_transport_detail(e),
                                  z_sendmany_invoked=True, submit_state="submitted",
@@ -627,7 +688,7 @@ def send_frozen(from_ua, amounts, policy, timeout_op=600):
     raise PreTxError("stage=opid_timeout 轮询超时 %ds（opid=%s, policy=%s）"
                      % (timeout_op, opid, policy),
                      stage="opid_timeout", z_sendmany_invoked=True,
-                     submit_state="submitted", opid=opid)
+                     submit_state="unknown", opid=opid)
 
 
 # ---------------------------------------------------------------------------
@@ -885,15 +946,14 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
     try:
         ts, tp, opid, res = send_frozen(from_ua, amounts, policy)
     except PreTxError as e:
-        row["error"] = str(e)[:300]
-        row["failure_class"] = _classify(e)
-        # 先写 sidecar 再返回（CSV 由主循环末尾统一落盘，故此处证据必然先落盘）
-        _emit_failure(idx, S, O, row["failure_class"], e,
-                      extra={"recipients": recipients,
-                             "amounts_zat": [int(round(x["amount"] * 1e8)) for x in amounts],
-                             "policy": policy, "from_ua": from_ua})
-        print("  [fail] %s" % row["error"])
-        return row, None
+        # 不再在此吞掉：把发送阶段上下文挂到异常上，交由主循环统一裁决
+        # （G4 / _campaign_continue）。失败证据改由 main 的 PreTxError 分支经
+        # fail_row → _emit_failure 写入一次，避免重复记录或丢失 attempt_id。
+        e.recipients = recipients
+        e.amounts_zat = [int(round(x["amount"] * 1e8)) for x in amounts]
+        e.policy = policy
+        e.from_ua = from_ua
+        raise
 
     txid = res.get("txid")
     row["policy"] = policy
@@ -935,6 +995,17 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
     print("  实际形态 spends=%s outputs=%s (目标 %d,%d) form_match=%s fee_match=%s"
           % (aS, aO, S, O, row["form_match"], row["fee_match"]))
 
+    # M7：已提交成功但形态/手续费不符 → 结果不匹配标签（§6 #32 ④）。
+    # 计时测量值（submit/pipeline/mine/sync/total/fee_zat/tx_size）已在本函数前述代码
+    # 完整记录，本判定不改变任何测量；仅标注类别并令主循环停止该形态。
+    # 双重不匹配的 tie-break：**手续费优先**（§6 第 32 条注记）——form 与 fee 同时不符时
+    # 记 fee_mismatch；form_match / fee_match 两列布尔值均已逐列写入 rounds.csv，
+    # 形态偏离信息不因 failure_class 单值化而丢失。
+    if not row["fee_match"]:
+        row["failure_class"] = "fee_mismatch"
+    elif not row["form_match"]:
+        row["failure_class"] = "form_mismatch"
+
     bal1 = sapling_zat()
     total_ms = (time.monotonic() - t_round) * 1000.0
     row["mine"] = "%.1f" % mine_ms
@@ -943,14 +1014,14 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
     row["fee_measured_zat"] = (bal0 - bal1) if (bal0 and bal1) else None
     print("  本轮墙钟 %8.1f ms" % total_ms)
     T = {"submit": ts, "pipeline": tp, "mine": mine_ms, "sync": sync_ms, "total": total_ms}
-    return row, T
+    return row, (None if row.get("failure_class") in MISMATCH_CLASSES else T)
 
 
 # failure_class 取值（冻结稿 §4.5）。
 #
 # T3 裁定（2026-10-30）：**保留 `opid_timeout`，不改名**。含义严格限定为
 # 「客户端轮询窗口耗尽，结果未知」——不是「操作在服务端超时」，更不是「发送失败」。
-# 该类记录必然已拿到 opid（submit_state=submitted），交易可能已上链。
+# 该类记录已拿到 opid，但受理状态未知（submit_state=unknown），须按 G4 核验其最终 fate。
 # 不改名的理由：名称不影响分类正确性、统计口径；真正的误读风险在汇总文案，
 # 已由 `_summary_note` 的「提交状态不明」段消除（S8 守护）；改名会让本常量与
 # 冻结稿 §4.4 / §6.4 R3 的表述脱节，收益为零。
@@ -1023,6 +1094,91 @@ def _text_fallback(raw):
     if "note" in low or "insufficient" in low or "金额" in raw:
         return "insufficient_notes"
     return "other"
+
+
+# §6 6-D：结果不匹配标签（M7）—— 已提交成功但形态/手续费不符，单列、不计入失败类别。
+MISMATCH_CLASSES = frozenset({"form_mismatch", "fee_mismatch"})
+
+
+def _load_g4_verdicts(path):
+    """G4 外部裁决文件（仅当显式传入 --g4-verdicts 才读取；执行器不自动计算 G4）。
+
+    格式：JSON 对象，键为 attempt_id（<run_id>:<round>），值为
+    "unaccepted" / "accepted" / "undecided"。
+    缺省或读取失败一律返回空 dict → 所有 opid_timeout 按默认 undecided 停止。
+
+    输入校验（fail-closed，任何违规整份文件拒绝，全部按 undecided 处理）：
+      - 重复键（JSON 默认会静默取末值，可能把 accepted 翻成 unaccepted 而误放行）：
+        直接拒绝整份文件，不得采用「最后一个值覆盖」。
+      - 非法 verdict 值（非精确 unaccepted/accepted/undecided）：拒绝整份文件，
+        不得降级成任何可继续状态。
+      - 其它 run 的键 / 当前 run 未命中的键：保留（支持多 run 文件），但绝不影响
+        当前轮次裁决——当前轮次只按 "<run_id>:<round>" 精确匹配。
+    """
+    if not path:
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        # 重复键检测：object_pairs_hook 在出现重复键时显式抛错（拒绝整份文件）。
+        # 否则 json.load 会静默取末值，accepted 可能被覆盖成 unaccepted 而误放行。
+        def _no_dup(pairs):
+            seen = set()
+            for k, _ in pairs:
+                if k in seen:
+                    raise ValueError("G4 裁决文件存在重复键: %r" % (k,))
+                seen.add(k)
+            return dict(pairs)
+        data = json.loads(text, object_pairs_hook=_no_dup)
+        if not isinstance(data, dict):
+            raise ValueError("G4 裁决文件顶层必须是 JSON 对象")
+        allowed = ("unaccepted", "accepted", "undecided")
+        cleaned = {}
+        for k, v in data.items():
+            key = str(k)
+            val = str(v)
+            if val not in allowed:
+                raise ValueError("G4 裁决值非法: %r=%r（仅允许 unaccepted/accepted/undecided）" % (key, v))
+            cleaned[key] = val
+        # 诊断：其它 run 的键不影响当前轮次（仅告警，不改变裁决结果）
+        cur = _SIDECAR.get("run_id")
+        if cur:
+            for key in cleaned:
+                if not key.startswith(cur + ":"):
+                    sys.stderr.write("[g4][diag] 忽略非当前 run 的裁决键（不影响当前轮次）: %r\n" % (key,))
+        return cleaned
+    except Exception as e:
+        sys.stderr.write("[g4] 裁决文件加载/校验失败，按 undecided 处理（全部停止）: %r\n" % (e,))
+        return {}
+
+
+def _campaign_continue(cls, stage, submit_state, g4_verdict="undecided"):
+    """§6 6-D ① campaign 内继续（机制①）裁决：仅下列组合允许继续，其余一律 break。
+
+    允许继续：
+      - ⑤ 瞬时环境：`state_verification_failed@A` / `env_transient_sync`（无条件）；
+      - D1a：`rpc_transport_error` 且 stage=submit 且 submit_state=not_submitted（无条件）；
+      - D1a：`rpc_transport_error` 且 stage=submit 且 submit_state=unknown：G4 先行（见下），仅外部明确裁决未受理才继续；
+      - `opid_timeout`：默认停止（见下）；仅当外部 G4 裁决明确为 unaccepted 时才继续。
+    不放行（break，停止该形态）：
+      - @B 受控恢复由调用方单独按「每形态限 1 次」处理，此处不裁决；
+      - @C / HeightMismatch / 各 rpc_*（除 D1a）/ opid_terminal_failed / other / 形态不符 → 否；
+      - `rpc_transport_error`@unknown 与 `opid_timeout` 均属 G4 先行类：默认停止，仅外部明确裁决未受理才允许继续（独立恢复流程）。
+    G4 输入契约：g4_verdict 来自**外部裁决文件**（--g4-verdicts），执行器不自动计算 G4。
+      仅 "unaccepted" 允许 opid_timeout / rpc_transport_error@unknown 继续；"accepted" 或 "undecided"（默认）均停止。
+    """
+    if cls in ("state_verification_failed@A", "env_transient_sync"):
+        return True
+    if cls == "rpc_transport_error" and stage == "submit" and submit_state == "not_submitted":
+        return True
+    if cls == "rpc_transport_error" and stage == "submit" and submit_state == "unknown":
+        # G4 先行类（与 opid_timeout 同机制）：默认停止；
+        # 仅当外部 G4 裁决明确为 unaccepted（未受理）才允许继续。
+        return g4_verdict == "unaccepted"
+    if cls == "opid_timeout":
+        # G4 先行类：默认停止；仅外部明确裁决未受理才允许继续（独立恢复流程）。
+        return g4_verdict == "unaccepted"
+    return False
 
 
 def _classify(err):
@@ -1154,11 +1310,15 @@ def replacement_allowed(rec):
     return not rec.get("z_sendmany_invoked")
 
 
-def fail_row(idx, S, O, cls, msg, err=None):
-    """构造失败行；**先写 sidecar 再返回**（fail-closed，§4.9 条件 3）。"""
+def fail_row(idx, S, O, cls, msg, err=None, extra=None):
+    """构造失败行；**先写 sidecar 再返回**（fail-closed，§4.9 条件 3）。
+
+    extra：发送阶段上下文（recipients / amounts_zat / policy / from_ua 等），
+    由 run_one 在重新抛出 PreTxError 前挂到异常上、经主循环透传，保证冒泡后不丢失。
+    """
     row = {"round": idx, "target_spend": S, "target_output": O,
            "error": str(msg)[:300], "failure_class": cls}
-    _emit_failure(idx, S, O, cls, err)
+    _emit_failure(idx, S, O, cls, err, extra=extra)
     return row
 
 
@@ -1182,7 +1342,7 @@ def _summary_note(rows, tx_ok, allm, dry_run):
     recip = [r for r in rows if str(r.get("failure_class") or "").startswith("recipient_")]
     # 「提交状态不明」必须单列：这两类的共同点是**请求可能已被受理**，
     # 因此既不能写成「未产生 txid」，也不能归入「构造/发送阶段失败」。
-    #   - opid_timeout：已拿到 opid（submit_state=submitted），只是轮询窗口耗尽；
+    #   - opid_timeout：已拿到 opid，但受理状态未知（submit_state=unknown），只是轮询窗口耗尽；
     #   - rpc_transport_error：submit 阶段无响应时为 unknown，status_poll 时已 submitted。
     unk = [r for r in rows if str(r.get("failure_class")) in CLS_UNKNOWN_STATE]
     other = [r for r in rows if r.get("failure_class")
@@ -1330,6 +1490,13 @@ def verify_run_artifacts(rundir):
     三项：① errors.jsonl 每行可解析 ② attempt_id 双向齐全且不重复
           ③ sidecar 行数 == 失败轮数。
 
+    **结果不匹配标签的例外（§6 第 32 行 ④）**：`form_mismatch` / `fee_mismatch`
+    按冻结稿**不是失败类别**、**无 sidecar**、不并入失败计数（§6-F）；但 M7 把这两个
+    标签写进了主 CSV 的 `failure_class` 列。因此这里**必须把它们排除**出「失败轮 ↔
+    sidecar」双向核对，否则一个形态/手续费不符的行会因缺 sidecar 而触发 SystemExit，
+    连带把整个 run 标为 `run_aborted` / `usable_as_sample=False`（正式样本被剔除）。
+    它们单独计入 `mismatch_rows`，既不参与失败轮计数，也不丢失可审计的痕迹。
+
     注：本项目**没有** `final_check.py`（那是另一项目的脚本），校验一律在这里
     与 `failure_class_selftest.py` 完成。
     """
@@ -1338,10 +1505,16 @@ def verify_run_artifacts(rundir):
     run_id = os.path.basename(str(rundir).rstrip("/\\"))
 
     fails = []
+    mismatch_rows = 0
     with open(rpath, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
-            if r.get("failure_class"):
-                fails.append("%s:%d" % (run_id, int(r["round"])))
+            fc = r.get("failure_class")
+            if not fc:
+                continue
+            if fc in MISMATCH_CLASSES:
+                mismatch_rows += 1        # ④ 不是失败类别、无 sidecar（L214 / 第 32 行）
+                continue
+            fails.append("%s:%d" % (run_id, int(r["round"])))
 
     recs = []
     if os.path.isfile(spath):
@@ -1365,7 +1538,8 @@ def verify_run_artifacts(rundir):
                          "缺 sidecar=%s；多 sidecar=%s" % (sorted(a - b), sorted(b - a)))
     if len(recs) != len(fails):
         raise SystemExit("[fatal] sidecar 行数 %d != 失败轮数 %d" % (len(recs), len(fails)))
-    return {"failure_rows": len(fails), "sidecar_rows": len(recs)}
+    return {"failure_rows": len(fails), "sidecar_rows": len(recs),
+            "mismatch_rows": mismatch_rows}
 
 
 COLUMNS = ["round", "target_spend", "target_output", "actual_spend", "actual_output",
@@ -1428,6 +1602,9 @@ def main():
     p.add_argument("--replaces", default=None, metavar="ATTEMPT_ID",
                    help="人工替换：被替换的原 attempt_id（<run_id>:<round>）。"
                         "脚本内不自动重试，替换须单独授权并独立 run 目录（§10）")
+    p.add_argument("--g4-verdicts", default=None, metavar="PATH",
+                   help="G4 外部裁决文件（JSON：{<run_id>:<round>: unaccepted|accepted|undecided}）。"
+                        "仅显式传入时读取；执行器不自动计算 G4。缺省=全部 undecided→opid_timeout 停止。")
     a = p.parse_args()
 
     if a.replaces and ":" not in a.replaces:
@@ -1449,13 +1626,18 @@ def main():
     else:
         rundir = os.path.join(a.outdir_base, "run_" + ts)
     os.makedirs(rundir, exist_ok=True)
+    run_id = os.path.basename(rundir.rstrip("/\\"))
+    # sidecar 先于 G4 文件加载初始化：_load_g4_verdicts 的 foreign-key 诊断依赖
+    # 正确的当前 run_id（init_sidecar 之前 _SIDECAR["run_id"] 为空或陈旧，会把
+    # 本 run 的键误报为「非当前 run」）。写入失败即终止（§4.9 条件 3）。
+    init_sidecar(rundir, a.replaces)
+    g4_map = _load_g4_verdicts(a.g4_verdicts)
     tee_stdio(os.path.join(rundir, "run.log"))
     print("[log]", os.path.join(rundir, "run.log"))
     print("[argv]", " ".join(sys.argv))
     print("[mode]", a.mode, "policy=", a.policy, "dry_run=", a.dry_run, "restore=", not a.no_restore)
     # sidecar 在首次失败前就绪；写入失败即终止（§4.9 条件 3）
-    print("[sidecar]", init_sidecar(rundir, a.replaces),
-          "replaces=%s" % (a.replaces or "-"))
+    print("[sidecar]", _SIDECAR["path"], "replaces=%s" % (a.replaces or "-"))
 
     # ---- meta.json：运行开始即写入自描述基线 ----
     # dry_run 必须是显式布尔：正式模式（dry_run=False）绝不能因为字段缺失/默认值
@@ -1477,7 +1659,7 @@ def main():
             "restore_script_sha256": pf["restore_script_sha256"],
             "restore_script_sha256_expected": RESTORE_SCRIPT_SHA256,
             "restore_script_sha256_match": pf["restore_script_sha256_match"],
-            "meta_stage": "run_start"}
+            "meta_stage": "run_start", **_version_anchors()}
     write_meta_json(rundir, meta)
     print("[meta] 运行开始基线已写入 meta.json: dry_run=%s mode=%s real_tx=%s snap=%s… script=%s…"
           % (meta["dry_run"], meta["mode"], meta["real_tx"],
@@ -1495,7 +1677,7 @@ def main():
     abort_exc = None
     try:
         if a.mode == "gate":
-            # 门禁：每种形态 1 次探测；失败/不可行如实记录，不重试
+            # 门禁：每种形态 1 次探测；失败/不可行如实记录，不重试（失败即 continue 到下一形态）
             for (S, O) in matrix:
                 attempts[(S, O)] = 1
                 idx += 1
@@ -1504,20 +1686,30 @@ def main():
                                             not a.no_restore, a.allow_hash_mismatch,
                                             a.allow_script_mismatch, a.allow_height_mismatch)
                 except HeightMismatch as e:
-                    rows.append(fail_row(idx, S, O, "state_height_mismatch", str(e)))
+                    rows.append(fail_row(idx, S, O, "state_height_mismatch", str(e), e))
                     continue
                 except SchemaMismatch:
                     raise          # schema 结构性错误：整轮中止，不按形态重试、不发送
+                except StateVerificationError as e:
+                    rows.append(fail_row(idx, S, O, "state_verification_failed@%s" % e.group,
+                                        str(e), e))
+                    continue
                 except StateError as e:
-                    rows.append(fail_row(idx, S, O, "state_verification_failed", str(e)))
+                    rows.append(fail_row(idx, S, O, "state_verification_failed", str(e), e))
                     continue
                 except PreTxError as e:
-                    rows.append(fail_row(idx, S, O, _classify(e), str(e), e))
+                    extra = {k: getattr(e, k, None)
+                             for k in ("recipients", "amounts_zat", "policy", "from_ua")}
+                    rows.append(fail_row(idx, S, O, _classify(e), str(e), e, extra=extra))
                     continue
                 except Exception as e:
-                    rows.append(fail_row(idx, S, O, "other", str(e)))
+                    rows.append(fail_row(idx, S, O, "other", str(e), e))
                     continue
+                # 成功或形态/手续费不符
                 rows.append(row)
+                if row.get("failure_class") in MISMATCH_CLASSES:
+                    # M7 ④：已提交但形态/手续费不符，gate 仅记录、不重测
+                    continue
                 if T is not None and row.get("txid") and row.get("form_match") and row.get("fee_match"):
                     successes[(S, O)] = 1
         else:
@@ -1525,6 +1717,7 @@ def main():
             # 达到 target 有效成功即停（预注册 §4/§6）。顺序随机化以避免「先小后大」偏差。
             form_order = sorted(set(matrix))
             random.Random(a.seed).shuffle(form_order)
+            form_b = {}   # 每形态 @B 受控恢复已用次数（§6 #6，每形态限 1 次）
             for (S, O) in form_order:
                 valid = 0
                 att = 0
@@ -1538,28 +1731,55 @@ def main():
                                                 not a.no_restore, a.allow_hash_mismatch,
                                                 a.allow_script_mismatch, a.allow_height_mismatch)
                     except HeightMismatch as e:
-                        rows.append(fail_row(idx, S, O, "state_height_mismatch", str(e)))
+                        rows.append(fail_row(idx, S, O, "state_height_mismatch", str(e), e))
                         infeasible = True
                         break
                     except SchemaMismatch:
                         raise          # schema 结构性错误：整轮中止，不按形态重试、不发送
-                    except StateError as e:
-                        rows.append(fail_row(idx, S, O, "state_verification_failed", str(e)))
-                        if att >= a.max_attempts:
+                    except StateVerificationError as e:
+                        cls = "state_verification_failed@%s" % e.group
+                        rows.append(fail_row(idx, S, O, cls, str(e), e))
+                        if e.group == "C":
                             infeasible = True
+                            break
+                        if e.group == "B":
+                            # 五类外·受控恢复：每形态限 1 次，用尽即停止
+                            if form_b.get((S, O), 0) >= 1:
+                                infeasible = True
+                                break
+                            form_b[(S, O)] = 1
+                            continue
+                        # group A → ⑤ 瞬时环境，无条件继续
                         continue
+                    except StateError as e:
+                        rows.append(fail_row(idx, S, O, "state_verification_failed", str(e), e))
+                        infeasible = True
+                        break
                     except PreTxError as e:
-                        rows.append(fail_row(idx, S, O, _classify(e), str(e), e))
-                        continue
+                        cls = _classify(e)
+                        extra = {k: getattr(e, k, None)
+                                 for k in ("recipients", "amounts_zat", "policy", "from_ua")}
+                        rows.append(fail_row(idx, S, O, cls, str(e), e, extra=extra))
+                        g4v = g4_map.get("%s:%d" % (run_id, idx), "undecided")
+                        if _campaign_continue(cls, getattr(e, "stage", None),
+                                             getattr(e, "submit_state", None),
+                                             g4_verdict=g4v):
+                            continue
+                        break
                     except Exception as e:
-                        rows.append(fail_row(idx, S, O, "other", str(e)))
-                        continue
+                        rows.append(fail_row(idx, S, O, "other", str(e), e))
+                        break
+                    # 成功或形态/手续费不符
                     rows.append(row)
+                    if row.get("failure_class") in MISMATCH_CLASSES:
+                        # M7 ④：已提交但形态/手续费不符 → 停止该形态
+                        infeasible = True
+                        break
                     if T is not None and row.get("txid") and row.get("form_match") and row.get("fee_match"):
                         valid += 1
                 successes[(S, O)] = valid
                 if infeasible:
-                    print("  [!] 形态 (S=%d,O=%d) 判定为不可行/状态异常" % (S, O))
+                    print("  [!] 形态 (S=%d,O=%d) 判定为不可行/状态异常/形态不符" % (S, O))
 
         # ---- 落盘 rounds.csv（F7：抽成函数，异常路径复用同一写法）----
         write_rounds_csv(rundir, rows)
@@ -1580,7 +1800,8 @@ def main():
                             "form_match", "fee_match", "all_match", "actual_forms", "note"])
             else:
                 w.writerow(["target_spend", "target_output", "attempts", "valid_success",
-                            "form_match", "fee_match", "all_match", "actual_forms", "note"])
+                            "form_match", "fee_match", "all_match", "actual_forms",
+                            "underpowered", "note"])
             for k in sorted(groups):
                 g = groups[k]
                 tx_ok = [x for x in g if x.get("txid")]
@@ -1590,8 +1811,15 @@ def main():
                 actual = sorted({(x.get("actual_spend"), x.get("actual_output")) for x in tx_ok})
                 # note 一律由 failure_class 等实际阶段信息推出，不用「有没有 txid」猜原因
                 note = _summary_note(g, tx_ok, allm, a.dry_run)
-                w.writerow([k[0], k[1], len(g), len(tx_ok), len(fm), len(fem), len(allm),
-                            str(actual), note])
+                if a.mode == "gate":
+                    w.writerow([k[0], k[1], len(g), len(tx_ok), len(fm), len(fem), len(allm),
+                                str(actual), note])
+                else:
+                    # §6 6-F：形态采集终止时，有效成功次数不足目标次数（默认 5 次）→ 样本不足。
+                    # 不论因达到最大尝试次数还是因不可重试错误提前停止，均按终止时有效成功次数判定。
+                    under = "TRUE" if successes.get(k, 0) < a.target_success else "FALSE"
+                    w.writerow([k[0], k[1], len(g), len(tx_ok), len(fm), len(fem), len(allm),
+                                str(actual), under, note])
 
         # ---- 自洽性校验：dry_run 与数据必须一致，防止汇总被误读 ----
         n_txid = len([r for r in rows if r.get("txid")])
@@ -1604,10 +1832,14 @@ def main():
         art = verify_run_artifacts(rundir)
         print("[verify] 失败轮=%d sidecar 行=%d（attempt_id 双向一致）"
               % (art["failure_rows"], art["sidecar_rows"]))
+        if art.get("mismatch_rows"):
+            print("[verify] 结果不匹配标签行=%d（§6 第 32 行 ④：不是失败类别、无 sidecar，不计入失败轮）"
+                  % art["mismatch_rows"])
 
         meta.update({"pids": pids,
                      "failure_rows": art["failure_rows"],
                      "sidecar_rows": art["sidecar_rows"],
+                     "mismatch_rows": art.get("mismatch_rows", 0),
                      "attempts_per_form": {("%d,%d" % k): v for k, v in attempts.items()},
                      "valid_successes_per_form": {("%d,%d" % k): v for k, v in successes.items()},
                      "rows_total": len(rows),

@@ -403,7 +403,7 @@ def i8():
         write_rounds(d, rows)
         cb._emit_failure(2, 2, 2, "other", cb.PreTxError("boom"))
         got = cb.verify_run_artifacts(d)
-        assert got == {"failure_rows": 1, "sidecar_rows": 1}, got
+        assert got == {"failure_rows": 1, "sidecar_rows": 1, "mismatch_rows": 0}, got
         # 多一条 sidecar -> 失败
         cb._emit_failure(3, 2, 2, "other", cb.PreTxError("boom"))
         try:
@@ -412,6 +412,32 @@ def i8():
             assert "多 sidecar" in str(e), str(e)
         else:
             raise AssertionError("sidecar 多出一条时未终止")
+    finally:
+        shutil.rmtree(os.path.dirname(d), ignore_errors=True)
+
+
+def i9():
+    """M7 结果不匹配标签：**不是失败类别、无 sidecar**，不得触发证据校验 fatal。
+
+    冻结稿第 32 行规定 `form_mismatch`/`fee_mismatch` 无 sidecar、L214 规定其不是
+    失败类别、§6-F 规定其不并入失败计数。但 M7 把二者写进了主 CSV 的
+    `failure_class` 列，若证据校验按「任何非空 failure_class 即失败轮」要求其有
+    sidecar，一次形态/手续费不符就会让校验 SystemExit，进而把整个 run 标为
+    run_aborted / usable_as_sample=False，正式样本被整体剔除。
+    本用例锁定：mismatch 行不计入 failure_rows、单独计入 mismatch_rows，且校验通过。
+    """
+    d = tmp_run("i9")
+    try:
+        rows = [{"round": 1, "target_spend": 2, "target_output": 2,
+                 "failure_class": "fee_mismatch"},
+                {"round": 2, "target_spend": 2, "target_output": 2,
+                 "failure_class": "other"}]
+        write_rounds(d, rows)
+        cb._emit_failure(2, 2, 2, "other", cb.PreTxError("boom"))
+        got = cb.verify_run_artifacts(d)
+        assert got["failure_rows"] == 1, got          # 只有 other 算失败轮
+        assert got["sidecar_rows"] == 1, got
+        assert got["mismatch_rows"] == 1, got         # fee_mismatch 单独计数
     finally:
         shutil.rmtree(os.path.dirname(d), ignore_errors=True)
 
@@ -565,7 +591,7 @@ def s7():
         recs = read_jsonl(os.path.join(rd, "errors.jsonl"))
         assert len(recs) == 10, len(recs)
         got = cb.verify_run_artifacts(rd)
-        assert got == {"failure_rows": 10, "sidecar_rows": 10}, got
+        assert got == {"failure_rows": 10, "sidecar_rows": 10, "mismatch_rows": 0}, got
         run_id = os.path.basename(rd)
         assert {x["attempt_id"] for x in recs} == \
             {"%s:%d" % (run_id, i) for i in range(1, 11)}
@@ -792,6 +818,7 @@ def main():
     check_hist("I6 dry-run 列结构与 note 全等", i6, DRY_RUN)
     check("I7 sidecar 行数 + 超长不截断", i7)
     check("I8 attempt_id 双向齐全", i8)
+    check("I9 M7 mismatch 非失败类别、无 sidecar，不触发校验 fatal", i9)
 
     print("\n=== S 组：状态与证据 ===")
     check("S1 传输异常 -> unknown/不可替换", s1)

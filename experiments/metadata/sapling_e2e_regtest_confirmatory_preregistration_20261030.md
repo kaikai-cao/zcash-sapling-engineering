@@ -193,7 +193,7 @@
 
 - **`failure_class`（原因）**：分类器判定的失败类别，见 §4 与下表 6-D。
 - **`stage`（阶段）**：失败发生的执行阶段（prep / state / sync / submit / status_poll / opid_failed / opid_timeout），属事实字段。
-- **`submit_state`（提交状态）**：`not_submitted` / `unknown` / `submitted` 三态，仅存于 sidecar `errors.jsonl`，经 `attempt_id=<run_id>:<round>` 与主 CSV 关联。
+- **`submit_state`（提交状态）**：`not_submitted` / `unknown` / `submitted` 三态，仅存于 sidecar `errors.jsonl`，经 `attempt_id=<run_id>:<round>` 与主 CSV 关联。**三态的语义是「操作结果的可判定性」，不是「钱包是否受理过 `z_sendmany`」**：`not_submitted` = 已知未创建 opid；`submitted` = 已知已创建且处于**确定状态**（在途 pending / opid 终态失败 / 已上链成功）；`unknown` = 已取得 opid 但轮询窗口内**未确认终态、结果不可判定**（仅 `opid_timeout` 属此态）。因此 `status_poll`（opid 在途、状态可知）记 `submitted` 与 `opid_timeout`（结果悬而未决）记 `unknown` 并不矛盾。**`submitted` 与 `unknown` 均以「钱包已受理该异步操作（`z_sendmany` 已返回 opid）」为前提**，二者区分在**状态是否可知**；两态**均不等于**交易已广播或已被链上/网络确认——该确认须由 G4 外部裁决核验。
 
 `submit_state` 是重试 / 替换权限的唯一技术前提；字段缺失须标「无法判定」，不得默认 `not_submitted`。`rpc_transport_error` 可跨 `not_submitted` / `unknown` / `submitted` 三态，故其重试裁决按 ①/D1a 逐态判定，不按类别一概而论。
 
@@ -230,7 +230,7 @@
 | 7 | `state_verification_failed`@C | null | null | 五类外·前置可行性 | 否 | 否 |
 | 8 | `env_transient_sync` | sync | not_submitted | ⑤ 瞬时环境 | 是（无条件） | 是* |
 | 9 | `rpc_transport_error` | submit | not_submitted | ① / D1a | 是（无条件） | 是* |
-| 10 | `rpc_transport_error` | submit | unknown | ① / D1a | 否（G4 先行） | 否 |
+| 10 | `rpc_transport_error` | submit | unknown | ① / D1a | 条件：G4 确认未受理后可继续 | 否 |
 | 11 | `rpc_transport_error` | status_poll | submitted | ① / D1a | 否 | 否 |
 | 12 | `rpc_duplicated_recipient` | submit | not_submitted | ① / D1b | 否 | 否 |
 | 13 | `rpc_duplicated_recipient` | status_poll | submitted | ① / D1b | 否 | 否 |
@@ -256,7 +256,11 @@
 
 \* G5 三重条件：`not_submitted` **且** `invoked=False` **且** 每形态 ≤ 1 次。
 
+> **G4 外部裁决的授权范围（仅限两行）**：G4 裁决文件（`--g4-verdicts`）**只在第 10 行（`rpc_transport_error`@submit@`unknown`）与第 30 行（`opid_timeout`）**生效，二者的「① campaign 继续」列均为「条件：G4 确认未受理后可继续」。**其余各行一律不受理 G4 裁决**，按该行原列执行——特别地，第 11/13/15/17/19/22/24/26/28 行（`status_poll`，`submit_state=submitted`）恒为「否」，即使 G4 给出 `unaccepted` 也不得继续（`status_poll` 阶段 opid 已取得、状态可知，无「未受理」可裁决）。实现中 `_campaign_continue` 的 G4 分支仅匹配 `stage=="submit"` 且 `submit_state=="unknown"`，`opid_timeout` 为独立分支，二者之外无任何路径读取 G4 裁决。
+
 > 第 32 条合并两个标签，理由：二者**判决相同**（停止该形态）且**可在同一行共现**（形态不符时手续费通常也不符）；统计时 `fee_mismatch` 单独计数。若拆为两条会与「一记录一判决」的计数口径冲突。
+>
+> **双重不匹配的优先级（明确 tie-break）**：当同一轮 `form_match=false` **且** `fee_match=false` 同时成立时，`failure_class` 记 `fee_mismatch`（**手续费优先**）。理由：`fee_mismatch` 是已单列统计的模型偏离事件（§6-F），优先归入它可保持手续费偏离的计数不被形态偏离稀释；`form_mismatch` 在此情形下**不另立类别**，其信息由 `rounds.csv` 的 `form_match` 列（`false`）与 `fee_match` 列（`false`）**逐列保留**，不因 `failure_class` 的单值化而丢失。
 >
 > `insufficient_notes`：0 个可达组合，保留在类别清单，标注「未使用标签」。
 
@@ -267,7 +271,7 @@
 
 ### 6-F 统计口径
 
-- `underpowered` 是**样本不足状态**，不是失败类别。达到 8 次尝试仍未取得 5 次有效成功的形态，在 `summary_by_shape.csv` 标该状态，**并完整保留在结果报告中**，附其全部尝试记录。
+- `underpowered` 是**样本不足状态**，不是失败类别。形态采集**终止时**，若有效成功次数不足目标次数（默认 5 次），在 `summary_by_shape.csv` 标记 `TRUE`；达到目标次数则标记 `FALSE`。无论因达到最大尝试次数还是因不可重试错误**提前停止**，均按**终止时的有效成功次数**判定，并完整保留该形态及其全部尝试记录。
 - `fee_mismatch` 单列为**手续费模型偏离事件**，不并入失败计数。
 - `other` 单列为**未映射失败**，不并入五类。
 - 任何情形**不得剔除**已记录的尝试行。
@@ -374,4 +378,13 @@
 
 > 结论口径：**性能模型的数学定义、假设与成功判据未变；执行规则与统计报告分类口径已变。** 不得表述为「纯文档补充」。
 
-> 文档回填范围：本次仅修改本预注册文本（§1 / §4.2 / §5 / §6 附录 / §8 / §12 / §13），**未改动任何 `.py` 执行器**；M6/M7/M8 的代码实现与第二次冻结仍需单独授权。
+> 文档回填范围：本次（冻结②回填）仅修改本预注册文本（§1 / §4.2 / §5 / §6 附录 / §8 / §12 / §13），未改动任何 `.py` 执行器；M6/M7/M8 的代码实现与第二次冻结仍需单独授权。
+
+> **执行器后续修正（冻结②回填之后，待干净克隆复跑验证，未提交）**：
+> - **D2**：修正 `opid_timeout` 的 `submit_state` 由 `submitted` 改为 `unknown`（已取得 opid，但轮询窗口内未确认终态、结果不可判定）；新增 G4 外部裁决入口——`--g4-verdicts <path>` 读取 `{<run_id>:<round>: unaccepted|accepted|undecided}` 的 JSON，默认全部 `undecided`→停止，仅外部明确裁决「未受理」才允许继续；执行器不自动计算 G4。
+> - **D1a-unknown 的 G4 先行落地**：第 10 行 `rpc_transport_error`@submit@`unknown` 由原先「仅停止」改为与 `opid_timeout` 同机制——默认停止，仅当外部 G4 裁决明确为 `unaccepted` 才允许继续；裁决入口同为 `--g4-verdicts`，执行器不自动计算 G4，不扩大自动恢复范围之外的其它路径。
+> - **G4 裁决文件输入加固（fail-closed）**：`--g4-verdicts` 的 JSON 采用整份校验——存在重复键、verdict 值非精确 `unaccepted`/`accepted`/`undecided`、顶层非 JSON 对象、文件缺失或解析失败时，**整份文件失效**（等价空映射），所有轮次按 `undecided` 停止；其它 run 的键与当前 run 未命中的键仅打印诊断，**绝不影响当前轮次**（当前轮次只按 `<run_id>:<round>` 精确匹配）。
+> - **submit_state 语义澄清**：三态语义统一为「操作结果的可判定性」（见 §4 字段定义），而非「钱包是否受理过 `z_sendmany`」；`status_poll` 记 `submitted`、`opid_timeout` 记 `unknown` 属既定口径，未因此改动任何裁决行。
+> - **M7 结果不匹配标签的证据校验修正（提交前核对发现）**：M7 把 `form_mismatch` / `fee_mismatch` 写入主 CSV 的 `failure_class` 列，但证据完整性校验（§4.9 条件 2/3）原按「任何非空 `failure_class` 即失败轮」要求其有 sidecar 记录，而第 32 行规定该二者**无 sidecar**、L214 规定其**不是失败类别**、§6-F 规定其**不并入失败计数**。二者冲突的后果是：正式采集中出现一次形态/手续费不符 → 校验 `SystemExit` → 整个 run 被标 `run_aborted` / `usable_as_sample=False` → 该 run 全部样本被 `fit_sapling_e2e_model` 剔除。修正：校验时将这两个标签**排除**出「失败轮 ↔ sidecar」双向核对，并单独计入 `meta.json` 的 `mismatch_rows`（不计入 `failure_rows`，痕迹不丢失）。此修正只改证据校验口径，**不改 M7 的分类、不改 tie-break、不改任何裁决行**。
+> - **underpowered**：判定由「用满 8 次尝试仍不足 5 次」改为「采集终止时有效成功次数 < 目标次数」（提前停止亦标 `TRUE`），措辞已于 §6-F 同步澄清。
+> 以上属对 M6/M7/M8 原落地的**修正**，尚未经干净克隆复跑验证，不得视为已通过验证。
