@@ -162,7 +162,11 @@ def note_inventory():
     若 zallet RPC 名不同，改这里即可，不影响其余协议。
     """
     try:
-        r = z("z_listunspent", [0])
+        # minconf=1：排除 0-conf/unsafe note。快照里某 0-conf note 的 memo 为原始字节
+        # （以 0xf6 开头，非合法 UTF-8），z_listunspent 在 minconf=0/includeUnsafe=true
+        # 时会 WalletDb::get_memo 失败。构造交易本就只需已确认的可花费 note，minconf=1
+        # 既契合语义，又避开坏 memo，恢复 Check #1（真实 Sapling Note 清单可读）。
+        r = z("z_listunspent", [1, 10000])
         notes = r if isinstance(r, list) else (r.get("result") or [])
         vals = []
         for n in notes:
@@ -601,8 +605,8 @@ def main():
                             str(actual), note])
 
         meta = {"args": vars(a), "pids": pids, "matrix": matrix, "mode": a.mode,
-                "policy_frozen": a.policy, "attempts_per_form": attempts,
-                "valid_successes_per_form": successes, "timestamp": ts,
+                "policy_frozen": a.policy, "attempts_per_form": {("%d,%d" % k): v for k, v in attempts.items()},
+                "valid_successes_per_form": {("%d,%d" % k): v for k, v in successes.items()}, "timestamp": ts,
                 "snapshot_sha256_expected": SNAPSHOT_SHA256,
                 "snapshot_target_height": SNAPSHOT_TARGET_HEIGHT,
                 "restore_script_sha256_expected": RESTORE_SCRIPT_SHA256}
