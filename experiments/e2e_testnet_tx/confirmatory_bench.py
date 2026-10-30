@@ -949,6 +949,11 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
 # failure_class 取值（冻结稿 §4.5）。T3 若决定保留旧名 `timeout`，只需改此处一处。
 CLS_OPID_TIMEOUT = "opid_timeout"
 
+# 「提交状态不明」类失败的集合：这些记录**不能**被断言「未产生 txid」。
+# 判定依据是 failure_class 而非 rows 里的 submit_state —— 36 列 COLUMNS 已冻结（I4），
+# 而 sidecar 的 submit_state 不在主表内，汇总函数读不到。
+CLS_UNKNOWN_STATE = frozenset({CLS_OPID_TIMEOUT, "rpc_transport_error"})
+
 # 资金不足措辞：`-4`/`-6` 都必须**同时**命中措辞才判资金不足（§2.2 双条件）。
 # 仅凭 code 不足：`-6` 在码表是 WalletInsufficientFunds，但资金不足也可能经
 # propose_transfer 失败映射为 `-4`；反之 `-4` 也可能是别的钱包错误。
@@ -1168,8 +1173,14 @@ def _summary_note(rows, tx_ok, allm, dry_run):
         return "成功构造但形态或手续费不符，未计入有效样本"
 
     recip = [r for r in rows if str(r.get("failure_class") or "").startswith("recipient_")]
+    # 「提交状态不明」必须单列：这两类的共同点是**请求可能已被受理**，
+    # 因此既不能写成「未产生 txid」，也不能归入「构造/发送阶段失败」。
+    #   - opid_timeout：已拿到 opid（submit_state=submitted），只是轮询窗口耗尽；
+    #   - rpc_transport_error：submit 阶段无响应时为 unknown，status_poll 时已 submitted。
+    unk = [r for r in rows if str(r.get("failure_class")) in CLS_UNKNOWN_STATE]
     other = [r for r in rows if r.get("failure_class")
-             and not str(r.get("failure_class")).startswith("recipient_")]
+             and not str(r.get("failure_class")).startswith("recipient_")
+             and str(r.get("failure_class")) not in CLS_UNKNOWN_STATE]
     built = [r for r in rows if not r.get("failure_class") and not r.get("txid")]
 
     parts = []
@@ -1177,6 +1188,10 @@ def _summary_note(rows, tx_ok, allm, dry_run):
         cls_desc = "/".join(sorted({str(r.get("failure_class")) for r in recip}))
         parts.append("收款地址准备失败 %d 条（%s）：发生在构造之前，未构造、未发送，"
                      "不代表该形态不可行" % (len(recip), cls_desc))
+    if unk:
+        cls_desc = "/".join(sorted({str(r.get("failure_class")) for r in unk}))
+        parts.append("提交状态不明 %d 条（%s）：请求可能已被受理，无 txid 不等于未产生交易，"
+                     "须按 G4 核验后方可重试" % (len(unk), cls_desc))
     if other:
         cls_desc = "/".join(sorted({str(r.get("failure_class")) for r in other}))
         seg = ("交易构造/发送阶段失败 %d 条（%s），未产生 txid"

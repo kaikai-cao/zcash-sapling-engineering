@@ -7,9 +7,10 @@ F5（失败分类 + 未截断证据）的离线自检 —— 不发交易、不�
   回放   R1–R4  历史 -8 原文回放 + 三条回归（同步超时 / opid 终态 / 轮询超时）
   不变量 I1–I8  params 与 timeout / 计时区间 / 成功口径 / COLUMNS / recipient_* /
                 dry-run 全等 / sidecar 行数 / attempt_id 双向
-  状态   S1–S7   传输异常=unknown / 被拒=not_submitted / sidecar 完整性 /
+  状态   S1–S8   传输异常=unknown / 被拒=not_submitted / sidecar 完整性 /
                 超长原文不截断 / 写入失败 fail-closed / replaces 留痕 /
-                main() 端到端（流程级，超出 §6 编号 1 条）
+                main() 端到端（流程级，超出 §6 编号 1 条）/
+                提交状态不明单列（审阅补修，超出 §6 编号 1 条）
 
 运行：python3 failure_class_selftest.py
 退出码非 0 表示存在失败。
@@ -578,6 +579,46 @@ def s7():
 
 
 # ===========================================================================
+def s8():
+    """「提交状态不明」单列：opid_timeout / transport 不得写成「未产生 txid」。
+
+    审阅中发现的第二个同族缺陷：这两类此前落在 other 桶，note 会写成
+    「交易构造/发送阶段失败 N 条（opid_timeout），未产生 txid」。但 opid_timeout
+    已拿到 opid（submitted）、submit 阶段传输异常为 unknown —— 交易可能已存在，
+    「未产生 txid」是无法由记录支撑的断言，而且直接违反 G4 的语义。
+    """
+    # 1) 纯超时：必须出现「提交状态不明」，且不得出现「未产生 txid」
+    rows = [{"target_spend": 2, "target_output": 2,
+             "failure_class": "opid_timeout", "txid": ""}]
+    n1 = cb._summary_note(rows, [], [], False)
+    assert "提交状态不明 1 条" in n1, n1
+    assert "opid_timeout" in n1, n1
+    assert "未产生 txid" not in n1, "超时不得断言未产生 txid：%s" % n1
+    assert "构造/发送阶段失败" not in n1, "超时不是构造/发送失败：%s" % n1
+
+    # 2) 纯传输异常：同口径
+    rows2 = [{"target_spend": 2, "target_output": 2,
+              "failure_class": "rpc_transport_error", "txid": ""}]
+    n2 = cb._summary_note(rows2, [], [], False)
+    assert "提交状态不明 1 条" in n2 and "未产生 txid" not in n2, n2
+
+    # 3) 混合：被拒 + 超时，必须分成两段，事实互不串味
+    rows3 = [{"target_spend": 3, "target_output": 3,
+              "failure_class": "rpc_duplicated_recipient", "txid": ""},
+             {"target_spend": 3, "target_output": 3,
+              "failure_class": "opid_timeout", "txid": ""}]
+    n3 = cb._summary_note(rows3, [], [], False)
+    assert "提交状态不明 1 条（opid_timeout）" in n3, n3
+    assert "交易构造/发送阶段失败 1 条（rpc_duplicated_recipient），未产生 txid" in n3, n3
+
+    # 4) 其余类别仍归 other，不被误并
+    rows4 = [{"target_spend": 4, "target_output": 2,
+              "failure_class": "rpc_insufficient_funds", "txid": ""}]
+    n4 = cb._summary_note(rows4, [], [], False)
+    assert "构造/发送阶段失败 1 条（rpc_insufficient_funds），未产生 txid" in n4, n4
+    assert "提交状态不明" not in n4, n4
+
+
 def main():
     print("=== C 组：code / 措辞映射 ===")
     for n, f in [("C1 -4 资金不足（经提案）", c1), ("C2 -6 资金不足", c2),
@@ -610,6 +651,7 @@ def main():
     check("S4 5000 字符原文不截断", s4)
     check("S5 写入失败 fail-closed", s5)
     check("S6 replaces 留痕 + 非法值拒绝", s6)
+    check("S8 提交状态不明单列（超时不得写成未产生 txid）", s8)
     check_opt("S7 main() 端到端：sidecar 与 CSV 自洽", s7, HAVE_RPS,
               "缺少 reporting_patch_selftest.py（%s）" % RPS_ERR)
 
