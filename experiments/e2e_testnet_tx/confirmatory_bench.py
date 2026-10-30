@@ -565,11 +565,22 @@ def fail_row(idx, S, O, cls, msg):
 # 主流程
 # ---------------------------------------------------------------------------
 def preflight():
+    """预检环境，并返回**运行开始时**的实际快照/脚本 SHA256（供 meta.json 自描述）。
+
+    这些值必须在运行开始即确定并写入 meta.json，不能等运行结束后从 rounds.csv
+    反向推断 —— 否则一旦中途崩溃或只写了一半，meta 就失去溯源能力。
+    """
     if not os.path.isfile(SNAPSHOT_WSL):
         raise RuntimeError("快照不存在: %s" % SNAPSHOT_WSL)
     if not os.path.isfile(RESTORE_SCRIPT):
         raise RuntimeError("恢复脚本不存在: %s" % RESTORE_SCRIPT)
+    snap_actual = sha256_file(SNAPSHOT_WSL)
+    script_actual = sha256_file(RESTORE_SCRIPT)
     print("[preflight] 快照=%s\n           恢复脚本=%s" % (SNAPSHOT_WSL, RESTORE_SCRIPT))
+    print("[preflight] 快照 SHA256=%s（与冻结值一致=%s）"
+          % (snap_actual, snap_actual == SNAPSHOT_SHA256))
+    print("[preflight] 脚本 SHA256=%s（与冻结值一致=%s）"
+          % (script_actual, script_actual == RESTORE_SCRIPT_SHA256))
     # A′：钱包 DB schema 预检（若 DB 尚不存在则由快照恢复创建，恢复后强制断言）
     if os.path.isfile(WALLET_DB_PATH):
         assert_wallet_db_schema()
@@ -577,6 +588,19 @@ def preflight():
     else:
         print("[preflight][warn] 钱包 DB 暂不存在（将由快照恢复创建），恢复后强制断言: %s"
               % WALLET_DB_PATH)
+    return {"snapshot_sha256": snap_actual,
+            "snapshot_sha256_match": snap_actual == SNAPSHOT_SHA256,
+            "restore_script_sha256": script_actual,
+            "restore_script_sha256_match": script_actual == RESTORE_SCRIPT_SHA256}
+
+
+def write_meta_json(rundir, meta):
+    """原子感写入 meta.json（临时文件 + 替换），避免半截文件。"""
+    path = os.path.join(rundir, "meta.json")
+    tmp = path + ".part"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=1, default=str, ensure_ascii=False)
+    os.replace(tmp, path)
 
 
 COLUMNS = ["round", "target_spend", "target_output", "actual_spend", "actual_output",
@@ -638,7 +662,7 @@ def main():
                     continue
                 matrix.append((int(r[0]), int(r[1])))
 
-    preflight()
+    pf = preflight()
     ts = time.strftime("%Y%m%d_%H%M%S")
     if a.mode == "gate":
         rundir = os.path.join(a.outdir_base, "_feasibility_gate", "run_" + ts)
@@ -649,6 +673,30 @@ def main():
     print("[log]", os.path.join(rundir, "run.log"))
     print("[argv]", " ".join(sys.argv))
     print("[mode]", a.mode, "policy=", a.policy, "dry_run=", a.dry_run, "restore=", not a.no_restore)
+
+    # ---- meta.json：运行开始即写入自描述基线 ----
+    # dry_run 必须是显式布尔：正式模式（dry_run=False）绝不能因为字段缺失/默认值
+    # 而被误读成 dry-run，反之亦然。
+    if not isinstance(a.dry_run, bool):
+        raise SystemExit("[fatal] dry_run 必须是显式布尔值（拒绝把缺失/默认值当成 dry-run）")
+    meta = {"args": vars(a), "matrix": matrix, "mode": a.mode,
+            "dry_run": bool(a.dry_run),
+            "real_tx": not bool(a.dry_run),
+            "restore_enabled": not a.no_restore,
+            "policy_frozen": a.policy,
+            "timestamp": ts,
+            "snapshot_sha256": pf["snapshot_sha256"],
+            "snapshot_sha256_expected": SNAPSHOT_SHA256,
+            "snapshot_sha256_match": pf["snapshot_sha256_match"],
+            "snapshot_target_height": SNAPSHOT_TARGET_HEIGHT,
+            "restore_script_sha256": pf["restore_script_sha256"],
+            "restore_script_sha256_expected": RESTORE_SCRIPT_SHA256,
+            "restore_script_sha256_match": pf["restore_script_sha256_match"],
+            "meta_stage": "run_start"}
+    write_meta_json(rundir, meta)
+    print("[meta] 运行开始基线已写入 meta.json: dry_run=%s mode=%s real_tx=%s snap=%s… script=%s…"
+          % (meta["dry_run"], meta["mode"], meta["real_tx"],
+             meta["snapshot_sha256"][:12], meta["restore_script_sha256"][:12]))
 
     pids = find_pids()
     sampler = Sampler(os.path.join(rundir, "memory_timeseries.csv"))
@@ -758,19 +806,32 @@ def main():
                 actual = sorted({(x.get("actual_spend"), x.get("actual_output")) for x in tx_ok})
                 note = ""
                 if not tx_ok:
-                    note = "无成功构造（形态不可行或环境/策略失败）"
+                    # dry-run 不发交易 ⇒ 必然没有 txid，不能把"没发交易"说成"构造失败"。
+                    # 统计口径（tx_success/form_match/fee_match）保持不变。
+                    if a.dry_run:
+                        note = "dry-run：未发交易，仅验证构造（无 txid 属预期，不代表形态不可行）"
+                    else:
+                        note = "无成功构造（形态不可行或环境/策略失败）"
                 elif not allm:
                     note = "成功构造但形态或手续费不符，未计入有效样本"
                 w.writerow([k[0], k[1], len(g), len(tx_ok), len(fm), len(fem), len(allm),
                             str(actual), note])
 
-        meta = {"args": vars(a), "pids": pids, "matrix": matrix, "mode": a.mode,
-                "policy_frozen": a.policy, "attempts_per_form": {("%d,%d" % k): v for k, v in attempts.items()},
-                "valid_successes_per_form": {("%d,%d" % k): v for k, v in successes.items()}, "timestamp": ts,
-                "snapshot_sha256_expected": SNAPSHOT_SHA256,
-                "snapshot_target_height": SNAPSHOT_TARGET_HEIGHT,
-                "restore_script_sha256_expected": RESTORE_SCRIPT_SHA256}
-        json.dump(meta, open(os.path.join(rundir, "meta.json"), "w"), indent=1, default=str)
+        # ---- 自洽性校验：dry_run 与数据必须一致，防止汇总被误读 ----
+        n_txid = len([r for r in rows if r.get("txid")])
+        if a.dry_run and n_txid:
+            raise SystemExit("[fatal] dry_run=True 却出现 %d 条带 txid 的记录：拒绝写出可被误读的汇总" % n_txid)
+        if (not a.dry_run) and meta.get("meta_stage") != "run_start":
+            raise SystemExit("[fatal] 正式模式缺少运行开始基线，meta.json 不可信")
+
+        meta.update({"pids": pids,
+                     "attempts_per_form": {("%d,%d" % k): v for k, v in attempts.items()},
+                     "valid_successes_per_form": {("%d,%d" % k): v for k, v in successes.items()},
+                     "rows_total": len(rows),
+                     "rows_with_txid": n_txid,
+                     "dry_run_consistent": (n_txid == 0) if a.dry_run else True,
+                     "meta_stage": "run_end"})
+        write_meta_json(rundir, meta)
 
         # 屏幕汇总
         print("\n=== %s 汇总（n=%d）===" % (a.mode, len(rows)))
@@ -781,6 +842,9 @@ def main():
             vs = successes.get(k, 0)
             print("  (S=%d,O=%d) 尝试=%d 有效成功=%d 实际形态=%s"
                   % (k[0], k[1], len(g), vs, actual))
+        if a.dry_run:
+            print("  [dry-run] 本轮未发交易，有效成功必然为 0；判定请看 rounds.csv 的 "
+                  "planned_amount_zat / expected_fee_zat / restored_note_count。")
         if a.mode == "confirm":
             short = [k for k in form_order if successes.get(k, 0) < a.target_success]
             if short:
