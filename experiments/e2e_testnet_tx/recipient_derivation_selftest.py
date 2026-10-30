@@ -469,6 +469,74 @@ def a5():
     print("      （真实 raw 目录读到 %d 行，门禁目录已被排除）" % len(rows))
 
 
+def _prep_fail_rows(n, cls="recipient_derivation_failed"):
+    return [{"round": i + 1, "target_spend": 1, "target_output": 2, "failure_class": cls}
+            for i in range(n)]
+
+
+def s1():
+    """F1: 正式模式、只发生收款地址准备失败 —— 不得读成「形态不可行」。"""
+    rows = _prep_fail_rows(2)
+    note = cb._summary_note(rows, [], [], False)
+    assert "收款地址准备失败 2 条" in note, note
+    assert "recipient_derivation_failed" in note, note
+    assert "不代表该形态不可行" in note, note
+    assert "无成功构造" not in note, note
+    assert "环境/策略失败" not in note, note
+
+
+def s2():
+    """F1: 正式模式、构造/发送阶段失败 —— 按实际 failure_class 描述。"""
+    rows = [{"round": 1, "failure_class": "rpc_policy_rejected"}]
+    note = cb._summary_note(rows, [], [], False)
+    assert "交易构造/发送阶段失败 1 条" in note, note
+    assert "rpc_policy_rejected" in note, note
+    assert "收款地址准备" not in note, note
+    assert "形态不可行" not in note, note
+
+
+def s3():
+    """F1: 两类失败并存 —— 各自单列，不合并、不互相冒充。"""
+    rows = _prep_fail_rows(1) + [{"round": 2, "failure_class": "timeout"}]
+    note = cb._summary_note(rows, [], [], False)
+    assert "收款地址准备失败 1 条" in note, note
+    assert "交易构造/发送阶段失败 1 条" in note, note
+    assert "timeout" in note, note
+
+
+def s4():
+    """F1: dry-run 且构造全部完成 —— 无 txid 属预期，并声明 L3 未覆盖。"""
+    rows = [{"round": 1, "dry_run": 1}]
+    note = cb._summary_note(rows, [], [], True)
+    assert "无 txid 属预期" in note, note
+    assert "L3 未覆盖" in note, note
+    assert "收款地址准备失败" not in note, note
+
+
+def s5():
+    """F1 回归：dry-run 下发生地址准备失败，不能被「dry-run 无 txid 属预期」掩盖。"""
+    rows = [{"round": 1, "dry_run": 1},
+            {"round": 2, "failure_class": "recipient_derivation_failed"}]
+    note = cb._summary_note(rows, [], [], True)
+    assert "收款地址准备失败 1 条" in note, note
+    assert "无 txid 属预期" in note, note
+
+
+def s6():
+    """F1: 有 txid 的两种情况仍沿用原文案（统计口径未变）。"""
+    ok = [{"txid": "ab", "form_match": True, "fee_match": True}]
+    assert cb._summary_note(ok, ok, ok, False) == "", "全匹配时应无 note"
+    bad = [{"txid": "ab", "form_match": True, "fee_match": False}]
+    assert cb._summary_note(bad, bad, [], False) == \
+        "成功构造但形态或手续费不符，未计入有效样本"
+
+
+def s7():
+    """F1: 无任何阶段信息时保留兜底文案，不臆测具体原因。"""
+    note = cb._summary_note([{"round": 1}], [], [], False)
+    assert note == "无成功构造（形态不可行或环境/策略失败）", note
+
+
 def main():
     print("=== 收款地址派生离线自检 ===")
     print("DERIVE_ATTEMPT_BUDGET=%d  INDEX_DOMAIN_MAX=2^88-1  COLUMNS=%d 列"
@@ -490,6 +558,13 @@ def main():
     check_fm("A3  旧列 CSV 可读", a3)
     check_fm("A4  失败行不入拟合", a4)
     check_fm("A5  门禁目录仍被排除", a5)
+    check("S1  汇总 note：仅地址准备失败", s1)
+    check("S2  汇总 note：构造/发送失败", s2)
+    check("S3  汇总 note：两类失败并存", s3)
+    check("S4  汇总 note：dry-run 构造完成", s4)
+    check("S5  汇总 note：dry-run 下地址失败不被掩盖", s5)
+    check("S6  汇总 note：有 txid 时文案不变", s6)
+    check("S7  汇总 note：无阶段信息时兜底", s7)
     print()
     ok = sum(1 for _, r, _ in RESULTS if r)
     print("结果：%d/%d 通过，%d 跳过" % (ok, len(RESULTS), len(SKIPPED)))

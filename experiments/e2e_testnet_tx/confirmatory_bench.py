@@ -129,9 +129,10 @@ TARGET_SUCCESS_PER_FORM = 5             # 每格目标有效成功次数（预�
 #   ② 低 index 可能已被历史 receiver 组合占用，或该 diversifier 导不出有效
 #      Jubjub point → 报 -4，必须跳过顺延；
 #   ③ 只有下面两类 -4 属于「换个 index 就行」，其余错误一律 fail-closed。
-# 预算按「每轮 attempt 独立 64 次」计：实测跳过率约 1/3，n_recip=8 期望约 12 次，
-# 64 留 5 倍余量，同时把最坏耗时限制在 64 次毫秒级本地 RPC。预算耗尽即抛错，
-# **不允许**回退到旧地址或重复地址兜底。
+# 预算按「每轮 attempt 独立 64 次」计。实测（2026-10-30，本快照环境，样本有限）：
+# 跳过率约 53%，n_recip=8 实际消耗 17–19 次，余量约 3.4 倍。64 是当前样本下的
+# 工程取值，**不是**对未来其它钱包状态/环境的保证；若预算耗尽，抛错并记
+# recipient_derivation_failed，**不允许**回退到旧地址或重复地址兜底。
 DERIVE_ATTEMPT_BUDGET = 64
 INDEX_DOMAIN_MAX = (1 << 88) - 1        # ZIP 316 diversifier index 为 11 字节
 DERIVE_RETRYABLE_PATTERNS = (
@@ -514,11 +515,18 @@ def account_unified_addresses():
     """读 listaddresses，返回 (最大 diversifier_index, 账户 unified 地址集合)。
 
     起点不用常量（探测已把 10^12 用掉，且快照换了常量就失效），也不用钱包 DB
-    （会新增 schema 依赖）。改用 listaddresses 的实测最大值 + 1：
-      - 每轮 attempt 开头都恢复快照 → addresses 回到同一行数 → 起点逐轮相同，
-        派生序列可复现、地址可写进 rounds.csv 事后核对；
-      - 即使起点偏低，撞上「已被其它 receiver 组合占用」也会命中白名单被跳过，
-        安全性不依赖起点精度。
+    （会新增 schema 依赖）。改用 listaddresses 的实测最大值 + 1。
+
+    **起点不保证逐轮可复现**（2026-10-30 实测，见
+    sapling_e2e_recipient_patch_verification_20261030.md）：快照恢复会让
+    addresses 表回到 38 行、listaddresses 的最大 index 也回到归档值
+    （4610582439），但 z_getaddressforaccount 的**无参派生游标不受恢复约束** ——
+    两次相同恢复后无参派生分别得到 4610657118 / 4610657129，单调上升，机制未定位。
+    因此每轮起点会被 sender 的 sapling_ua() 抬着走，实际 index 逐轮不同；
+    这**不影响测量**（index 不参与构造与计时），但报告不得声称「每轮钱包状态完全一致」。
+
+    起点精度也不承担安全性：即使起点偏低，撞上「已被其它 receiver 组合占用」
+    也会命中白名单被跳过。
 
     数据缺失 / 类型异常 / 地址重复一律抛错，**不静默回退到 index 0**（探测已证明
     index 0/1/2 都不能用）。注意：不校验 index 唯一性——同一 index 合法地可能对应
@@ -814,6 +822,45 @@ def fail_row(idx, S, O, cls, msg):
             "error": msg[:300], "failure_class": cls}
 
 
+def _summary_note(rows, tx_ok, allm, dry_run):
+    """生成汇总表 note：**按 failure_class 的实际阶段描述，不凭「无 txid」推断原因**。
+
+    三类必须分开，否则汇总会把工具缺陷读成实验结论：
+      - `recipient_*`：收款地址准备失败 —— 发生在构造之前，没有构造、没有发送，
+        **不能**读成"该形态不可行"（门禁 run_20261030_110042 就是这么被误读的）；
+      - 其它 failure_class：构造/发送/状态阶段失败 —— 按实际类别列出，不笼统归因；
+      - dry-run：没有 txid 是预期，但仍须报告地址准备与构造是否完成。
+
+    本函数只影响 note 文案；tx_success / form_match / fee_match / all_match 的
+    统计口径在上层，不经过这里。
+    """
+    if tx_ok:
+        if allm:
+            return ""
+        return "成功构造但形态或手续费不符，未计入有效样本"
+
+    recip = [r for r in rows if str(r.get("failure_class") or "").startswith("recipient_")]
+    other = [r for r in rows if r.get("failure_class")
+             and not str(r.get("failure_class")).startswith("recipient_")]
+    built = [r for r in rows if not r.get("failure_class") and not r.get("txid")]
+
+    parts = []
+    if recip:
+        cls_desc = "/".join(sorted({str(r.get("failure_class")) for r in recip}))
+        parts.append("收款地址准备失败 %d 条（%s）：发生在构造之前，未构造、未发送，"
+                     "不代表该形态不可行" % (len(recip), cls_desc))
+    if other:
+        cls_desc = "/".join(sorted({str(r.get("failure_class")) for r in other}))
+        parts.append("交易构造/发送阶段失败 %d 条（%s），未产生 txid"
+                     % (len(other), cls_desc))
+    if dry_run and built:
+        parts.append("dry-run：地址准备与构造已完成，未发交易（无 txid 属预期；"
+                     "L3 未覆盖，不构成形态可行性证据）")
+    if not parts:
+        return "无成功构造（形态不可行或环境/策略失败）"
+    return "；".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # 主流程
 # ---------------------------------------------------------------------------
@@ -1066,16 +1113,8 @@ def main():
                 fem = [x for x in tx_ok if x.get("fee_match")]
                 allm = [x for x in tx_ok if x.get("form_match") and x.get("fee_match")]
                 actual = sorted({(x.get("actual_spend"), x.get("actual_output")) for x in tx_ok})
-                note = ""
-                if not tx_ok:
-                    # dry-run 不发交易 ⇒ 必然没有 txid，不能把"没发交易"说成"构造失败"。
-                    # 统计口径（tx_success/form_match/fee_match）保持不变。
-                    if a.dry_run:
-                        note = "dry-run：未发交易，仅验证构造（无 txid 属预期，不代表形态不可行）"
-                    else:
-                        note = "无成功构造（形态不可行或环境/策略失败）"
-                elif not allm:
-                    note = "成功构造但形态或手续费不符，未计入有效样本"
+                # note 一律由 failure_class 等实际阶段信息推出，不用「有没有 txid」猜原因
+                note = _summary_note(g, tx_ok, allm, a.dry_run)
                 w.writerow([k[0], k[1], len(g), len(tx_ok), len(fm), len(fem), len(allm),
                             str(actual), note])
 
