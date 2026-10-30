@@ -52,6 +52,7 @@ Sapling 端到端成本模型 · 补充验证（confirmatory）测量执行器
 import argparse
 import csv
 import hashlib
+import http.client
 import json
 import os
 import random
@@ -153,7 +154,71 @@ class HeightMismatch(StateError):
 
 
 class PreTxError(Exception):
-    """交易提交前就已失败（RPC 拒绝、opid 终态失败、超时、资金不足等）。"""
+    """交易提交前就已失败（RPC 拒绝、opid 终态失败、超时、资金不足等）。
+
+    F5：异常除文本外还承载**结构化事实**，供 `_classify()` 与 sidecar 使用，
+    不再靠自然语言包装语（如「policy=... 被拒」）传达阶段：
+
+        stage              失败阶段（§4.3 七值之一，见 metadata 设计稿）
+        raw_error          原始 JSON-RPC error dict（**原对象，不截断**）
+        raw_transport      传输异常 {type, repr, errno}（不截断）
+        code / rpc_message 从 raw_error 解出的码与完整消息
+        opid               已拿到的异步操作 id
+        z_sendmany_invoked 是否调用过 z_sendmany
+        submit_state       not_submitted / unknown / submitted（§4.8 三态）
+
+    默认值为「未触及提交」（最保守以外的另一侧）：未显式覆盖时不会被误判为已提交；
+    需要表达的 unknown/submitted 必须在 raise 处显式写出，避免隐式状态。
+    """
+
+    stage = None
+    raw_error = None
+    raw_transport = None
+    code = None
+    rpc_message = None
+    opid = None
+    z_sendmany_invoked = False
+    submit_state = "not_submitted"
+    method = None
+
+    def __init__(self, msg, stage=None, raw_error=None, raw_transport=None, opid=None,
+                 z_sendmany_invoked=None, submit_state=None, method=None):
+        Exception.__init__(self, msg)
+        if stage is not None:
+            self.stage = stage
+        if raw_error is not None:
+            self.raw_error = raw_error
+            if isinstance(raw_error, dict):
+                self.code = raw_error.get("code")
+                self.rpc_message = raw_error.get("message")
+        if raw_transport is not None:
+            self.raw_transport = raw_transport
+        if opid is not None:
+            self.opid = opid
+        if z_sendmany_invoked is not None:
+            self.z_sendmany_invoked = bool(z_sendmany_invoked)
+        if submit_state is not None:
+            self.submit_state = submit_state
+        if method is not None:
+            self.method = method
+
+
+class RpcCallError(PreTxError):
+    """JSON-RPC 层失败：请求已送达，服务端返回结构化 error。
+
+    `submit_state` 默认 `not_submitted`：拿到 error 响应即未拿到 opid，交易**未被受理**。
+    注意表述边界：只说「未被受理」，不说「什么都没发生」（§4.8）。
+    """
+
+
+class TransportError(PreTxError):
+    """传输层异常：未收到可解析的 JSON-RPC 响应。
+
+    请求是否到达**不可知**，故 `submit_state` 默认 `unknown`（从严）——
+    这正是「不得重发」的技术依据，不能由「没有 txid」推定未提交（§4.8 / G4）。
+    """
+
+    submit_state = "unknown"
 
 
 class SchemaMismatch(StateError):
@@ -181,6 +246,31 @@ class RecipientDerivationError(RecipientError):
 class RecipientValidationError(RecipientError):
     """地址校验失败（L1 去重 / L1.5 归属一致性 / L2 Sapling-only）。"""
     cls = "recipient_validation_failed"
+
+
+# ---------------------------------------------------------------------------
+# 失败证据：结构化异常工具 + sidecar（errors.jsonl）
+#
+# 设计依据：experiments/metadata/sapling_e2e_f5_error_classification_design_20261030.md
+# §4.8 提交状态三态 / §4.9 sidecar 三条硬条件 / §4.10 事实层与解释层分离。
+# ---------------------------------------------------------------------------
+# _post 的四类失败模式（§15.2 第 2 项）：前三者请求可能未到达，
+# json.JSONDecodeError 表示请求**已到达**但响应不可解析 —— 一律按 unknown 处理。
+_TRANSPORT_EXC = (OSError, http.client.HTTPException, json.JSONDecodeError)
+
+_UNSET = object()
+
+
+def _transport_detail(e):
+    """传输异常原样留证：类型 + repr + errno，不截断（§4.9 条件 1）。"""
+    return {"type": type(e).__name__, "repr": repr(e), "errno": getattr(e, "errno", None)}
+
+
+def _rpc_brief(raw_error):
+    """把结构化 error 压成一行便于 CSV 阅读；完整对象另存 sidecar。"""
+    if isinstance(raw_error, dict):
+        return "code=%s message=%s" % (raw_error.get("code"), raw_error.get("message"))
+    return repr(raw_error)
 
 
 # ---------------------------------------------------------------------------
@@ -468,31 +558,76 @@ def send_frozen(from_ua, amounts, policy, timeout_op=600):
     """提交 → 轮询 → 返回 (t_submit_ms, t_pipeline_ms, opid, result)。
 
     只使用 policy 一种策略；被拒即抛错，绝不回退到其它策略（预注册 §5）。
+
+    F5：不再把异常包装成「policy=... 被拒」这种带归因的文本 —— 它曾让**所有**
+    发送阶段失败（含 -8 参数错误、-6 资金不足、轮询超时）都被判成「策略拒绝」。
+    现在异常只陈述事实（阶段 + code + RPC 原文），阶段与提交状态显式写入属性。
     """
     params = [from_ua, amounts, 1, None, policy]
     t0 = time.monotonic()
     try:
-        opid = z("z_sendmany", params, timeout=120)
-    except RuntimeError as e:
-        raise PreTxError("policy=%s 被拒: %s" % (policy, str(e)[:200]))
+        # I1：timeout 必须显式传 120。z_raw 默认 60，退回默认即改变行为口径。
+        res, err = z_raw("z_sendmany", params, timeout=120)
+    except _TRANSPORT_EXC as e:
+        # zauth() 在读 cookie 时失败：请求尚未发出，可判未提交（仍是环境问题）
+        if isinstance(e, FileNotFoundError) and getattr(e, "filename", None) == COOKIE:
+            raise TransportError("stage=submit 读取 RPC cookie 失败: %s" % type(e).__name__,
+                                 stage="submit", raw_transport=_transport_detail(e),
+                                 z_sendmany_invoked=False, submit_state="not_submitted",
+                                 method="z_sendmany")
+        # 其余传输层异常：请求是否到达不可知 → unknown（从严，§4.8）
+        raise TransportError("stage=submit 传输层异常: %s" % type(e).__name__,
+                             stage="submit", raw_transport=_transport_detail(e),
+                             z_sendmany_invoked=True, submit_state="unknown",
+                             method="z_sendmany")
+    if err:
+        raise RpcCallError("stage=submit RPC 拒绝: %s" % _rpc_brief(err),
+                           stage="submit", raw_error=err, z_sendmany_invoked=True,
+                           submit_state="not_submitted", method="z_sendmany")
+    if not isinstance(res, str) or not res.strip():
+        # 既无 error 也无可用的 opid：请求已到达但响应不可用 → 同 unknown 处理
+        raise TransportError("stage=submit 响应无 opid（result=%r）" % (res,),
+                             stage="submit", z_sendmany_invoked=True,
+                             submit_state="unknown", method="z_sendmany")
+    opid = res
     t_submit = (time.monotonic() - t0) * 1000.0
 
     t1 = time.monotonic()
     while time.monotonic() - t1 < timeout_op:
         try:
-            st = z("z_getoperationstatus", [[opid]])
-        except RuntimeError as e:
-            raise PreTxError("查询 opid 状态失败: %s" % str(e)[:200])
+            # timeout 取 900，与 z() 的默认值一致，不改既有轮询行为
+            st, perr = z_raw("z_getoperationstatus", [[opid]], timeout=900)
+        except _TRANSPORT_EXC as e:
+            # 已拿到 opid = 确定已受理，故 submit_state=submitted（超时不得重发）
+            raise TransportError("stage=status_poll 传输层异常: %s" % type(e).__name__,
+                                 stage="status_poll", raw_transport=_transport_detail(e),
+                                 z_sendmany_invoked=True, submit_state="submitted",
+                                 opid=opid, method="z_getoperationstatus")
+        if perr:
+            raise RpcCallError("stage=status_poll RPC 错误: %s" % _rpc_brief(perr),
+                               stage="status_poll", raw_error=perr, z_sendmany_invoked=True,
+                               submit_state="submitted", opid=opid,
+                               method="z_getoperationstatus")
         rec = st[0] if isinstance(st, list) else st
+        if not isinstance(rec, dict):
+            raise TransportError("stage=status_poll 响应结构异常（非 dict）",
+                                 stage="status_poll", z_sendmany_invoked=True,
+                                 submit_state="submitted", opid=opid)
         s = rec.get("status")
         if s == "success":
             t_pipeline = (time.monotonic() - t1) * 1000.0
             return t_submit, t_pipeline, opid, rec.get("result") or {}
         if s == "failed":
-            raise PreTxError("operation failed: %s"
-                             % json.dumps(rec.get("error"), ensure_ascii=False))
+            raise RpcCallError("stage=opid_failed 操作终态失败: %s"
+                               % _rpc_brief(rec.get("error")),
+                               stage="opid_failed", raw_error=rec.get("error"),
+                               z_sendmany_invoked=True, submit_state="submitted",
+                               opid=opid, method="z_getoperationstatus")
         time.sleep(0.02)
-    raise PreTxError("operation timeout (policy=%s)" % policy)
+    raise PreTxError("stage=opid_timeout 轮询超时 %ds（opid=%s, policy=%s）"
+                     % (timeout_op, opid, policy),
+                     stage="opid_timeout", z_sendmany_invoked=True,
+                     submit_state="submitted", opid=opid)
 
 
 # ---------------------------------------------------------------------------
@@ -704,6 +839,9 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
         row["failure_class"] = e.cls
         row["recipient_validation"] = "failed"
         row["error"] = str(e)[:300]
+        # 证据留档：prepare 阶段失败也必须进 sidecar（否则「sidecar 行数 == 失败轮数」不成立）
+        _emit_failure(idx, S, O, e.cls, e, extra={"recipients": n_recip, "policy": policy},
+                      stage="prep", submit_state="not_submitted", z_sendmany_invoked=False)
         print("  [fail] 收款地址准备失败（%s，已尝试 %d 次）: %s"
               % (e.cls, e.attempts, row["error"]))
         return row, None
@@ -723,7 +861,8 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
 
     wt, target, sec = wait_sync()
     if wt is None:
-        raise PreTxError("前置同步超时")
+        raise PreTxError("stage=sync 前置同步超时", stage="sync",
+                         z_sendmany_invoked=False, submit_state="not_submitted")
 
     amounts = build_amounts(recipients, amount_zec)
     row["planned_amount_zat"] = pick["amount_zat"]
@@ -747,7 +886,12 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
         ts, tp, opid, res = send_frozen(from_ua, amounts, policy)
     except PreTxError as e:
         row["error"] = str(e)[:300]
-        row["failure_class"] = _classify(str(e))
+        row["failure_class"] = _classify(e)
+        # 先写 sidecar 再返回（CSV 由主循环末尾统一落盘，故此处证据必然先落盘）
+        _emit_failure(idx, S, O, row["failure_class"], e,
+                      extra={"recipients": recipients,
+                             "amounts_zat": [int(round(x["amount"] * 1e8)) for x in amounts],
+                             "policy": policy, "from_ua": from_ua})
         print("  [fail] %s" % row["error"])
         return row, None
 
@@ -802,24 +946,208 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
     return row, T
 
 
-def _classify(err):
-    e = err.lower()
-    if "被拒" in e or "policy" in e:
-        return "rpc_policy_rejected"
-    if "timeout" in e:
-        return "timeout"
-    if "failed" in e:
-        return "opid_terminal_failed"
-    if "note" in e or "insufficient" in e or "金额" in e:
-        return "insufficient_notes"
-    if "同步" in e:
+# failure_class 取值（冻结稿 §4.5）。T3 若决定保留旧名 `timeout`，只需改此处一处。
+CLS_OPID_TIMEOUT = "opid_timeout"
+
+# 资金不足措辞：`-4`/`-6` 都必须**同时**命中措辞才判资金不足（§2.2 双条件）。
+# 仅凭 code 不足：`-6` 在码表是 WalletInsufficientFunds，但资金不足也可能经
+# propose_transfer 失败映射为 `-4`；反之 `-4` 也可能是别的钱包错误。
+_FUNDS_MSG_PATTERNS = ("insufficient funds", "insufficient balance", "insufficient",
+                       "not enough funds", "not enough", "no spendable")
+
+# 隐私策略拒绝的措辞：优先用事件码；否则要求「privacy policy」**且**带否定措辞。
+# 关键反例：「Invalid parameter, unknown privacy policy: FooPolicy」是参数错误，
+# 不能因为含 "privacy policy" 就判策略拒绝（§6.2 反向用例）。
+_PRIVPOL_EVENT_PATTERNS = ("err-privpol",)
+_PRIVPOL_NEGATION = ("not allowed", "not permitted", "disallowed")
+
+
+def _is_funds_msg(msg):
+    return any(p in msg for p in _FUNDS_MSG_PATTERNS)
+
+
+def _is_privpol_msg(msg):
+    if any(p in msg for p in _PRIVPOL_EVENT_PATTERNS):
+        return True
+    return ("privacy policy" in msg) and any(k in msg for k in _PRIVPOL_NEGATION)
+
+
+def _map_code(code, msg):
+    """第 2 层：error code 表驱动。msg 已 lower()，仅用于 -8 子类与 -4/-6 双条件。"""
+    if code == -8:
+        if "duplicated recipient address" in msg:
+            # 事实层标签：仅陈述「重复收款地址导致 RPC 拒绝」。
+            # 「执行器未去重」是解释层结论，须由 recipients 字段另行证明（§4.10）。
+            return "rpc_duplicated_recipient"
+        if _is_privpol_msg(msg):
+            return "rpc_privacy_policy_rejected"
+        return "rpc_invalid_parameter"
+    if code in (-4, -6):
+        if _is_funds_msg(msg):
+            return "rpc_insufficient_funds"
+        # -4 其余为钱包错误；-6 未命中措辞时**保留原码**，不猜语义
+        return "rpc_wallet_error" if code == -4 else "rpc_error_%d" % code
+    if code == -5:
+        return "rpc_invalid_address_or_key"
+    if code == -32602:
+        return "rpc_request_schema_invalid"
+    # 未知码保留原码，事后可无损重分类（§4.5）
+    return "rpc_error_%d" % code
+
+
+def _text_fallback(raw):
+    """第 3 层：仅在**无 code、非传输、非超时**时使用。
+
+    与旧实现的差别只有一处：**策略拒绝不参与文本兜底** —— 没有 code 就不得标
+    policy_rejected，这正是 F5 的根因。
+    """
+    low = raw.lower()
+    if "同步" in raw:
         return "env_transient_sync"
+    if "timeout" in low or "超时" in raw:
+        return CLS_OPID_TIMEOUT
+    if "failed" in low:
+        return "opid_terminal_failed"
+    if "note" in low or "insufficient" in low or "金额" in raw:
+        return "insufficient_notes"
     return "other"
 
 
-def fail_row(idx, S, O, cls, msg):
-    return {"round": idx, "target_spend": S, "target_output": O,
-            "error": msg[:300], "failure_class": cls}
+def _classify(err):
+    """失败 → `failure_class`（三层：阶段 → code → 文本），只输出**事实层**标签。
+
+    参数可为异常对象（首选，携带结构化事实）或字符串（旧调用，仅文本层可用）。
+
+    第 1 层 阶段判别不看文本：`opid_timeout` / 传输异常直接定性，
+            彻底消灭「轮询超时因括号里带 policy 被判成策略拒绝」这类误判。
+    第 2 层 code 表（`_map_code`），未知码保留原码。
+    第 3 层 仅当无 code 时退回文本，且不产出「策略拒绝」。
+
+    与 §4.5 的两处必要衔接（均由冻结稿其它条款要求，已在此显式实现）：
+      - `opid` 终态失败仍记 `opid_terminal_failed`（§6.4 R2「不变」），
+        但 code ∈ {-4,-6} 且命中资金措辞时上移为 `rpc_insufficient_funds`
+        （修正 §3 表格里标记为「△ 资金语义丢失」的那一行）；
+      - `stage=submit/status_poll` 却无 code 也无传输异常 = 响应不可用，
+        按 `rpc_transport_error` 处理（与 send_frozen 的 unknown 判定一致）。
+    """
+    if not isinstance(err, BaseException):
+        return _text_fallback(str(err))
+
+    stage = getattr(err, "stage", None)
+    # ---- 第 1 层：阶段 ----
+    if stage == "opid_timeout":
+        return CLS_OPID_TIMEOUT
+    if getattr(err, "raw_transport", None) is not None:
+        return "rpc_transport_error"
+
+    code = getattr(err, "code", None)
+    msg = str(getattr(err, "rpc_message", None) or "").lower()
+
+    if stage == "opid_failed":
+        if code in (-4, -6) and _is_funds_msg(msg):
+            return "rpc_insufficient_funds"
+        return "opid_terminal_failed"
+
+    # ---- 第 2 层：code ----
+    if code is not None:
+        return _map_code(code, msg)
+
+    if stage in ("submit", "status_poll"):
+        return "rpc_transport_error"
+
+    # ---- 第 3 层：文本兜底 ----
+    return _text_fallback(str(err))
+
+
+# ---------------------------------------------------------------------------
+# sidecar：errors.jsonl（未截断的失败证据）
+# ---------------------------------------------------------------------------
+_SIDECAR = {"path": None, "run_id": None, "replaces": None, "rows": 0}
+
+
+def init_sidecar(rundir, replaces=None):
+    """初始化 sidecar 会话，必须在主循环之前调用。"""
+    _SIDECAR.update({"path": os.path.join(rundir, "errors.jsonl"),
+                     "run_id": os.path.basename(str(rundir).rstrip("/\\")),
+                     "replaces": replaces, "rows": 0})
+    return _SIDECAR["path"]
+
+
+def _sidecar_open_append():
+    """单列成函数，便于自检脚本注入写入失败（S5）。"""
+    return open(_SIDECAR["path"], "a", encoding="utf-8")
+
+
+def _emit_failure(idx, S, O, cls, err=None, extra=None,
+                  stage=_UNSET, submit_state=_UNSET, z_sendmany_invoked=_UNSET):
+    """追加一条失败证据并 flush；**写入失败即终止实验**（§4.9 条件 3）。
+
+    `_UNSET` 与 `None` 语义不同：`None` 表示「事实未知、如实留空」，
+    `_UNSET` 表示「未显式覆盖，从异常对象推导」。
+    """
+    if not _SIDECAR.get("path"):
+        raise SystemExit("[fatal] sidecar 未初始化：拒绝在不留失败证据的情况下继续")
+    run_id = _SIDECAR["run_id"]
+    st = getattr(err, "stage", None) if stage is _UNSET else stage
+    ss = getattr(err, "submit_state", None) if submit_state is _UNSET else submit_state
+    inv = getattr(err, "z_sendmany_invoked", None) if z_sendmany_invoked is _UNSET \
+        else z_sendmany_invoked
+    rec = {
+        "attempt_id": "%s:%d" % (run_id, idx),   # §4.2 唯一关联键，不用行号
+        "run_id": run_id,
+        "round": idx,
+        "target_spend": S,
+        "target_output": O,
+        "failure_class": cls,
+        "stage": st,
+        "code": getattr(err, "code", None),
+        "raw_error": getattr(err, "raw_error", None),          # 原对象，未截断
+        "raw_transport": getattr(err, "raw_transport", None),  # 类型 + repr + errno
+        "rpc_message": getattr(err, "rpc_message", None),
+        "method": getattr(err, "method", None),
+        "submit_state": ss,
+        "z_sendmany_invoked": bool(inv) if inv is not None else None,
+        "opid": getattr(err, "opid", None),
+        # 仅供对照，**不得**作为分类依据（旧实现用它做过判定，这正是缺陷来源）
+        "wrapper_text": None if err is None else str(err),
+        "replaces": _SIDECAR.get("replaces"),
+        "written_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+    for k, v in (extra or {}).items():
+        rec.setdefault(k, v)
+    try:
+        f = _sidecar_open_append()
+        try:
+            f.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+        finally:
+            f.close()
+    except OSError as e:
+        raise SystemExit("[fatal] sidecar 写入失败，拒绝继续实验（失败证据会丢失）: %r" % (e,))
+    _SIDECAR["rows"] += 1
+    return rec
+
+
+def replacement_allowed(rec):
+    """G5：只有能证明「未触及提交阶段」的失败才允许人工替换（每形态上限 1 次）。
+
+    - `submit_state=unknown`：可能已受理 → 不可替换（G4）；
+    - `submit_state=submitted`：已受理 → 不可替换，也不得重发；
+    - `z_sendmany_invoked=True`：被 RPC 拒绝 → 不得重试（G3）；
+    - 仅 `not_submitted` 且 `invoked=False` → 可替换（仍须人工确认并留痕）。
+    """
+    if rec.get("submit_state") != "not_submitted":
+        return False
+    return not rec.get("z_sendmany_invoked")
+
+
+def fail_row(idx, S, O, cls, msg, err=None):
+    """构造失败行；**先写 sidecar 再返回**（fail-closed，§4.9 条件 3）。"""
+    row = {"round": idx, "target_spend": S, "target_output": O,
+           "error": str(msg)[:300], "failure_class": cls}
+    _emit_failure(idx, S, O, cls, err)
+    return row
 
 
 def _summary_note(rows, tx_ok, allm, dry_run):
@@ -851,8 +1179,12 @@ def _summary_note(rows, tx_ok, allm, dry_run):
                      "不代表该形态不可行" % (len(recip), cls_desc))
     if other:
         cls_desc = "/".join(sorted({str(r.get("failure_class")) for r in other}))
-        parts.append("交易构造/发送阶段失败 %d 条（%s），未产生 txid"
-                     % (len(other), cls_desc))
+        seg = ("交易构造/发送阶段失败 %d 条（%s），未产生 txid"
+               % (len(other), cls_desc))
+        # §4.7：重复收款地址只陈述事实，**不写**「执行器未去重」这类解释层结论
+        if any(str(r.get("failure_class")) == "rpc_duplicated_recipient" for r in other):
+            seg += "；其中重复收款地址导致 RPC 拒绝，不代表该形态不可行"
+        parts.append(seg)
     if dry_run and built:
         parts.append("dry-run：地址准备与构造已完成，未发交易（无 txid 属预期；"
                      "L3 未覆盖，不构成形态可行性证据）")
@@ -901,6 +1233,50 @@ def write_meta_json(rundir, meta):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=1, default=str, ensure_ascii=False)
     os.replace(tmp, path)
+
+
+def verify_run_artifacts(rundir):
+    """校验 sidecar 与主 CSV 的一致性（§4.9 条件 2/3），不满足即 SystemExit。
+
+    三项：① errors.jsonl 每行可解析 ② attempt_id 双向齐全且不重复
+          ③ sidecar 行数 == 失败轮数。
+
+    注：本项目**没有** `final_check.py`（那是另一项目的脚本），校验一律在这里
+    与 `failure_class_selftest.py` 完成。
+    """
+    rpath = os.path.join(rundir, "rounds.csv")
+    spath = os.path.join(rundir, "errors.jsonl")
+    run_id = os.path.basename(str(rundir).rstrip("/\\"))
+
+    fails = []
+    with open(rpath, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r.get("failure_class"):
+                fails.append("%s:%d" % (run_id, int(r["round"])))
+
+    recs = []
+    if os.path.isfile(spath):
+        with open(spath, encoding="utf-8") as f:
+            for i, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    recs.append(json.loads(line))
+                except ValueError as e:
+                    raise SystemExit("[fatal] errors.jsonl 第 %d 行不可解析: %s" % (i, e))
+
+    ids = [r.get("attempt_id") for r in recs]
+    dup = sorted({x for x in ids if ids.count(x) > 1})
+    if dup:
+        raise SystemExit("[fatal] errors.jsonl 中 attempt_id 重复: %s" % dup)
+    a, b = set(fails), set(ids)
+    if a != b:
+        raise SystemExit("[fatal] sidecar 与失败行不一一对应："
+                         "缺 sidecar=%s；多 sidecar=%s" % (sorted(a - b), sorted(b - a)))
+    if len(recs) != len(fails):
+        raise SystemExit("[fatal] sidecar 行数 %d != 失败轮数 %d" % (len(recs), len(fails)))
+    return {"failure_rows": len(fails), "sidecar_rows": len(recs)}
 
 
 COLUMNS = ["round", "target_spend", "target_output", "actual_spend", "actual_output",
@@ -960,7 +1336,13 @@ def main():
     p.add_argument("--allow-height-mismatch", action="store_true")
     p.add_argument("--no-restore", action="store_true",
                    help="跳过快照恢复（仅在已确认环境干净时使用；违反预注册 §6，慎用）")
+    p.add_argument("--replaces", default=None, metavar="ATTEMPT_ID",
+                   help="人工替换：被替换的原 attempt_id（<run_id>:<round>）。"
+                        "脚本内不自动重试，替换须单独授权并独立 run 目录（§10）")
     a = p.parse_args()
+
+    if a.replaces and ":" not in a.replaces:
+        raise SystemExit("[fatal] --replaces 必须是 <run_id>:<round> 形式的 attempt_id")
 
     matrix = DEFAULT_MATRIX
     if a.matrix:
@@ -982,6 +1364,9 @@ def main():
     print("[log]", os.path.join(rundir, "run.log"))
     print("[argv]", " ".join(sys.argv))
     print("[mode]", a.mode, "policy=", a.policy, "dry_run=", a.dry_run, "restore=", not a.no_restore)
+    # sidecar 在首次失败前就绪；写入失败即终止（§4.9 条件 3）
+    print("[sidecar]", init_sidecar(rundir, a.replaces),
+          "replaces=%s" % (a.replaces or "-"))
 
     # ---- meta.json：运行开始即写入自描述基线 ----
     # dry_run 必须是显式布尔：正式模式（dry_run=False）绝不能因为字段缺失/默认值
@@ -993,6 +1378,8 @@ def main():
             "real_tx": not bool(a.dry_run),
             "restore_enabled": not a.no_restore,
             "policy_frozen": a.policy,
+            "replaces": a.replaces,
+            "sidecar": "errors.jsonl",
             "timestamp": ts,
             "snapshot_sha256": pf["snapshot_sha256"],
             "snapshot_sha256_expected": SNAPSHOT_SHA256,
@@ -1034,7 +1421,7 @@ def main():
                     rows.append(fail_row(idx, S, O, "state_verification_failed", str(e)))
                     continue
                 except PreTxError as e:
-                    rows.append(fail_row(idx, S, O, _classify(str(e)), str(e)))
+                    rows.append(fail_row(idx, S, O, _classify(e), str(e), e))
                     continue
                 except Exception as e:
                     rows.append(fail_row(idx, S, O, "other", str(e)))
@@ -1071,7 +1458,7 @@ def main():
                             infeasible = True
                         continue
                     except PreTxError as e:
-                        rows.append(fail_row(idx, S, O, _classify(str(e)), str(e)))
+                        rows.append(fail_row(idx, S, O, _classify(e), str(e), e))
                         continue
                     except Exception as e:
                         rows.append(fail_row(idx, S, O, "other", str(e)))
@@ -1125,7 +1512,14 @@ def main():
         if (not a.dry_run) and meta.get("meta_stage") != "run_start":
             raise SystemExit("[fatal] 正式模式缺少运行开始基线，meta.json 不可信")
 
+        # ---- 证据完整性：sidecar 必须覆盖全部失败轮（§4.9 条件 2/3）----
+        art = verify_run_artifacts(rundir)
+        print("[verify] 失败轮=%d sidecar 行=%d（attempt_id 双向一致）"
+              % (art["failure_rows"], art["sidecar_rows"]))
+
         meta.update({"pids": pids,
+                     "failure_rows": art["failure_rows"],
+                     "sidecar_rows": art["sidecar_rows"],
                      "attempts_per_form": {("%d,%d" % k): v for k, v in attempts.items()},
                      "valid_successes_per_form": {("%d,%d" % k): v for k, v in successes.items()},
                      "rows_total": len(rows),
