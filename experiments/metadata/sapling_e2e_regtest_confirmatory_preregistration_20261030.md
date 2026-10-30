@@ -24,10 +24,25 @@
 | 环境 | WSL2 离线 regtest，原生进程（非 docker compose） |
 | 节点 | Zebra 6.2.3（`zebrad` 二进制指纹见 `raw/ENV_binaries.txt`） |
 | 钱包 | Zallet Beta（`zallet` / `zallet-zaino` launcher+prover） |
-| 测量脚本 | `experiments/e2e_testnet_tx/sapling_e2e_bench.py`（分支 HEAD `ce4eccb`，z_sendmany 路径） |
+| 测量执行器 | `experiments/e2e_testnet_tx/confirmatory_bench.py`（本次 gate 执行 HEAD `8a9a90e`；文件 blob `f19f0d6c…`，与当前 `cec4fd0` 相同） |
 | 分析脚本 | `experiments/e2e_testnet_tx/fit_sapling_e2e_model.py`（同 HEAD；阶段三前需加 `--raw-dir`，仅改参数、不改模型） |
 | 计时时钟 | Python `time.monotonic()`（见脚本第 288–311、395 行） |
 | 轮询间隔 | `0.02 s`（`time.sleep(0.02)`，脚本第 316 行）→ `pipeline` 量化误差 ≤ 20 ms（已核对脚本，非沿用旧值） |
+
+
+> **版本与复现锚定（如实记录限制）**
+> 本次 gate 执行版本为 `8a9a90e`。由于执行元数据**未记录** `git_head`，该版本依据执行时间线（gate 起于 15:23:41，位于 `8a9a90e` 15:23:09 与 `cec4fd0` 15:30:36 之间）与 Git 提交记录确定；执行器文件与当前 `cec4fd0` 的 blob SHA 一致（`f19f0d6c…`）。
+> 本次 gate **未记录二进制哈希**，属实验记录限制。`meta.json` 无 `git_head`，run 目录内无每轮版本或二进制记录；`raw/ENV_binaries.txt` 为 2026-10-29 试点快照，**不覆盖**本次执行。
+> **源码 blob SHA 不替代二进制哈希**，两者分别描述，本记录不声称已完成二进制级复现锚定。
+
+> **历史说明**：冻结①（`a1277a7`，2026-10-29 20:50）引用 `sapling_e2e_bench.py` 是当时实况；`confirmatory_bench.py` 首次提交 `b790514` 在 21:02，晚 12 分钟。两者**职责不同，不是同一脚本的两个版本**：前者为试点（pilot）脚本，后者为确认性执行器（z_sendmany 路径）。
+
+> **门禁核验表**：六项核验见 F5 验证文档附四（D1，8/8 通过）；本次记录：链高 32297（20/20 次快照恢复一致）、可花费 note 36、余额 11999980000 zat、addresses 38 行，与 §1 末表一致。
+
+> **补测前待整改（本次不授权改动执行器）**：
+> 1. `meta.json` 记录 `git_head`；
+> 2. 记录执行器文件 SHA-256；
+> 3. 若实际执行依赖编译二进制，再记录相应二进制 SHA-256。
 
 ### 快照（唯一冻结值，以文件 + 哈希为准）
 
@@ -44,10 +59,10 @@
 > **门禁核验后填写（恢复即定，确定性）：**
 > | 核验项 | 值 |
 > |---|---|
-> | 实际恢复链高 | （门禁首次恢复后填） |
-> | 可花费 Sapling note 数 | （门禁填） |
-> | Sapling 余额（zat） | （门禁填） |
-> | 是否支持 S=17 | （门禁填：是/否，及原因） |
+> | 实际恢复链高 | 32297（20/20 次快照恢复一致） |
+> | 可花费 Sapling note 数 | 36 |
+> | Sapling 余额（zat） | 11999980000 |
+> | 是否支持 S=17 | 是（36 note ≥ 17，余额相容） |
 
 > 任何一项环境/脚本/快照在中途变更，必须记 `DEVIATIONS` 新条目并重算，不得"悄悄换环境"。
 
@@ -120,10 +135,18 @@
 
 | 形态 (S,O) | 门禁结果 | 处理 | 原因 |
 |---|---|---|---|
-| （待填）17,2 | 不可构造 / 可构造 | 剔除 / 保留 | note 不足或钱包报错，见日志 |
-| （待填）3,3 | 不可构造 / 可构造 | 剔除 / 保留 | 见日志 |
-| （待填）4,2 | 不可构造 / 可构造 | 剔除 / 保留 | 见日志 |
-| … | … | … | … |
+| 17,2 | 可构造 | 保留 | outputs=2，fee=85000=5000·max(17,2)，size=8010 |
+| 3,3 | 可构造 | 保留 | outputs=3，fee=15000，H_B 保持原设计检验 |
+| 4,2 | 可构造 | 保留 | outputs=2，fee=20000，H_B 保持原设计检验 |
+| 1,2 | 可构造 | 保留 | outputs=2，fee=10000 |
+| 2,2 | 可构造 | 保留 | outputs=2，fee=10000 |
+| 7,2 | 可构造 | 保留 | outputs=2，fee=35000 |
+| 10,2 | 可构造 | 保留 | outputs=2，fee=50000 |
+| 1,9 | 可构造 | 保留 | outputs=9（8 收款+1 找零），fee=45000 |
+| 3,2 | 可构造 | 保留 | outputs=2，fee=15000 |
+| 4,3 | 可构造 | 保留 | outputs=3，fee=20000 |
+
+> **矩阵零修订**：10 格全部可构造，无任何剔除；对照事实按收敛口径——本次结果支持「地址去重解决了这三种多收款形态此前遇到的重复地址拒绝问题」（不写「必要且充分」）。`(3,3)` 与 `(4,2)` 均可构造，H_B **不降级**，保持原设计检验。
 
 > 若门禁使正式矩阵变化，先在此记录修订及原因，再冻结最终测量矩阵；未在此登记的变化一律无效。
 
@@ -133,18 +156,19 @@
 
 ---
 
-## 5. 计时边界与记录字段（冻结，全部追溯到 `sapling_e2e_bench.py` 实现）
+## 5. 计时边界与记录字段（冻结，全部追溯到 `confirmatory_bench.py`，行号锚定 `cec4fd0`）
 
-主指标与辅助指标（脚本第 283–397 行；A/B/C 分类）：
+主指标与辅助指标（`confirmatory_bench.py`，行号锚定版本 `cec4fd0`；该文件与 gate 执行的 `8a9a90e` blob 相同 `f19f0d6c…`，故行号对 gate 同样成立；A/B/C 分类）：
 
-- **`submit`**：从发出 `z_sendmany` RPC 请求到拿到成功返回的 `opid`（脚本第 288–296 行，`t_submit`）。
-- **`pipeline`（主指标）**：从 `opid` 返回后，到首次观察到操作状态为 `success`（脚本第 298–311 行，`t_pipeline`）。含 build+prove+sign+broadcast（即 Sapling Groth16 证明+签名+广播），**不含区块确认**。轮询量化误差 ≤ 20 ms（已核对 `time.sleep(0.02)`）。
-- **`mine`**：对应挖块阶段耗时（`advance()`，脚本第 362–365 行；实际 `generate` n 块，轮询 `getblockchaininfo.blocks` 确认链高增量）。
-- **`sync`**：钱包达到规定同步条件所用时间（`wait_sync()`，脚本第 367–369 行）。同步条件：钱包 `wallet_tip.height >= max(node_tip.height, zebrad blocks)`（脚本第 169–170 行）。
-- **`total`**：单轮从**前置同步结束后**（`one_round` 内 `t_round` 起点，第 346 行）到本轮结束的墙钟 = submit + pipeline + mine + 后置 sync（脚本第 395 行）。**注意：每轮开始前的 `wait_sync()`（第 340 行）不计入 `total`**；该前置同步是测量前提，非交易耗时。
+- **`submit`**：从发出 `z_sendmany` RPC 请求到拿到成功返回的 `opid`（`send_frozen()`，`t0` @567 → `t_submit` @593）。
+- **`pipeline`（主指标）**：从 `opid` 返回后，到首次观察到操作状态为 `success`（`t_pipeline` @618）。含 build+prove+sign+broadcast（即 Sapling Groth16 证明+签名+广播），**不含区块确认**。轮询量化误差 ≤ 20 ms（已核对 `time.sleep(0.02)` @626）。
+- **`mine`**：对应挖块阶段耗时（`advance()`，实际 `generate` n 块，轮询 `getblockchaininfo.blocks` 确认链高增量）。
+- **`sync`**：钱包达到规定同步条件所用时间（`wait_sync()`）。同步条件：钱包 `wallet_tip.height >= max(node_tip.height, zebrad blocks)`。
+- **`total`**：单轮从**前置同步结束后**（`run_one()` 内 `t_round` 起点）到本轮结束的墙钟 = submit + pipeline + mine + 后置 sync。**注意：每轮开始前的 `wait_sync()` 不计入 `total`**；该前置同步是测量前提，非交易耗时。
 - 每轮至少记录：`S, O, 证明数(=S+O)`、`submit, pipeline, mine, sync, total`、实际手续费与交易大小、链高、钱包同步状态、资金池快照标识、成功/失败状态及日志、二进制哈希+脚本版本(git HEAD)+代码提交。
 
 > 禁止：把各阶段中位数相加冒充 `total`；把 `total`（含确认）当主指标报告；在采集过程中修改上述计时逻辑。
+> 行号仅用于定位，计时定义不变；行号锚定 `cec4fd0`，与其余冻结上下文一致。
 
 ---
 
@@ -157,6 +181,96 @@
   - 所有尝试（含失败）**全部保留**原始日志与原因，计入 FAILURES 记录；**不得为凑成功数删除不喜欢的耗时值**。
   - 重测条件：仅 ⑤ 环境瞬时故障可重测同形态（计入该格 8 次尝试上限）；形态性失败（①④）按 §4.1/§4.2 处理，不重测掩盖。
 - 新数据目录：`experiments/e2e_testnet_tx/raw/confirmatory_20261030/`，**不覆盖**试点 `raw/sapling_e2e_*`；门禁探测存 `_feasibility_gate/`（§4.1）。
+
+---
+
+
+---
+
+### 6-A 三维正交
+
+失败分类的三个维度相互独立，不得相互推导：
+
+- **`failure_class`（原因）**：分类器判定的失败类别，见 §4 与下表 6-D。
+- **`stage`（阶段）**：失败发生的执行阶段（prep / state / sync / submit / status_poll / opid_failed / opid_timeout），属事实字段。
+- **`submit_state`（提交状态）**：`not_submitted` / `unknown` / `submitted` 三态，仅存于 sidecar `errors.jsonl`，经 `attempt_id=<run_id>:<round>` 与主 CSV 关联。
+
+`submit_state` 是重试 / 替换权限的唯一技术前提；字段缺失须标「无法判定」，不得默认 `not_submitted`。`rpc_transport_error` 可跨 `not_submitted` / `unknown` / `submitted` 三态，故其重试裁决按 ①/D1a 逐态判定，不按类别一概而论。
+
+### 6-A′ ⑤ 的适用范围（新增）
+
+> **⑤ 环境瞬时故障**：仅指具有**瞬时性、可恢复性**，且**不表明实验快照或目标形态存在结构性问题**的环境故障。例如：节点尚未就绪、短暂 RPC 不可用、可恢复的同步异常。
+>
+> **以下不属于 ⑤**：
+> - `state_height_mismatch`：恢复后链高与预注册目标不一致，属**快照状态结构性不一致**；
+> - **D3-C**：目标形态在当前 Note 状态下不可构造，属**前置可行性失败**；
+> - **D3-B**：恢复态完整性校验失败，按**独立的受控恢复规则**处理，不得仅凭其发生在恢复阶段就认定为 ⑤。
+>
+> 因此，**⑤ 的重试授权不适用于上述结构性或前置可行性失败**；D3-B 的继续权限来自受控恢复规则本身（每形态限 1 次），不来自 ⑤。
+
+### 6-B 两类标签来源
+
+- **`failure_class`**：异常类别标签，由分类器在失败路径写出，属「发生了什么」。
+- **结果不匹配标签**（`form_mismatch` / `fee_mismatch`）：交易已成功提交（`submit_state=submitted`，`txid` 佐证），但回查形态或手续费与计划不一致；它**不是失败类别**，不进入失败分类计数，仅在统计报告中单列。
+
+### 6-C 双锚点（代码位置 + 消息前缀）
+
+`fail_row` 的调用点（1507 / 1512 / 1518 / 1541 / 1547 / 1555）未传异常对象，故若 sidecar 缺失 `stage` / `submit_state`，按 D3 约定**以固定版本代码位置授权**，报告不得称 sidecar 证实 `not_submitted`；字段缺失须标「无法判定」。
+
+### 6-D 32 条裁决记录
+
+| # | `failure_class` | `stage` | `submit_state` | 类别 | ① campaign 继续 | ② 人工替换 |
+|---|---|---|---|---|---|---|
+| 1 | `recipient_error` | prep | not_submitted | 五类外·前置准备 | 否 | 否 |
+| 2 | `recipient_derivation_failed` | prep | not_submitted | 五类外·前置准备 | 否 | 否 |
+| 3 | `recipient_validation_failed` | prep | not_submitted | 五类外·前置准备 | 否 | 否 |
+| 4 | `state_height_mismatch` | null | null | 五类外·结构性 | 否 | 否 |
+| 5 | `state_verification_failed`@A | null | null | ⑤ 瞬时环境 | 是（无条件） | 否 |
+| 6 | `state_verification_failed`@B | null | null | **五类外·受控恢复** | 是（条件：每形态限 1 次） | 否 |
+| 7 | `state_verification_failed`@C | null | null | 五类外·前置可行性 | 否 | 否 |
+| 8 | `env_transient_sync` | sync | not_submitted | ⑤ 瞬时环境 | 是（无条件） | 是* |
+| 9 | `rpc_transport_error` | submit | not_submitted | ① / D1a | 是（无条件） | 是* |
+| 10 | `rpc_transport_error` | submit | unknown | ① / D1a | 否（G4 先行） | 否 |
+| 11 | `rpc_transport_error` | status_poll | submitted | ① / D1a | 否 | 否 |
+| 12 | `rpc_duplicated_recipient` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 13 | `rpc_duplicated_recipient` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 14 | `rpc_privacy_policy_rejected` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 15 | `rpc_privacy_policy_rejected` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 16 | `rpc_invalid_parameter` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 17 | `rpc_invalid_parameter` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 18 | `rpc_insufficient_funds` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 19 | `rpc_insufficient_funds` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 20 | `rpc_insufficient_funds` | opid_failed | submitted | ① / D1b | 否 | 否 |
+| 21 | `rpc_wallet_error` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 22 | `rpc_wallet_error` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 23 | `rpc_invalid_address_or_key` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 24 | `rpc_invalid_address_or_key` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 25 | `rpc_request_schema_invalid` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 26 | `rpc_request_schema_invalid` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 27 | `rpc_error_<N>` | submit | not_submitted | ① / D1b | 否 | 否 |
+| 28 | `rpc_error_<N>` | status_poll | submitted | ① / D1b | 否 | 否 |
+| 29 | `opid_terminal_failed` | opid_failed | submitted | ② | 否 | 否 |
+| 30 | `opid_timeout` | opid_timeout | unknown | ③ | 条件：G4 确认未受理后可继续 | 否 |
+| 31 | `other` | null | null | 五类外·未映射 | 否 | 否 |
+| 32 | `form_mismatch` / `fee_mismatch` | 无 sidecar | submitted（`txid` 佐证） | ④ | 否 | 否 |
+
+\* G5 三重条件：`not_submitted` **且** `invoked=False` **且** 每形态 ≤ 1 次。
+
+> 第 32 条合并两个标签，理由：二者**判决相同**（停止该形态）且**可在同一行共现**（形态不符时手续费通常也不符）；统计时 `fee_mismatch` 单独计数。若拆为两条会与「一记录一判决」的计数口径冲突。
+>
+> `insufficient_notes`：0 个可达组合，保留在类别清单，标注「未使用标签」。
+
+### 6-E 两种机制边界
+
+- **机制①（campaign 内继续）**：同一形态下 ≤ 8 次尝试内自动继续（非重试），受 6-D 的「① campaign 继续」列约束。
+- **机制②（人工替换 `--replaces`）**：须满足 G5 三重条件（`not_submitted` + `invoked=False` + 每形态 ≤ 1 次），在独立 run 目录追加记录，原记录永久保留（G2）。
+
+### 6-F 统计口径
+
+- `underpowered` 是**样本不足状态**，不是失败类别。达到 8 次尝试仍未取得 5 次有效成功的形态，在 `summary_by_shape.csv` 标该状态，**并完整保留在结果报告中**，附其全部尝试记录。
+- `fee_mismatch` 单列为**手续费模型偏离事件**，不并入失败计数。
+- `other` 单列为**未映射失败**，不并入五类。
+- 任何情形**不得剔除**已记录的尝试行。
 
 ---
 
@@ -198,7 +312,8 @@
 - M1 / M2 / M3 使用**相同形态集合**与**相同评估方法**，方可比较。
 
 ### 失败分类与重测（与 §6 一致，写入分析）
-- 本轮失败类别：RPC 失败、opid 最终状态失败、超时、实际形态/手续费不符、已确认环境瞬时故障。
+- 失败类别、阶段、提交状态的三维划分与 32 条裁决记录见 **§6（6-D）**；本轮**不在此重复列举**，以免与 §6 出现两套失败分类口径。
+- 结果记录中 `form_mismatch` / `fee_mismatch` 属「已提交成功但形态/手续费不符」，单列于统计报告（§6-F），**不计入失败类别**，亦不进入五类重测判定。
 - `MissingProofGenerationKey` / `sapling_signed=0` 属此前 PCZT 路径错误，**不列为本轮常规失败示例**。
 - 每次尝试（含最终不进入模型的失败）均保留日志。
 
@@ -234,10 +349,29 @@
 ## 12. 执行里程碑（状态如实标注）
 
 - **阶段一 · 候选协议冻结（本次）**：方案 + 可行性判据 + 失败规则 + 统计方法 + 时间边界已冻结①；已提交 PR #24。✅ 候选协议已冻结。
-- **阶段一 · 可行性门禁**：10 形态各 1 次可执行性探测，记录全部成功/失败；按 §4.2 冻结最终矩阵②。⬜ 未执行。
+- **阶段一 · 可行性门禁**：`run_20261030_152341`，10/10 形态全部可构造、形态与手续费精确匹配（form_match / fee_match 10/10），0 失败、0 重测；按 §4.2 冻结最终矩阵②（零修订）。✅ 已执行。
 - **阶段二 · 正式补测**：每格 ≤8 次尝试争取 ≥5 成功，随机顺序、每轮快照恢复，独立保存。⬜ 未执行。
 - **阶段三 · 分析**：三层分析 + 假设判据 + 复现检查（fit 脚本加 `--raw-dir` 指向 confirmatory 目录）。⬜ 未执行。
 - **阶段四（可选）**：Builder 内部计时修正，更新报告/PPT/PR 三者一致。⬜ 未执行。
 
 > 分析调用示例（阶段三）：
 > `python experiments/e2e_testnet_tx/fit_sapling_e2e_model.py --raw-dir experiments/e2e_testnet_tx/raw/confirmatory_20261030 --md experiments/e2e_testnet_tx/raw/confirmatory_20261030/FIT.md`
+
+---
+
+## 13. 修改记录（冻结②回填）
+
+| # | 变更 | 对成功判据 | 对执行 / 统计口径 |
+|---|---|---|---|
+| M1 | 测量脚本 → `confirmatory_bench.py`@`8a9a90e` | 不变 | 补充版本证据 |
+| M2 | 核验手段 → DB 只读 + schema 断言 + 双 RPC | 不变 | 核验更强，排除 `listunspent` 截断风险 |
+| M3 | §5 定位 → 函数名 + 行号（锚 `cec4fd0`） | 不变 | 仅定位方式 |
+| M4 | §1 四项待填 → 32297 / 36 / 11999980000 / 是 | 不变 | 补充门禁证据 |
+| M5 | §4.2 → 10/10 可构造，零修订 | 不变 | 矩阵固定，H_B 不降级 |
+| **M6** | §6 失败处理重构（D1a/D1b 拆分、D3 A/B/C、④ 停止、⑤ 要件化） | **不变** | **改变失败处理、重试资格与样本获取过程**；部分形态可能提前停止并标 `underpowered` |
+| **M7** | 新增 `form_mismatch` / `fee_mismatch` | **不变** | **改变统计报告分类口径**；手续费偏离单列 |
+| M8 | 版本锚定整改（`git_head` / 执行器 SHA-256 / 二进制 SHA-256） | 不变 | 待补测前落实，本轮记为已知限制 |
+
+> 结论口径：**性能模型的数学定义、假设与成功判据未变；执行规则与统计报告分类口径已变。** 不得表述为「纯文档补充」。
+
+> 文档回填范围：本次仅修改本预注册文本（§1 / §4.2 / §5 / §6 附录 / §8 / §12 / §13），**未改动任何 `.py` 执行器**；M6/M7/M8 的代码实现与第二次冻结仍需单独授权。
