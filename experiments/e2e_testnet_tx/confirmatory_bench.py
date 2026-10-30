@@ -17,9 +17,13 @@ Sapling 端到端成本模型 · 补充验证（confirmatory）测量执行器
   2. 初始状态核验（硬阻断）：恢复后查链高必须 == 32297；可花费 Sapling Note
      清单必须成功读取且解析；余额必须可读；对目标 (S,O) 必须能可靠构造金额
      （强制 S 个 spend 的边界可满足，否则该形态标为不可行，停止发送）。
-  3. 构造：目标 (S,O) → O-1 个收款地址（预期 1 个找零 → 实际 O 输出）全部指向
-     恢复后钱包的同一 sapling UA；按 note 清单选金额，显式预留手续费
+  3. 准备地址与构造：目标 (S,O) → O-1 个收款地址（预期 1 个找零 → 实际 O 输出），
+     每个收款地址都是**互不相同**的 Sapling-only UA（显式 diversifier index 派生，
+     不可用 index 跳过顺延，预算 64 次/轮），且必须先过 L1 去重、L1.5 账户地址集合
+     一致性、L2 receiver 校验；按 note 清单选金额，显式预留手续费
      F = 5000·max(S,O) 与正找零，迫使恰好动用前 S 个最小 note。
+     地址准备失败 → 记为 recipient_derivation_failed / recipient_validation_failed，
+     不构造、不发送、不计有效成功。
   4. 计时（冻结边界，沿用 sapling_e2e_bench 的单调时钟与 20ms 轮询）：
        submit   = z_sendmany RPC 往返（拿到 opid）
        pipeline = opid 返回 → 首次 status=success（含 Groth16 证明+签名+广播）
@@ -61,6 +65,10 @@ from sapling_e2e_bench import (
     z, b, height, wait_sync, advance, sapling_ua, pools, sapling_zat,
     view_tx, tee_stdio, Sampler, find_pids, rss_kb, STAGES, build_amounts,
     COOKIE, ACCOUNT, tx_size,
+    # 地址派生需要「结构化错误」：z() 把 JSON-RPC error 压成字符串，无法按 code
+    # 区分可恢复的 -4 与其它错误。这里复用同模块的底层 POST 与 cookie 认证，
+    # 避免出现第二套 RPC 认证口径。
+    _post, zauth, ZA,
 )
 
 # ---------------------------------------------------------------------------
@@ -113,6 +121,24 @@ DEFAULT_MATRIX = [
 MAX_ATTEMPTS_PER_FORM = 8               # 每格最多尝试次数（预注册 §4）
 TARGET_SUCCESS_PER_FORM = 5             # 每格目标有效成功次数（预注册 §4）
 
+# --- 多收款地址派生（ZIP 316 显式 diversifier index）------------------------
+# 门禁 run_20261030_110042 暴露：`recipients = [from_ua] * n_recip` 在 n_recip>=2
+# 时被 zebra 以 `-8 duplicated recipient address` 拒绝。地址派生能力探测
+# （experiments/metadata/sapling_e2e_address_derivation_probe_20261030.md）实测：
+#   ① zallet 支持 z_getaddressforaccount(acct, ["sapling"], index) 得到不同 UA；
+#   ② 低 index 可能已被历史 receiver 组合占用，或该 diversifier 导不出有效
+#      Jubjub point → 报 -4，必须跳过顺延；
+#   ③ 只有下面两类 -4 属于「换个 index 就行」，其余错误一律 fail-closed。
+# 预算按「每轮 attempt 独立 64 次」计：实测跳过率约 1/3，n_recip=8 期望约 12 次，
+# 64 留 5 倍余量，同时把最坏耗时限制在 64 次毫秒级本地 RPC。预算耗尽即抛错，
+# **不允许**回退到旧地址或重复地址兜底。
+DERIVE_ATTEMPT_BUDGET = 64
+INDEX_DOMAIN_MAX = (1 << 88) - 1        # ZIP 316 diversifier index 为 11 字节
+DERIVE_RETRYABLE_PATTERNS = (
+    "cannot generate an address with the requested receivers",
+    "was already generated with different receiver types",
+)
+
 
 # ---------------------------------------------------------------------------
 # 自定义异常（区分「结构性不可行」与「可重试的瞬时失败」）
@@ -131,6 +157,29 @@ class PreTxError(Exception):
 
 class SchemaMismatch(StateError):
     """钱包 DB schema / 记录结构与本执行器预期不符 —— 结构性错误，整轮中止，不重试。"""
+
+
+class RecipientError(PreTxError):
+    """收款地址准备失败（派生或校验）—— 发生在交易构造之前，不可能产生 txid。
+
+    继承 PreTxError 只是为了让「万一未被就地捕获」时仍落到「提交前失败」路径；
+    正常路径由 run_one() 就地捕获并写成失败行，failure_class 显式赋值，不经 _classify()。
+    """
+    cls = "recipient_error"
+
+    def __init__(self, msg, attempts=0):
+        PreTxError.__init__(self, msg)
+        self.attempts = attempts          # 已消耗的派生尝试次数（写入 rounds.csv）
+
+
+class RecipientDerivationError(RecipientError):
+    """地址派生失败（index 越界 / 不可恢复的 RPC 错误 / 预算耗尽）。"""
+    cls = "recipient_derivation_failed"
+
+
+class RecipientValidationError(RecipientError):
+    """地址校验失败（L1 去重 / L1.5 归属一致性 / L2 Sapling-only）。"""
+    cls = "recipient_validation_failed"
 
 
 # ---------------------------------------------------------------------------
@@ -446,6 +495,180 @@ def send_frozen(from_ua, amounts, policy, timeout_op=600):
 
 
 # ---------------------------------------------------------------------------
+# 收款地址准备：显式 diversifier index 派生 + L1/L1.5/L2 校验
+#
+# 设计依据：experiments/metadata/sapling_e2e_recipient_derivation_patch_design_20261030.md
+# 三条不可退让的边界：
+#   1) 地址准备必须在交易构造之前完成，失败即返回失败行，绝不调用 z_sendmany；
+#   2) 只有白名单内的 -4 才顺延，其余错误立即抛出（fail-closed）；
+#   3) 预算耗尽后不得用旧地址/重复地址兜底，宁可让该轮失败。
+# ---------------------------------------------------------------------------
+def z_raw(method, params, timeout=60):
+    """调用钱包 RPC 并保留结构化错误：返回 (result, error_dict)，不抛异常。"""
+    d = _post(ZA[0], ZA[1], {"jsonrpc": "2.0", "method": method,
+                             "params": params, "id": 1}, zauth(), timeout)
+    return d.get("result"), d.get("error")
+
+
+def account_unified_addresses():
+    """读 listaddresses，返回 (最大 diversifier_index, 账户 unified 地址集合)。
+
+    起点不用常量（探测已把 10^12 用掉，且快照换了常量就失效），也不用钱包 DB
+    （会新增 schema 依赖）。改用 listaddresses 的实测最大值 + 1：
+      - 每轮 attempt 开头都恢复快照 → addresses 回到同一行数 → 起点逐轮相同，
+        派生序列可复现、地址可写进 rounds.csv 事后核对；
+      - 即使起点偏低，撞上「已被其它 receiver 组合占用」也会命中白名单被跳过，
+        安全性不依赖起点精度。
+
+    数据缺失 / 类型异常 / 地址重复一律抛错，**不静默回退到 index 0**（探测已证明
+    index 0/1/2 都不能用）。注意：不校验 index 唯一性——同一 index 合法地可能对应
+    不同 receiver 组合（正是「already generated with different receiver types」
+    那一类），断言唯一性会把正常数据误判为损坏；只把「地址字符串重复」当异常。
+    """
+    res, err = z_raw("listaddresses", [])
+    if err is not None:
+        raise RecipientDerivationError(
+            "listaddresses 失败: %s" % json.dumps(err, ensure_ascii=False)[:200])
+    if not isinstance(res, list):
+        raise RecipientDerivationError(
+            "listaddresses 返回类型异常: %s" % type(res).__name__)
+    idxs = []
+    addrs = []
+    for grp in res:
+        if not isinstance(grp, dict):
+            continue
+        for acc in (grp.get("unified") or []):
+            for e in (acc.get("addresses") or []):
+                di = e.get("diversifier_index") if isinstance(e, dict) else None
+                a = e.get("address") if isinstance(e, dict) else None
+                if (not isinstance(di, int)) or isinstance(di, bool) \
+                        or di < 0 or di > INDEX_DOMAIN_MAX:
+                    raise RecipientDerivationError(
+                        "addresses 条目的 diversifier_index 非法: %r" % (di,))
+                if not isinstance(a, str) or not a:
+                    raise RecipientDerivationError("addresses 条目缺少 address")
+                idxs.append(di)
+                addrs.append(a)
+    if not idxs:
+        raise RecipientDerivationError("listaddresses 未返回任何 unified 地址")
+    uniq = set(addrs)
+    if len(uniq) != len(addrs):
+        raise RecipientDerivationError(
+            "listaddresses 存在重复地址记录（%d 条 / %d 唯一）"
+            % (len(addrs), len(uniq)))
+    return max(idxs), uniq
+
+
+def derive_sapling_recipient(start_index, max_attempts, account=0):
+    """从 start_index 起顺延，返回 (address, used_index, receiver_types, attempts)。
+
+    只有 DERIVE_RETRYABLE_PATTERNS 命中的 -4 才顺延；其它任何错误（含 gap-limit
+    类、-5/-8、未知 code）立即抛错——把未知错误当「无效 index」会静默吞掉真实的
+    环境故障，并可能让重试朝错误方向烧完预算。
+    """
+    idx = start_index
+    attempts = 0
+    last_err = None
+    while attempts < max_attempts:
+        if idx > INDEX_DOMAIN_MAX:
+            raise RecipientDerivationError(
+                "diversifier index 越界（%d > 2^88-1）" % idx, attempts)
+        attempts += 1
+        res, err = z_raw("z_getaddressforaccount", [account, ["sapling"], idx])
+        if err is None:
+            addr = res.get("address") if isinstance(res, dict) else res
+            rts = res.get("receiver_types") if isinstance(res, dict) else None
+            if not addr:
+                raise RecipientDerivationError(
+                    "派生返回缺少 address: %s" % json.dumps(res, ensure_ascii=False)[:160],
+                    attempts)
+            rts = list(rts) if rts else ["sapling"]
+            if rts != ["sapling"]:
+                raise RecipientDerivationError(
+                    "派生返回的 receiver_types 非 sapling-only: %r" % (rts,), attempts)
+            return addr, idx, rts, attempts
+        last_err = err
+        code = err.get("code") if isinstance(err, dict) else None
+        msg = str(err.get("message", "")) if isinstance(err, dict) else str(err)
+        if code == -4 and any(p in msg for p in DERIVE_RETRYABLE_PATTERNS):
+            idx += 1
+            continue
+        raise RecipientDerivationError(
+            "派生失败（不可恢复）index=%d code=%s msg=%s"
+            % (idx, code, msg[:160]), attempts)
+    raise RecipientDerivationError(
+        "派生预算耗尽：%d 次尝试仍未取到可用 index（最后错误 %s）"
+        % (attempts, json.dumps(last_err, ensure_ascii=False)[:160] if last_err else "-"),
+        attempts)
+
+
+def prepare_recipients(n_recip, sender=None, budget=DERIVE_ATTEMPT_BUDGET):
+    """为 n_recip 个 Output 准备收款地址，返回 dict（含可落盘的溯源字段）。
+
+    顺序：派生 → L1 去重 → L1.5 归属一致性 → L2 Sapling-only。任一步失败即抛
+    RecipientError 的子类，调用方在构造交易前返回失败行。
+    """
+    start_idx, _ = account_unified_addresses()
+    next_idx = start_idx + 1
+    picked = []                       # [(address, index, receiver_types)]
+    attempts = 0
+    while len(picked) < n_recip:
+        remaining = budget - attempts
+        if remaining <= 0:
+            raise RecipientDerivationError(
+                "派生预算耗尽（%d/%d 次，已派生 %d/%d 个地址）"
+                % (attempts, budget, len(picked), n_recip), attempts)
+        addr, used_idx, rts, att = derive_sapling_recipient(next_idx, remaining)
+        attempts += att
+        picked.append((addr, used_idx, rts))
+        next_idx = used_idx + 1       # 同一 index 不重复请求（幂等但无意义）
+
+    addrs = [x[0] for x in picked]
+
+    # L1：地址必须互不相同（纯本地判定，不依赖 RPC，是最后兜底）
+    if len(set(addrs)) != n_recip:
+        raise RecipientValidationError(
+            "L1 失败：收款地址不唯一（%d 个地址 / %d 唯一）"
+            % (len(addrs), len(set(addrs))), attempts)
+
+    # L1.5：重新读一次 listaddresses，确认这些地址确实已被本钱包持久化且属于账户
+    # unified 集合。这是「钱包账户地址集合一致性检查」，**不是**密码学意义上的
+    # 地址所有权证明，报告措辞不得升级。
+    _, owned = account_unified_addresses()
+    missing = [a for a in addrs if a not in owned]
+    if missing:
+        raise RecipientValidationError(
+            "L1.5 失败：%d/%d 个收款地址不在账户 unified 集合中"
+            % (len(missing), len(addrs)), attempts)
+
+    # L2：z_listunifiedreceivers 能解析且 receiver 集合严格为 {sapling}
+    # （validateaddress 对合法 UA 也返回 isvalid=false，不可用）
+    for a in addrs:
+        res, err = z_raw("z_listunifiedreceivers", [a])
+        if err is not None:
+            raise RecipientValidationError(
+                "L2 失败：地址无法解析 %s… (%s)"
+                % (a[:24], json.dumps(err, ensure_ascii=False)[:120]), attempts)
+        if not isinstance(res, dict) or set(res.keys()) != {"sapling"}:
+            raise RecipientValidationError(
+                "L2 失败：receiver 集合非 sapling-only: %r"
+                % (sorted(res.keys()) if isinstance(res, dict) else res,), attempts)
+
+    return {
+        "recipients": addrs,
+        "div_indices": [x[1] for x in picked],
+        "receiver_types": ["+".join(x[2]) for x in picked],
+        "derivation_attempts": attempts,
+        "validation": "L1+L1.5+L2",
+    }
+
+
+def _addr_hash(addr):
+    """地址的可追溯标识：sha256 前 16 位十六进制（CSV 不落完整地址）。"""
+    return hashlib.sha256(addr.encode("utf-8")).hexdigest()[:16]
+
+
+# ---------------------------------------------------------------------------
 # 单轮
 # ---------------------------------------------------------------------------
 def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
@@ -459,10 +682,36 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
     pick = state["pick"]
     n_recip = max(1, pick["n_recip"])
     amount_zec = pick["amount_zat"] / 1e8
-    recipients = [from_ua] * n_recip          # 收款地址全部指向恢复后钱包同一 UA（自转/自收）
     print("\n----- round %d | 目标 (S=%d,O=%d) policy=%s -----" % (idx, S, O, policy))
+
+    # 收款地址必须在交易构造之前准备：n_recip 个**互不相同**的 Sapling-only UA
+    # （配 1 个找零 → 实际 O 输出）。派生/校验失败即返回失败行：不构造、不发送、
+    # 不产生 txid，failure_class 显式标注失败阶段。
+    try:
+        prep = prepare_recipients(n_recip, from_ua)
+    except RecipientError as e:
+        row["recipients"] = n_recip
+        row["recipient_count"] = n_recip
+        row["derivation_attempts"] = e.attempts
+        row["failure_class"] = e.cls
+        row["recipient_validation"] = "failed"
+        row["error"] = str(e)[:300]
+        print("  [fail] 收款地址准备失败（%s，已尝试 %d 次）: %s"
+              % (e.cls, e.attempts, row["error"]))
+        return row, None
+    recipients = prep["recipients"]
+    row["recipients"] = n_recip
+    row["recipient_count"] = n_recip
+    row["diversifier_indices"] = ";".join(str(i) for i in prep["div_indices"])
+    row["recipient_addresses_hash"] = ";".join(_addr_hash(a) for a in recipients)
+    row["recipient_receivers"] = ";".join(prep["receiver_types"])
+    row["derivation_attempts"] = prep["derivation_attempts"]
+    row["recipient_validation"] = prep["validation"]
     print("  收款地址数=%d（含 1 找零→实际 O 输出）目标总额=%.6f ZEC 手续费预留=%d zat"
           % (n_recip, amount_zec, pick["fee_zat"]))
+    print("  收款地址 index=%s 派生尝试=%d 校验=%s"
+          % (row["diversifier_indices"], row["derivation_attempts"],
+             row["recipient_validation"]))
 
     wt, target, sec = wait_sync()
     if wt is None:
@@ -475,6 +724,10 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
 
     if dry_run:
         print("  [dry-run] 不实际发交易（已恢复+核验+选定金额）")
+        print("  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only"
+              "（%d 个收款地址）" % n_recip)
+        print("  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——"
+              "本次运行不构成形态可行性证据")
         row.update({"dry_run": 1,
                     "note_count": state.get("restored_note_count"),
                     "restored_height": state.get("restored_height")})
@@ -610,7 +863,16 @@ COLUMNS = ["round", "target_spend", "target_output", "actual_spend", "actual_out
            "fee_zat", "expected_fee_zat", "planned_amount_zat", "recipients",
            "restored_height", "restored_note_count",
            "snapshot_sha256", "restore_script_sha256",
-           "dry_run", "failure_class", "error"]
+           "dry_run", "failure_class", "error",
+           # --- 多收款地址派生的溯源列（一律追加在末尾，不重排既有列）---------
+           # 旧分析脚本（analyze_sapling_cost.py / fit_sapling_e2e_model.py）均用
+           # csv.DictReader，追加列不影响既有字段读取。
+           "recipient_count",          # 收款地址数（与 recipients 同值，保留旧列名兼容）
+           "diversifier_indices",      # 实际使用的 index，分号分隔，可复现
+           "recipient_addresses_hash",  # sha256(address)[:16]，分号分隔，不落完整地址
+           "recipient_receivers",      # 逐地址 receiver 组成，L2 的持久证据
+           "derivation_attempts",      # 该轮消耗的派生尝试次数（含被跳过的无效 index）
+           "recipient_validation"]     # L1/L1.5/L2 结果；失败时为 failed
 
 
 def do_one_attempt(idx, S, O, policy, mine_blocks, dry_run, restore,
