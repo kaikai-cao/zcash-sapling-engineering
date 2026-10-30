@@ -118,7 +118,10 @@ note 对照（同一批行）：
 
 1. **`reporting_patch_selftest.py` 存在陈旧断言**：第 122 行仍断言 F1 之前的 dry-run 文案 `dry-run：未发交易，仅验证构造`，而 `247f855` 已改成 `dry-run：地址准备与构造已完成…`。即该用例**自 247f855 起就是失败的**，上一轮「自检全绿」的结论因此不成立。已就地修正断言（该文件仍未入仓）。
 2. **`failure_class_selftest.py` 的 I6 原设计不可执行**：想用历史 dry-run 目录逐行复现 note，但那个 run 产出于 F1 之前，note 是旧口径。改为「列结构全等 + 当前口径复现 + 显式承认旧口径差异」三段断言。
-3. **三个测试辅助文件仍未跟踪**：`recipient_derivation_selftest.py`、`reporting_patch_selftest.py`、`a_prime_selftest.py`、`a_note_scan_diag.py`、`raw/confirmatory_20261030/`。本轮只提交了 `failure_class_selftest.py`（T1 第 13 项）。是否把其余文件入仓需单独决定；S7 已加守卫，缺 `reporting_patch_selftest.py` 时 SKIP 而非报错。
+3. **测试文件的跟踪状态**（先前的判断有误，此处更正）：
+   - `recipient_derivation_selftest.py` 是**已跟踪**文件，其 T9 直接调用 `run_one()`，而 F5 后失败路径会写 sidecar，故必须同步加 `init_sidecar()`，否则该跟踪测试在 HEAD 上直接崩（`[fatal] sidecar 未初始化`）。此修改已作为补提交入仓，属 F5 的必要连带改动，不是范围扩大。
+   - 仍未跟踪：`reporting_patch_selftest.py`（本轮就地修正了它的陈旧断言，但未入仓）、`a_prime_selftest.py`、`a_note_scan_diag.py`、`raw/confirmatory_20261030/`。
+   - S7 已加守卫：缺 `reporting_patch_selftest.py` 时 SKIP 而非报错。
 
 ---
 
@@ -127,7 +130,7 @@ note 对照（同一批行）：
 - 未执行真实 `--dry-run`（会触发快照恢复 + 服务启动）；S7 与 reporting T1 用 stub 覆盖了同样的流程分支。
 - 未发任何交易、未启动 `--mode gate`、未恢复快照。
 - 未修改预注册、未修改历史 run 目录、未重分类历史 `failure_class`（§7 口径声明继续有效）。
-- 未把 `recipient_derivation_selftest.py` / `reporting_patch_selftest.py` 入仓。
+- 未把 `reporting_patch_selftest.py` 入仓（该文件仍为未跟踪状态，其断言已就地修正）。
 
 ---
 

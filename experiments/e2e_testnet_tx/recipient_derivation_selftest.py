@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import confirmatory_bench as cb           # noqa: E402
 import csv                                # noqa: E402
+import json                               # noqa: E402
 
 # 分析脚本依赖 numpy（系统 python3 可能没有）。缺依赖时 A 组标记 SKIP 而非 FAIL，
 # 但正确做法是用带 numpy 的解释器跑全量：见文件末尾说明。
@@ -322,6 +323,11 @@ def t9():
     orig_send = cb.send_frozen
     cb.send_frozen = lambda *a, **k: (_ for _ in ()).throw(AssertionError("不得发送"))
     buf = io.StringIO()
+    # F5：失败证据改由 sidecar 承载，run_one 的失败路径也会写 errors.jsonl，
+    # 故此处必须先初始化 sidecar（真实运行由 main() 在首次失败前完成）。
+    sd = os.path.join(tempfile.mkdtemp(prefix="recip_t9_"), "run_t9")
+    os.makedirs(sd)
+    cb.init_sidecar(sd)
     try:
         with contextlib.redirect_stdout(buf):
             row, T = cb.run_one(3, 4, 3, "FullPrivacy", 2, False, fake_state(2), "uaddr1000")
@@ -336,6 +342,17 @@ def t9():
     assert row["recipient_validation"] == "failed"
     assert row["recipient_count"] == 2
     assert "收款地址准备失败" in buf.getvalue()
+    # sidecar 事实层：准备阶段失败必须标明未触及提交
+    with open(os.path.join(sd, "errors.jsonl"), encoding="utf-8") as f:
+        recs = [json.loads(x) for x in f if x.strip()]
+    assert len(recs) == 1, "sidecar 应恰好 1 条：%d" % len(recs)
+    r = recs[0]
+    assert r["attempt_id"] == "run_t9:3", r["attempt_id"]
+    assert r["stage"] == "prep", r["stage"]
+    assert r["submit_state"] == "not_submitted", r["submit_state"]
+    assert r["z_sendmany_invoked"] is False
+    assert r["recipients"] == 2
+    shutil.rmtree(os.path.dirname(sd), ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
