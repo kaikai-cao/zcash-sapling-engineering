@@ -51,6 +51,7 @@ import hashlib
 import json
 import os
 import random
+import sqlite3
 import subprocess
 import sys
 import time
@@ -76,6 +77,34 @@ FROZEN_POLICY = "FullPrivacy"           # 策略冻结：单一 policy，不回�
 OUTDIR_BASE = "raw/confirmatory_20261030"
 MIN_CHANGE_ZAT = 100000                 # 0.001 ZEC：强制正找零下限，保证 change>0
 
+# --- A′：Note 清单改为「钱包 DB 只读 + schema 断言 + 双 RPC 硬校验」 ---------
+# 不用 z_listunspent 的原因（实测，见 _note_scan_diag/）：
+#   快照里 26 个 note 的 memo 是 512B 随机字节，zallet 对 memo[0] < 0xF5 的记录
+#   强行按 UTF-8 解码 → 抛 `WalletDb::get_memo failed: Invalid UTF-8`，整条清单不可读；
+#   maxconf=10000 只是恰好把其中大部分排除，返回的是被截断的 10/36，且被截掉的
+#   并非最大的 note —— 会静默破坏「恰好动用 S 个 note」的构造，属于「能跑但错」。
+WALLET_DB_PATH = os.environ.get("E2E_WALLET_DB") or os.path.expanduser(
+    "~/z3-regtest/data/zallet/wallet.db")
+# 冻结快照的可花费 Sapling Note 预期值（门禁核验后回填预注册 §1）。
+# 这不是 warning：四个量必须两两相等，任一不等即视为清单不完整。
+EXPECTED_SAPLING_NOTE_COUNT = 36
+EXPECTED_SAPLING_ZAT = 11999980000
+DB_REQUIRED_SCHEMA = {
+    "sapling_received_notes": {"id", "transaction_id", "output_index", "value", "memo"},
+    "transactions": {"id_tx", "txid", "mined_height"},
+    "sapling_received_note_spends": {"sapling_received_note_id"},
+}
+SQL_UNSPENT_SAPLING = """
+SELECT n.id, t.txid, t.mined_height, n.output_index, n.value
+FROM sapling_received_notes AS n
+JOIN transactions AS t ON t.id_tx = n.transaction_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM sapling_received_note_spends AS s
+    WHERE s.sapling_received_note_id = n.id
+)
+ORDER BY n.value ASC, n.id ASC
+"""
+
 # 候选矩阵（预注册 §4，10 种形态，每格目标 5 次有效成功；门禁每格 1 次）
 DEFAULT_MATRIX = [
     (1, 2), (2, 2), (4, 2), (7, 2), (10, 2), (17, 2),
@@ -98,6 +127,10 @@ class HeightMismatch(StateError):
 
 class PreTxError(Exception):
     """交易提交前就已失败（RPC 拒绝、opid 终态失败、超时、资金不足等）。"""
+
+
+class SchemaMismatch(StateError):
+    """钱包 DB schema / 记录结构与本执行器预期不符 —— 结构性错误，整轮中止，不重试。"""
 
 
 # ---------------------------------------------------------------------------
@@ -155,35 +188,151 @@ def restore_snapshot(allow_hash_mismatch=False, allow_script_mismatch=False):
     return snap_actual, script_actual
 
 
+def _db_columns(cur, table):
+    return [r[1] for r in cur.execute("PRAGMA table_info(%s)" % table)]
+
+
+def assert_wallet_db_schema(cur=None):
+    """断言钱包 DB schema；不匹配抛 SchemaMismatch（绝不猜字段、绝不做兼容猜测）。
+
+    cur=None 时自行只读打开一次连接（供 preflight 使用）。
+    """
+    close = False
+    if cur is None:
+        if not os.path.isfile(WALLET_DB_PATH):
+            raise SchemaMismatch("钱包 DB 不存在: %s" % WALLET_DB_PATH)
+        con = sqlite3.connect("file:%s?mode=ro" % WALLET_DB_PATH, uri=True, timeout=10)
+        cur = con.cursor()
+        close = True
+    try:
+        tables = {r[0] for r in cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        for table, need in DB_REQUIRED_SCHEMA.items():
+            if table not in tables:
+                raise SchemaMismatch(
+                    "钱包 DB 缺少表 %s（现有 %d 张表；前 10: %s）"
+                    % (table, len(tables), sorted(tables)[:10]))
+            missing = need - set(_db_columns(cur, table))
+            if missing:
+                raise SchemaMismatch("表 %s 缺少字段 %s（现有: %s）"
+                                     % (table, sorted(missing), _db_columns(cur, table)))
+    finally:
+        if close:
+            try:
+                con.close()
+            except Exception:
+                pass
+
+
+def note_inventory_detailed():
+    """A′：只读读取钱包 DB 中全部可花费 Sapling Note，并做四重硬校验。
+
+    校验链（任一不满足即失败；**绝不回退到 z_listunspent**）：
+      1) 只读打开（sqlite mode=ro），不写库、不改快照、不恢复服务；
+      2) schema 断言：表 / 关联字段 / mined_height / spent 判定字段齐备；
+      3) 逐条记录合法性：value>0、txid 与 output_index 非空、已确认（0 < mined_height <= 链高）、
+         身份 (txid, output_index) 不重复；
+      4) 双 RPC 硬校验（这两个 RPC 都不解码 memo，故不受 memo bug 影响）：
+             DB 条数 == z_getnotescount([1]).sapling == EXPECTED_SAPLING_NOTE_COUNT
+             DB 总额 == z_getbalanceforaccount([ACCOUNT,1]).pools.sapling.valueZat
+                     == EXPECTED_SAPLING_ZAT
+    返回 list[dict]（按 value 升序）或 None（读取失败，由 verify_state 硬停）。
+    """
+    if not os.path.isfile(WALLET_DB_PATH):
+        print("[inv][warn] 钱包 DB 不存在: %s" % WALLET_DB_PATH)
+        return None
+    try:
+        con = sqlite3.connect("file:%s?mode=ro" % WALLET_DB_PATH, uri=True, timeout=10)
+    except Exception as e:
+        print("[inv][warn] 钱包 DB 只读打开失败: %s" % str(e)[:160])
+        return None
+
+    try:
+        cur = con.cursor()
+        assert_wallet_db_schema(cur)
+        rows = cur.execute(SQL_UNSPENT_SAPLING).fetchall()
+    except SchemaMismatch:
+        raise
+    except Exception as e:
+        print("[inv][warn] 钱包 DB 查询失败: %s" % str(e)[:160])
+        return None
+    finally:
+        try:
+            con.close()
+        except Exception:
+            pass
+
+    h = height()
+    if h is None:
+        print("[inv][warn] 无法读取链高，Note 的确认高度无法校验")
+        return None
+
+    recs = []
+    seen = set()
+    for nid, txid, mined_height, out_index, value in rows:
+        if txid is None or out_index is None or mined_height is None:
+            raise SchemaMismatch(
+                "note id=%s 关联字段缺失（txid/output_index/mined_height 有空值）" % nid)
+        if value is None or int(value) <= 0:
+            raise SchemaMismatch("note id=%s 面值非法: %r" % (nid, value))
+        key = (bytes(txid).hex(), int(out_index))
+        if key in seen:
+            raise SchemaMismatch("note 身份重复: txid=%s outindex=%d" % key)
+        seen.add(key)
+        mh = int(mined_height)
+        if mh <= 0 or mh > h:
+            raise SchemaMismatch("note id=%s mined_height=%d 不在 (0, 链高 %d] 内" % (nid, mh, h))
+        recs.append({"note_id": nid, "txid": key[0], "output_index": key[1],
+                     "value_zat": int(value), "mined_height": mh,
+                     "confirmations": h - mh + 1})
+
+    db_count = len(recs)
+    db_zat = sum(r["value_zat"] for r in recs)
+
+    # 双 RPC 硬校验（两个都不解码 memo）
+    try:
+        cnt_obj = z("z_getnotescount", [1])
+        rpc_count = int((cnt_obj or {}).get("sapling"))
+    except Exception as e:
+        print("[inv][warn] z_getnotescount 失败: %s" % str(e)[:160])
+        return None
+    try:
+        bal_obj = z("z_getbalanceforaccount", [ACCOUNT, 1])
+        rpc_zat = int(((bal_obj or {}).get("pools") or {}).get("sapling", {}).get("valueZat"))
+    except Exception as e:
+        print("[inv][warn] z_getbalanceforaccount 失败: %s" % str(e)[:160])
+        return None
+
+    bad = []
+    if db_count != EXPECTED_SAPLING_NOTE_COUNT:
+        bad.append("DB 条数 %d != 预期冻结值 %d" % (db_count, EXPECTED_SAPLING_NOTE_COUNT))
+    if db_zat != EXPECTED_SAPLING_ZAT:
+        bad.append("DB 总额 %d != 预期冻结值 %d" % (db_zat, EXPECTED_SAPLING_ZAT))
+    if rpc_count != db_count:
+        bad.append("RPC 条数 %d != DB 条数 %d" % (rpc_count, db_count))
+    if rpc_zat != db_zat:
+        bad.append("RPC 余额 %d != DB 总额 %d" % (rpc_zat, db_zat))
+    if bad:
+        raise StateError("Note 清单完整性校验失败（清单不完整，停止发交易）：\n  "
+                         + "\n  ".join(bad))
+
+    print("[inv] DB 只读清单 OK: %d notes / %d zat | RPC count=%d balance=%d 全部一致 | "
+          "高度 %d..%d"
+          % (db_count, db_zat, rpc_count, rpc_zat,
+             min(r["mined_height"] for r in recs), max(r["mined_height"] for r in recs)))
+    return recs
+
+
 def note_inventory():
     """取当前钱包可花费 Sapling Note 面值列表（zat），升序；失败返回 None。
 
     严格规则：拿不到可靠清单就返回 None，由上层**停止发交易**，绝不粗略猜测。
-    若 zallet RPC 名不同，改这里即可，不影响其余协议。
+    数据来源为 A′ 的钱包 DB 只读清单（见 note_inventory_detailed），不使用 z_listunspent。
     """
-    try:
-        # minconf=1：排除 0-conf/unsafe note。快照里某 0-conf note 的 memo 为原始字节
-        # （以 0xf6 开头，非合法 UTF-8），z_listunspent 在 minconf=0/includeUnsafe=true
-        # 时会 WalletDb::get_memo 失败。构造交易本就只需已确认的可花费 note，minconf=1
-        # 既契合语义，又避开坏 memo，恢复 Check #1（真实 Sapling Note 清单可读）。
-        r = z("z_listunspent", [1, 10000])
-        notes = r if isinstance(r, list) else (r.get("result") or [])
-        vals = []
-        for n in notes:
-            if n.get("pool") == "sapling" or n.get("type") == "sapling":
-                v = n.get("valueZat")
-                if not v:
-                    v = int(round(float(n.get("amount", 0)) * 1e8))
-                if v:
-                    vals.append(v)
-        if vals:
-            return sorted(vals)
-        print("[inv] z_listunspent 返回 0 个 sapling note（RPC 名可能不同或钱包为空）")
+    recs = note_inventory_detailed()
+    if recs is None:
         return None
-    except Exception as e:
-        print("[inv][warn] z_listunspent 失败: %s" % str(e)[:140])
-        return None
-
+    return [r["value_zat"] for r in recs]
 
 def pick_amount_zat(S, O, inv):
     """选金额，显式预留手续费 F=5000·max(S,O) 与正找零，迫使恰好动用前 S 个最小 note。
@@ -421,6 +570,13 @@ def preflight():
     if not os.path.isfile(RESTORE_SCRIPT):
         raise RuntimeError("恢复脚本不存在: %s" % RESTORE_SCRIPT)
     print("[preflight] 快照=%s\n           恢复脚本=%s" % (SNAPSHOT_WSL, RESTORE_SCRIPT))
+    # A′：钱包 DB schema 预检（若 DB 尚不存在则由快照恢复创建，恢复后强制断言）
+    if os.path.isfile(WALLET_DB_PATH):
+        assert_wallet_db_schema()
+        print("[preflight] 钱包 DB schema OK: %s" % WALLET_DB_PATH)
+    else:
+        print("[preflight][warn] 钱包 DB 暂不存在（将由快照恢复创建），恢复后强制断言: %s"
+              % WALLET_DB_PATH)
 
 
 COLUMNS = ["round", "target_spend", "target_output", "actual_spend", "actual_output",
@@ -515,6 +671,8 @@ def main():
                 except HeightMismatch as e:
                     rows.append(fail_row(idx, S, O, "state_height_mismatch", str(e)))
                     continue
+                except SchemaMismatch:
+                    raise          # schema 结构性错误：整轮中止，不按形态重试、不发送
                 except StateError as e:
                     rows.append(fail_row(idx, S, O, "state_verification_failed", str(e)))
                     continue
@@ -548,6 +706,8 @@ def main():
                         rows.append(fail_row(idx, S, O, "state_height_mismatch", str(e)))
                         infeasible = True
                         break
+                    except SchemaMismatch:
+                        raise          # schema 结构性错误：整轮中止，不按形态重试、不发送
                     except StateError as e:
                         rows.append(fail_row(idx, S, O, "state_verification_failed", str(e)))
                         if att >= a.max_attempts:
