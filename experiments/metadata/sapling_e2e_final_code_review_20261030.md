@@ -172,3 +172,77 @@ if not tx_ok:
 - 未启动新一轮 gate；
 - 未改动 `run_20261030_110042/`、`laststate_seal_20261030_1115/`、预注册；
 - 未 squash、未合并 PR #24。
+
+---
+
+## 9. 处理结果（2026-10-30 14:2x 补记）
+
+用户裁定：**修 F1、更正 F4；F2、F3 保留为已知限制，不扩大本轮补丁范围。**
+理由：F1 影响实验结论的解释，F4 影响后续审查者对实验设计的理解；F2、F3 只影响
+异常诊断信息，不改变 fail-closed 行为，也不影响正常成功样本的统计口径。
+
+| 编号 | 状态 | 处理方式 |
+|---|---|---|
+| F1 | **已修** | 新增 `_summary_note(rows, tx_ok, allm, dry_run)`，note 改为按 `failure_class` 分流；汇总统计的四列（`tx_success`/`form_match`/`fee_match`/`all_match`）与 `writerow` 未动 |
+| F2 | 保留 | 传输层异常仍落到 `other`；判定仍 fail-closed，行为未变 |
+| F3 | 保留 | 失败行 `derivation_attempts` 仍只含失败子调用计数 |
+| F4 | **已更正** | 预算注释改为实测口径（53%、17–19 次、约 3.4 倍余量，并注明不是对未来环境的保证）；`account_unified_addresses()` docstring 删除「起点逐轮相同/派生序列可复现」，改记为实测观测（4610657118 / 4610657129、游标不受恢复约束、机制未定位），并写明「报告不得声称每轮钱包状态完全一致」 |
+
+F1 的三条分流规则：
+
+1. `failure_class` 以 `recipient_` 开头 → 「收款地址准备失败 N 条（具体类别）：发生在构造之前，未构造、未发送，**不代表该形态不可行**」；
+2. 其它 `failure_class` → 「交易构造/发送阶段失败 N 条（具体类别），未产生 txid」，按实际类别列出，不笼统归因；
+3. dry-run 且存在「无 failure_class、无 txid」的行 → 追加「地址准备与构造已完成，未发交易（无 txid 属预期；L3 未覆盖，不构成形态可行性证据）」；
+   且该分支**与 1/2 并列**，所以 dry-run 下若发生地址准备失败，两条会同时出现，不再被「dry-run 无 txid 属预期」掩盖。
+
+只有在既无 txid、又没有任何 `failure_class` 信息时才回落到原兜底文案
+「无成功构造（形态不可行或环境/策略失败）」。
+
+自检：新增 S1–S7 七个用例（仅地址失败 / 仅构造失败 / 两类并存 / dry-run 构造完成 /
+dry-run 下地址失败不被掩盖 / 有 txid 时文案不变 / 无阶段信息时兜底），
+全量 **30/30 通过**（原 23 + 新增 7）。
+
+本轮**未发交易、未启动 gate**；环境仍停在 addresses 39 / transactions 50 /
+notes 50 / blocks 32297，服务已停。
+
+---
+
+## 10. 新发现 F5（本轮不修，需单独裁定）：`failure_class` 对发送阶段失败不精确
+
+用**历史门禁的真实 `rounds.csv`** 回放新 note 函数时发现：那 3 条失败行的
+`failure_class` 全部是 `rpc_policy_rejected`，而实际原因是
+`-8 Invalid parameter, duplicated recipient address`。
+
+成因是 `send_frozen()`（L469 附近）：
+
+```python
+try:
+    opid = z("z_sendmany", params, timeout=120)
+except RuntimeError as e:
+    raise PreTxError("policy=%s 被拒: %s" % (policy, str(e)[:200]))
+```
+
+任何 `z_sendmany` 异常都被包装成「policy=FullPrivacy **被拒**」，而
+`_classify()` 的第一条就是 `if "被拒" in e or "policy" in e: return "rpc_policy_rejected"`。
+于是 `-8` 参数错误、资金不足、RPC 内部错误，全都会先命中这条，被标成「策略拒绝」。
+
+对 F1 修复的影响（必须说清）：
+
+- **note 的后半句是对的**——「交易构造/发送阶段失败 N 条，未产生 txid」不再宣称形态不可行；
+- **括号里的类别可能错**——`rpc_policy_rejected` 会让人误以为是 FullPrivacy 策略导致的，
+  而实际是参数问题；
+- 地址准备失败走的是新代码自己的 `recipient_*` 分类，**不受此影响**，文案是准确的。
+
+建议（未实施）：让 `_classify` 优先解析错误文本里内嵌的 JSON-RPC `code`
+（如 `-8` → `rpc_invalid_parameter`），把「被拒」降级为兜底而不是首选。
+这属于代码行为改动，且触及 `_classify`，**不在本轮 F1/F4 授权范围内**，故只登记。
+
+附：用真实数据回放的新汇总文案（只读，未改写任何文件）
+
+| (S,O) | 新 note |
+|---|---|
+| (1,2) (2,2) (3,2) (4,2) (7,2) (10,2) (17,2) | 空（全部匹配） |
+| (1,9) (3,3) (4,3) | 交易构造/发送阶段失败 1 条（rpc_policy_rejected），未产生 txid |
+
+对照旧文案：这三行原本会被写成「无成功构造（形态不可行或环境/策略失败）」。新文案
+不再把失败归因于形态，但类别名仍需 F5 修正后才准确。
