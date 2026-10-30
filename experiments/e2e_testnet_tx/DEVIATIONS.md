@@ -107,3 +107,57 @@ PCZT 在 Sapling 上跑不通，于是 PCZT 的四阶段数据取自 Orchard/Iro
 4. 报告只呈现预注册分析；探索性发现另列附录。
 
 当前数据集（29 轮 / 11 形态）可作为该预注册的**试点**，用于估计每格所需样本量。
+
+---
+
+## 4. 确认性实验执行器的修正记录（2026-10-30，分支 `experiments/e2e-testnet-tx-harness`）
+
+> 本节记录**冻结②回填（`891c2b9`）之后、正式 confirmatory campaign 之前**对执行器
+> 与预注册所做的修正。所有修正均已在**干净克隆**中复跑验证，**未启动正式采集**、
+> 未发送真实交易。正式采集仍需单独授权。
+
+### 4.1 修正清单（提交 `45400c6`）
+
+| # | 修正 | 原因 | 验证 |
+|---|---|---|---|
+| 1 | `submit_state` 三态语义统一为「操作结果的可判定性」 | 原注释用「钱包已受理」措辞，与 `opid_timeout=unknown` 表面矛盾 | 静态检查 + 预注册 §4 补注 |
+| 2 | `rpc_transport_error@submit@unknown` 接入 G4 先行 | 预注册第 10 行原写「否（G4 先行）」但代码未接入 | B13 真实 G4 文件端到端（续/停） |
+| 3 | G4 裁决文件 fail-closed 加固（拒重复键/非法值） | JSON 末值覆盖会把 `accepted` 翻成 `unaccepted` 而误放行 | A1b 单元 + B11/B12 |
+| 4 | `init_sidecar` 前移，消除 foreign-key 诊断误报 | loader 早于 sidecar 初始化，诊断比对陈旧 run_id | stderr 诊断行复核 |
+| 5 | **修复 M7 证据校验缺陷** | 见 4.2 | B15/B16 + selftest I9 |
+| 6 | `MANIFEST.sha256` 重新生成 + 预注册独立校验锚点 | 旧清单滞后于代码（`fit_sapling_e2e_model.py` 失配），且未覆盖执行器与预注册 | `sha256sum -c` 129/129 通过 |
+
+### 4.2 D6 · M7 结果不匹配标签与证据校验冲突（真实缺陷，会作废整 run）
+
+**偏离性质**：不是计划外扩展，而是**实现与预注册不一致**的缺陷修复。
+
+**事实**：M7 把 `form_mismatch` / `fee_mismatch` 写入主 CSV 的 `failure_class` 列；
+而预注册第 32 行规定该二者**无 sidecar**、L214 规定其**不是失败类别**、§6-F 规定其
+**不并入失败计数**。但 `verify_run_artifacts` 按「任何非空 `failure_class` 即失败轮」
+要求其有 sidecar 记录 —— 二者直接冲突。
+
+**后果链**：正式采集中出现**一次**形态/手续费不符 → 证据校验 `SystemExit` →
+整个 run 被 `mark_run_aborted` 标为 `run_aborted` / `usable_as_sample=False` →
+`fit_sapling_e2e_model.load_all` 据此**剔除该 run 的全部样本**。即：一次形态偏离
+足以让整轮采集作废。
+
+**为什么此前没被发现**：该路径需要「发送成功且回查形态/手续费不符」才会触发，
+既有 29 轮试点数据与门禁 run 均未出现形态偏离，故从未被执行过；隔离 harness 在
+本轮才首次覆盖该路径。
+
+**修正**：证据校验时把这两个标签**排除**出「失败轮 ↔ sidecar」双向核对，并单独
+计入 `meta.json` 的 `mismatch_rows`（**不计入** `failure_rows`，痕迹不丢失）。
+**不改 M7 的分类、不改 tie-break、不改任何裁决行**；预注册补记「双重不匹配
+tie-break：手续费优先」，并注明 `form_match` / `fee_match` 两列布尔值逐列保留于
+`rounds.csv`，形态偏离信息不因 `failure_class` 单值化而丢失。
+
+### 4.3 本轮明确**未**做的事
+
+- **未启动正式 confirmatory campaign**（`--mode confirm`），未发送真实交易，
+  未启动/停止 Zebra 或 Zallet；正式采集需另行授权。
+- 未合并 PR #24（保持 open，标题含【待审阅，勿合并】）。
+- 未修改任何既有实验数据与 `raw/` 下的产物；本轮提交只含执行器、自检脚本、
+  预注册文档与哈希清单。
+- 未扩展功能范围：G4 自动裁决仍**只**授权预注册第 10、30 两行，
+  `status_poll` 各行恒为「否」。
+

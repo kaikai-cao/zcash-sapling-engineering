@@ -1,20 +1,20 @@
 # 实验产物哈希清单
 
-> 生成时间：2026-10-29T08:02:13Z（UTC）  
-> 文件数：**80**　合计：**13,436,054 B**（12.81 MB）  
+> 生成时间：2026-10-30T11:45:10Z（UTC）  
+> 文件数：**131**　合计：**4,269,806 B**（4.07 MB）  
 > 校验：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
 
 ## 按类别
 
 | 类别 | 文件数 | 字节数 |
 |---|---:|---:|
-| doc | 2 | 15,402 |
+| doc | 2 | 19,050 |
 | e2e_regtest | 9 | 3,419 |
-| external | 1 | 13,167,422 |
+| external | 1 | 34,725 |
 | pczt | 19 | 56,375 |
-| raw-other | 3 | 24,745 |
+| raw-other | 48 | 3,790,949 |
 | sapling | 37 | 53,866 |
-| script | 9 | 114,825 |
+| script | 15 | 311,422 |
 
 ## 运行目录完整性
 
@@ -38,19 +38,68 @@
 
 | 文件 | 字节 | mtime (UTC) | SHA256（前 16 位） |
 |---|---:|---|---|
-| `DEVIATIONS.md` | 5,784 | 2026-10-29T08:00:24Z | `820565f7fe8e97c7` |
+| `DEVIATIONS.md` | 9,432 | 2026-10-30T11:45:03Z | `b0051c4a25897d7b` |
 | `README_runbook.md` | 9,618 | 2026-10-29T08:01:04Z | `ff8cd66933e1be0a` |
+| `a_note_scan_diag.py` | 11,969 | 2026-10-30T02:33:53Z | `bbba7ab2ec2afcd2` |
+| `a_prime_selftest.py` | 8,136 | 2026-10-30T02:40:28Z | `3833e64e4fb7b712` |
 | `analyze_sapling_cost.py` | 5,969 | 2026-10-29T07:21:00Z | `acb1d5b7c0af8b8e` |
 | `bootstrap_sapling_ci.py` | 4,238 | 2026-10-29T07:33:31Z | `98c922b0b1ac9e50` |
+| `confirmatory_bench.py` | 97,003 | 2026-10-30T11:40:11Z | `41f3a75d10f3258b` |
 | `e2e_tx_bench.py` | 20,117 | 2026-10-28T12:19:37Z | `251c421667634474` |
 | `e2e_tx_bench_v2.py` | 19,270 | 2026-10-29T06:37:13Z | `6ebafa52545ab088` |
-| `fit_sapling_e2e_model.py` | 14,466 | 2026-10-29T07:31:23Z | `7a90dad2b09965a9` |
+| `failure_class_selftest.py` | 38,793 | 2026-10-30T11:41:55Z | `7834ffd10766d6d7` |
+| `fit_sapling_e2e_model.py` | 16,678 | 2026-10-30T07:04:30Z | `c7dbbe0c739d1422` |
 | `make_manifest.py` | 7,924 | 2026-10-29T08:02:07Z | `0f1a310db3ef1351` |
 | `mem_sample.py` | 3,904 | 2026-10-27T10:10:05Z | `d0ad3c684c33fc8c` |
 | `pczt_bench_pool.py` | 15,957 | 2026-10-29T07:03:43Z | `c2db6c650c536f9a` |
 | `raw/AUDIT_trail.md` | 13,842 | 2026-10-29T08:01:32Z | `13737e8390726730` |
 | `raw/ENV_binaries.txt` | 2,541 | 2026-10-29T07:44:42Z | `b8d0c672ae7bd0f7` |
 | `raw/FAILURES.md` | 8,362 | 2026-10-29T08:00:44Z | `429ad5ccfac0ef91` |
+| `raw/MANIFEST.prereg.sha256` | 148 | 2026-10-30T11:44:36Z | `54d7e625590e4403` |
+| `raw/confirmatory_20261030/.gitignore` | 923 | 2026-10-30T06:55:55Z | `b171a34f6d2248f0` |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/README.md` | 2,414 | 2026-10-30T03:15:39Z | `e4bb0bd2bf270430` |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/addresses_before.tsv` | 5,393 | 2026-10-30T03:15:27Z | `ec19fc7c041ce676` |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/filelist.tsv` | 112,447 | 2026-10-30T03:15:26Z | `6c465f72a412dcf3` |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/sha256.txt` | 176,512 | 2026-10-30T03:15:27Z | `57e66098b7cd3446` |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/wallet.db.sealed` | 3,198,976 | 2026-10-30T03:15:26Z | `1512cf95f3c5ff46` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/gate_summary.csv` | 869 | 2026-10-30T01:24:07Z | `40ca128b28e75bc2` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/memory_timeseries.csv` | 10,083 | 2026-10-30T01:24:07Z | `229ced0f6bd52935` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/meta.json` | 690 | 2026-10-30T01:24:07Z | `777082ceec576ce4` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/rounds.csv` | 1,695 | 2026-10-30T01:24:07Z | `a1b3de30b871f8d6` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/run.log` | 7,775 | 2026-10-30T01:24:07Z | `1accae9bbfd49271` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/gate_summary.csv` | 869 | 2026-10-30T01:53:47Z | `40ca128b28e75bc2` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/memory_timeseries.csv` | 10,105 | 2026-10-30T01:53:47Z | `ffe78d414114867f` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/meta.json` | 1,116 | 2026-10-30T01:53:47Z | `18ab7bad3dd1d184` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/rounds.csv` | 2,060 | 2026-10-30T01:53:47Z | `aedbf1c7de0b1fda` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/run.log` | 8,276 | 2026-10-30T01:53:47Z | `c68c4863a396df7a` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/gate_summary.csv` | 869 | 2026-10-30T02:46:57Z | `40ca128b28e75bc2` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/memory_timeseries.csv` | 10,193 | 2026-10-30T02:46:57Z | `ee99c4129c79ab5b` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/meta.json` | 1,116 | 2026-10-30T02:46:57Z | `a392866eb6d1cdeb` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/rounds.csv` | 2,200 | 2026-10-30T02:46:57Z | `5ad6c7842aa71887` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/run.log` | 10,204 | 2026-10-30T02:46:57Z | `16c169da688e61a1` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/gate_summary.csv` | 521 | 2026-10-30T03:05:34Z | `27e841ac37c3df7e` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/memory_timeseries.csv` | 25,131 | 2026-10-30T03:05:34Z | `3f547b497010bc5c` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/meta.json` | 1,615 | 2026-10-30T03:05:34Z | `09e3d8dae319ed1e` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/rounds.csv` | 4,125 | 2026-10-30T03:05:34Z | `7a2dbb6308dc8064` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/run.log` | 12,276 | 2026-10-30T03:05:34Z | `84a6b9770a1b858d` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/gate_summary.csv` | 1,199 | 2026-10-30T03:32:05Z | `eb53e72bb42df265` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/memory_timeseries.csv` | 10,394 | 2026-10-30T03:32:05Z | `bd316a8de63581e0` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/meta.json` | 1,528 | 2026-10-30T03:32:05Z | `e7561aa222e93d50` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/rounds.csv` | 3,157 | 2026-10-30T03:32:05Z | `a3a323b050af5147` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/run.log` | 13,551 | 2026-10-30T03:32:05Z | `c84e5062a50879c3` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/gate_summary.csv` | 1,559 | 2026-10-30T07:17:07Z | `6b0fc46a893567e2` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/memory_timeseries.csv` | 6,897 | 2026-10-30T07:17:07Z | `a7a4940f04df9f28` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/meta.json` | 1,634 | 2026-10-30T07:17:07Z | `3089c3163999aa95` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/rounds.csv` | 3,157 | 2026-10-30T07:17:07Z | `c16a961eefa7e2a1` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/run.log` | 13,703 | 2026-10-30T07:17:07Z | `15bca86bf5a8146b` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/gate_summary.csv` | 371 | 2026-10-30T07:29:01Z | `5bc066ecbe9f0899` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/memory_timeseries.csv` | 27,551 | 2026-10-30T07:29:00Z | `b0bfc742350720c7` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/meta.json` | 1,759 | 2026-10-30T07:29:01Z | `fec1c5703d88f9db` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/rounds.csv` | 4,825 | 2026-10-30T07:29:01Z | `0a48ea443baf4266` |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/run.log` | 13,280 | 2026-10-30T07:29:01Z | `a778e412c53c868e` |
+| `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104052.json` | 5,914 | 2026-10-30T02:40:52Z | `c5df66dd37996783` |
+| `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104149.json` | 5,914 | 2026-10-30T02:41:49Z | `b6c31348e53fd5f8` |
+| `raw/confirmatory_20261030/_note_scan_diag/scan_20261030_103423.json` | 41,210 | 2026-10-30T02:34:23Z | `12526ed6cfafce02` |
 | `raw/e2e_regtest_v2/run_20261029_142533/memory_timeseries.csv` | 117 | 2026-10-29T06:25:33Z | `24880f834bf21c28` |
 | `raw/e2e_regtest_v2/run_20261029_143529/memory_timeseries.csv` | 199 | 2026-10-29T06:35:29Z | `9eec9a09dd58c2ae` |
 | `raw/e2e_regtest_v2/run_20261029_143529/run_summary.json` | 1,390 | 2026-10-29T06:35:29Z | `dc1485c50c3f947e` |
@@ -116,13 +165,15 @@
 | `raw/sapling_smoke/run_20261029_151423/rounds.csv` | 295 | 2026-10-29T07:14:26Z | `c33437af7bef3c56` |
 | `raw/sapling_smoke/run_20261029_151423/stage_timings.csv` | 95 | 2026-10-29T07:14:26Z | `a9a3e2b6c08cb848` |
 | `raw/sapling_smoke/run_20261029_151423/summary.csv` | 176 | 2026-10-29T07:14:26Z | `074afedb55274b81` |
+| `recipient_derivation_selftest.py` | 26,269 | 2026-10-30T06:55:12Z | `13f9830138703963` |
+| `reporting_patch_selftest.py` | 12,215 | 2026-10-30T06:42:25Z | `ba6e9872b990ccea` |
 | `sapling_e2e_bench.py` | 22,980 | 2026-10-29T07:39:54Z | `e9c29018549b0dae` |
 
 ## 外部资产（不进 MANIFEST.sha256，需单独校验）
 
 | 绝对路径 | 字节 | SHA256 |
 |---|---:|---|
-| `D:/Research/z3/snapshots/z3_regtest_h32297_20261029_145710.tar.gz` | 13,167,422 | `ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c` |
+| `../metadata/sapling_e2e_regtest_confirmatory_preregistration_20261030.md` | 34,725 | `0ced5b8710a8cee98181b105a99bc347a26eda1f3c7aa99116d81ae84ee99db6` |
 
 这些文件位于另一个仓库（`D:/Research/z3`）或 WSL 内，是复现实验的前置资产：
 链快照含 32297 高度之前的全部区块状态与钱包库，`snapshot_restore.sh --yes` 12 秒可回到该状态，
