@@ -34,7 +34,7 @@ RAW = os.path.join(HERE, "raw", "confirmatory_20261030")
 GATE_RUN = os.path.join(RAW, "_feasibility_gate", "run_20261030_110042")   # 正式 gate 7/10
 DRY_RUN = os.path.join(RAW, "_feasibility_gate", "run_20261030_113002")    # 补丁后 dry-run
 
-# S7 复用 reporting_patch_selftest 的 stub；该文件当前未入仓，缺失时 SKIP 而非 ERROR
+# S7 复用 reporting_patch_selftest 的 stub（已随 6cd58de 入仓）；仍保留缺失时 SKIP 而非 ERROR 的守卫
 try:
     import reporting_patch_selftest as RPS      # noqa: E402
     HAVE_RPS, RPS_ERR = True, ""
