@@ -25,7 +25,8 @@ import shutil
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 
 import confirmatory_bench as cb           # noqa: E402
 import csv                                # noqa: E402
@@ -65,6 +66,19 @@ def check_fm(name, fn):
         print("SKIP  %s （需要 numpy：%s）" % (name, FM_ERR))
         return
     check(name, fn)
+
+
+def check_hist(name, fn, need):
+    """需要历史 raw 目录的用例：目录缺失时 SKIP，不冒充通过。
+
+    与 failure_class_selftest.check_hist 同一约定。历史 run 目录若未纳入版本库
+    （例如部分检出），直接 FAIL 会把「数据不在」误报成「实现有错」。
+    """
+    if not os.path.isdir(need):
+        SKIPPED.append((name, "缺少历史目录 %s" % need))
+        print("SKIP  %s （缺少历史目录 %s）" % (name, need))
+        return
+    check_fm(name, fn)
 
 
 class FakeWallet:
@@ -476,10 +490,11 @@ def a4():
 
 
 def a5():
-    """真实 raw 目录：load_all 仍排除 _feasibility_gate（门禁数据不得混入）。"""
-    root = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "raw", "confirmatory_20261030")
-    assert os.path.isdir(root), "raw 目录不存在: %s" % root
+    """真实 raw 目录：load_all 仍排除 _feasibility_gate（门禁数据不得混入）。
+
+    目录缺失由 main() 的 check_hist 判为 SKIP，故此处不再重复断言「目录存在」。
+    """
+    root = os.path.join(HERE, "raw", "confirmatory_20261030")
     rows = fm.load_all(root)
     assert all(r["batch"] != "_feasibility_gate" for r in rows), \
         "门禁数据混入了拟合输入"
@@ -574,7 +589,8 @@ def main():
     check_fm("A2  含新列 CSV 可读", a2)
     check_fm("A3  旧列 CSV 可读", a3)
     check_fm("A4  失败行不入拟合", a4)
-    check_fm("A5  门禁目录仍被排除", a5)
+    check_hist("A5  门禁目录仍被排除", a5,
+               os.path.join(HERE, "raw", "confirmatory_20261030"))
     check("S1  汇总 note：仅地址准备失败", s1)
     check("S2  汇总 note：构造/发送失败", s2)
     check("S3  汇总 note：两类失败并存", s3)
@@ -586,9 +602,13 @@ def main():
     ok = sum(1 for _, r, _ in RESULTS if r)
     print("结果：%d/%d 通过，%d 跳过" % (ok, len(RESULTS), len(SKIPPED)))
     if SKIPPED:
-        print("跳过的用例需要 numpy；请用带 numpy 的解释器复跑：")
-        print("  D:/WorkBuddyData/.workbuddy/binaries/python/envs/default/Scripts/python.exe "
-              "recipient_derivation_selftest.py")
+        print("跳过明细（不计为通过）：")
+        for n, why in SKIPPED:
+            print("  - %s：%s" % (n, why))
+        if any("numpy" in str(w) for _, w in SKIPPED):
+            print("  提示：含 numpy 依赖项，可用带 numpy 的解释器复跑：")
+            print("    D:/WorkBuddyData/.workbuddy/binaries/python/envs/default/Scripts/python.exe "
+                  "recipient_derivation_selftest.py")
     return 0 if ok == len(RESULTS) else 1
 
 
