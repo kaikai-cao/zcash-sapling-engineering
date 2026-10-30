@@ -1,7 +1,7 @@
 # 实验产物哈希清单
 
-> 生成时间：2026-10-30T13:13:37Z（UTC）  
-> **可校验（git 跟踪）文件数：129**　合计：**896,238 B**（0.85 MB）  
+> 生成时间：2026-10-30T13:24:36Z（UTC）  
+> **可校验（git 跟踪）文件数：130**　合计：**905,963 B**（0.86 MB）  
 > 本地排除（不可远端校验）文件数：**14**  
 > 校验（干净克隆即可 100% 通过）：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
 
@@ -13,7 +13,7 @@
 
 | 类别 | 文件数 | 字节数 |
 |---|---:|---:|
-| doc | 2 | 33,033 |
+| doc | 3 | 42,758 |
 | e2e_regtest | 9 | 3,419 |
 | other | 1 | 936 |
 | pczt | 19 | 56,375 |
@@ -40,12 +40,13 @@
 | `raw/sapling_smoke/run_20261029_151423` | 5 | summary_by_shape.csv |
 | `raw/sapling_smoke2/run_20261029_151658` | 6 | 无 |
 
-## 明细 · git 跟踪（129 条，可干净克隆校验）
+## 明细 · git 跟踪（130 条，可干净克隆校验）
 
 | 文件 | 字节 | mtime (UTC) | SHA256（前 16 位） |
 |---|---:|---|---|
 | `DEVIATIONS.md` | 23,415 | 2026-10-30T13:13:08Z | `eaf4fabcab36a3c1` |
-| `README_runbook.md` | 9,618 | 2026-10-29T08:01:04Z | `ff8cd66933e1be0a` |
+| `FREEZE.md` | 9,450 | 2026-10-30T13:24:26Z | `fd834ee080cd3822` |
+| `README_runbook.md` | 9,893 | 2026-10-30T13:24:31Z | `39643aa7faf100af` |
 | `a_note_scan_diag.py` | 11,969 | 2026-10-30T02:33:53Z | `bbba7ab2ec2afcd2` |
 | `a_prime_selftest.py` | 8,136 | 2026-10-30T02:40:28Z | `3833e64e4fb7b712` |
 | `analyze_sapling_cost.py` | 5,969 | 2026-10-29T07:21:00Z | `acb1d5b7c0af8b8e` |

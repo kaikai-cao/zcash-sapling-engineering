@@ -1,0 +1,174 @@
+# Sapling 端到端成本测量 —— 最终冻结说明
+
+**冻结时间**：2026-10-30
+**冻结基线**：分支 `experiments/e2e-testnet-tx-harness`，远端 HEAD `5acfd50`
+**一句话结论**：50 轮确认性实验已完成并通过预注册判据；代码、数据、分析、偏离、环境证据
+已串成一条可核验的链，本线**就此冻结，不再新增实验、指标或脚本**。
+
+本文是这条研究线的**唯一入口**。它不重复各文档内容，只回答三件事：
+「冻结在哪个版本」「哪些说法有证据支撑」「哪些说法不成立」。
+
+---
+
+## 1. 冻结基线：提交与状态
+
+| 项 | 值 |
+|---|---|
+| 远端 HEAD | `5acfd509fd424373efca65269d36e57d8bc6bec0`（`5acfd50`） |
+| 本地 HEAD | 同上，与远端 `0 / 0`（无领先、无落后） |
+| 工作区 | 干净（`git status --porcelain` 为 0 项） |
+| 分支 | `experiments/e2e-testnet-tx-harness` |
+| `main` | **未被触碰**，仍为 `1fb6cc1`（本地 `main` 停在 `9d7195a`，属本地未同步，不影响本分支） |
+| PR #24 | **open，未合并**；与 base 存在 `experiments/metadata/INDEX.md` 的合并冲突，按冻结要求**不做 rebase** |
+
+本轮提交链（时间顺序）：
+
+| 提交 | 内容 |
+|---|---|
+| `30e531b` | 工程材料哈希冻结 + 执行器修正记录 |
+| `aeb7447` | 正式 confirmatory campaign 数据归档（50 轮）+ FIT/RESULTS |
+| `07a55ae` | 冻结前审计修复：登记 D7、拆分 MANIFEST、锚定分级、补 CI/harness |
+| `5acfd50` | 补 `experiments/**` 的 CI push 触发（此前该分支从未跑过 CI） |
+
+**CI 对应的确切 SHA**：GitHub Actions run [`41061900242`](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/41061900242)
+的 `head_sha` 就是 `5acfd50`，7 个 job 全部 `success`，其中包含
+`end-to-end Sapling analysis (deterministic, no node)`（selftest 32/0/0 + harness 132/0 +
+用归档 CSV 重算三项假设并比对冻结数值）。
+
+---
+
+## 2. 正式实验结果（唯一正式 run）
+
+`raw/confirmatory_20261030/run_20261030_201124` —— 50 轮 / 10 形态 × 5，
+`failure_rows=0`、`mismatch_rows=0`、`rows_with_txid=50/50`。
+每一轮测量前均从同一快照恢复（链高 32297、note 数 36、余额 11999980000 zat，50/50 一致）。
+
+| 假设 | 判据（预注册 §9） | 实测 | 结论 |
+|---|---|---|---|
+| H_A | Δ=a_S−c_O 的 95% CI 下界 > 0 | 540.57 ms，CI [513.11, 552.96] | 接受 |
+| H_B | 两形态中位数差 CI 不含 0、同号、量级 ∈[300,800] ms | 632.90 ms，CI [483.10, 783.20] | 接受（稳定） |
+| H_C | LOO 降幅 ≥10% 且 ≥20 ms，且 M3<M2 | 1490.12 → 83.31 ms（−94.4%），M3<M2(275.04) | 接受 |
+
+M3：`total = 641.5·S + 101.0·O + 650.5` ms（R²=0.9996，LOO-RMSE 83.3 ms）；
+`fee=5000·max(S,O)` 50/50；`tx_size = 352·S + 948·O + 130` 残差 0 B。
+
+> 门禁 run（`_feasibility_gate/…`）只证明「10 个形态在本环境可构造」，
+> **不计入任何统计量**，`load_all` 硬排除该路径。
+
+详见 [`raw/confirmatory_20261030/RESULTS.md`](raw/confirmatory_20261030/RESULTS.md)、
+[`raw/confirmatory_20261030/FIT.md`](raw/confirmatory_20261030/FIT.md)。
+
+---
+
+## 3. 偏离（完整列表，均见 `DEVIATIONS.md`）
+
+| 编号 | 偏离 | 状态 |
+|---|---|---|
+| D1 | 测量环境 Testnet → WSL2 离线 Regtest | 已披露，不补跑 |
+| D2 | 交易构造 PCZT 四阶段 → `z_sendmany` | 已披露（PCZT Sapling 分支在 beta.3 不可用） |
+| D3 | 池：Sapling → Orchard/Ironwood（仅 PCZT 部分） | 已披露 |
+| D4 | 样本口径 N≥5 不同 note → 单账户自转 | 已披露 |
+| D5 | 统计口径：中位数 → 中位数 + 回归 + 自助法 | 已披露 |
+| D6 | M7 mismatch 标签与证据校验冲突（真实缺陷，会作废整 run） | **已修**，加 I9 守卫 |
+| D7 | **样本顺序：逐次随机化 → 形态块随机化** | **已登记 + 敏感性分析**，不重跑 |
+
+D7 是本轮最重要的偏离：预注册 §6 要求「50 次测量逐次随机、序列落盘」，执行器实为
+先打乱 10 个形态、再对每形态连续跑满 5 次。探索性诊断（`order_sensitivity.py`）：
+加入顺序项后 Δ 由 540.20 → 528.36 ms（**−2.2%**，仍远大于 0），`c_O` 由 101.52 →
+111.48 ms（**+9.8%**），顺序项约 +17.8 ms/块。
+**处置**：保留原始 50 轮与原始判据，`c_O` 改为区间引用，判定方向不变。
+
+---
+
+## 4. 证据链与清单
+
+| 清单 | 覆盖 | 校验方式 |
+|---|---|---|
+| `raw/MANIFEST.sha256` | **129 条，只含 git 跟踪文件** | `cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`（干净克隆 100% 通过） |
+| `raw/MANIFEST.local-excluded.sha256` | **14 条本地证据**（含 `wallet.db.sealed`、`run.log`、诊断 JSON），逐条写明排除理由 | 仅在本工作区有效，**不要求**克隆校验 |
+| `raw/MANIFEST.prereg.sha256` | 预注册双锚点：历史值 `0ced5b87…`（对照）+ 当前值（随 §14 更新） | `sha256sum -c` |
+| `raw/ENV_binaries_confirm_20261030.txt` | 二进制哈希 + **证据等级** | 见文件内复现命令 |
+
+环境锚点：快照 `z3_regtest_h32297_20261029_145710.tar.gz`
+`ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c`；
+恢复脚本 `2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11`；
+执行器 `41f3a75d10f3258b05f09d837ef218a6bc9ee2a6e1a39f332e4b89a797c36459`。
+
+**钱包数据库上传边界**：`wallet.db.sealed` 含支出密钥，**永不上传播仓库**；
+宁可让清单分成两份，也不为「一条命令全过」而放宽这个边界。
+
+---
+
+## 5. 依赖与环境
+
+| 项 | 值 |
+|---|---|
+| 分析环境（实测） | CPython **3.13.14** + NumPy **2.5.4**（`requirements-analysis.txt`） |
+| 执行器 / 自检 | **只用标准库**，不依赖 NumPy；CI 中两者分开跑，避免「环境缺失」与「代码问题」混淆 |
+| 节点 | zebrad **6.2.3** |
+| 钱包 | zallet **Beta**（`zallet-zaino` 后端） |
+| 运行平台 | WSL2 Ubuntu（Windows 11 宿主） |
+
+---
+
+## 6. 冻结时必须采用的表述（不得越界）
+
+| 事项 | 冻结表述 | 不得写成 |
+|---|---|---|
+| 随机化 | 存在**形态块随机化偏离**，已登记并完成敏感性分析 | 「无任何预注册偏离」 |
+| 二进制哈希 | **末轮进程级实测**（`/proc/PID/exe`），**前 49 轮基于文件一致性推定** | 「50 轮逐轮实测」 |
+| 环境可复现 | 干净克隆可复核**代码、分析、已提交证据** | 「完整实验环境完全可复现」 |
+
+第三点尤其要守住：干净克隆能验证的是「归档数据 → 报告数字」这一段（已由 CI 门禁），
+**不等于**能脱离外部快照、节点二进制与钱包环境独立重建全部实验现场。
+二进制锚定的边界同理——恢复脚本每轮 kill 并重启节点，故只对末轮进程有直接证据；
+其余 49 轮的依据是磁盘 mtime 停在 2026-10-29 09:32（早于 run 34.7 h）且哈希与
+pilot 采集逐位一致。
+
+---
+
+## 7. 已知局限与未完成项（明确列出）
+
+1. WSL2 **离线 Regtest**，不是 Testnet；全部结论不得外推至 Testnet 或主网。
+2. 每种形态 **n=5**，按冻结方案执行，不追加样本。
+3. 内存采样未覆盖 `zallet-zaino`，故**不给完整内存结论**。
+4. **无逐轮墙钟时间戳**、**无逐轮进程级二进制采样**——数据侧未记录，补采须重跑，不做。
+5. 预注册**未做「干净克隆重跑实验得到同样数据」**的验证；已验证的是报告层可复现。
+6. 交付物 4（PPT 修订）**未做**，不影响代码与实验材料冻结。
+7. 阶段四（可选，Builder 内部计时修正）**未做**，不在冻结范围。
+
+---
+
+## 8. 两条复现路径（等级不同，不可混说）
+
+```bash
+# A. 代码 / 分析 / 已提交证据 —— 干净克隆即可（已实测通过）
+git clone --branch experiments/e2e-testnet-tx-harness <repo> && cd <repo>/experiments/e2e_testnet_tx
+sha256sum -c raw/MANIFEST.sha256                       # 129/129
+python3 failure_class_selftest.py                      # 32/0/0（无 NumPy 时 31/0/1skip）
+python3 isolated_harness.py                            # 132/0
+python3 fit_sapling_e2e_model.py --raw-dir raw/confirmatory_20261030 --require-match --md /tmp/FIT.md
+python3 h_ab_bootstrap.py                              # H_A/H_B/H_C
+python3 order_sensitivity.py                           # D7 敏感性（探索性）
+
+# B. 重建实验现场 —— 需要外部资产，未验证
+#    快照 tar.gz + snapshot_restore.sh + zebrad/zallet-zaino 二进制 + WSL2 环境
+#    这些都在仓库之外；本仓库只记录其 SHA-256 与证据等级。
+```
+
+---
+
+## 9. 现场保留声明（冻结即停止改动）
+
+- **不删除**：174 个 `.bak` 目录（约 7 GB）、快照与恢复脚本、原始 `run.log`、
+  `MANIFEST.local-excluded.sha256` 所列本地证据。磁盘余量充足，清理属可选且非必要。
+- **不做**：为消除 PR 冲突而 rebase / 合并；不修改 50 轮原始数据；不删除历史材料。
+- **PR #24** 保持 open，标题与描述已更新为完成态，等待审阅。
+
+---
+
+## 10. 结束标记
+
+> 本线（Spend prove 耗时剖析 → MSM/并行 → 完整交易构建 → Regtest 流程 →
+> 预注册 50 轮确认性实验）到此结束。冻结后不再新增实验、指标、脚本或补测。
+> 后续工作转向 Halo2 实践与小论文选题。

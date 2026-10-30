@@ -1,5 +1,9 @@
 # 端到端 Testnet 真实 Sapling 转账 —— 环境搭建与功能验证 Runbook
 
+> **入口指引**：本目录的结论与状态以 [`FREEZE.md`](FREEZE.md)（2026-10-30 冻结说明）为准；
+> 偏离明细见 [`DEVIATIONS.md`](DEVIATIONS.md)；正式实验结果见
+> [`raw/confirmatory_20261030/RESULTS.md`](raw/confirmatory_20261030/RESULTS.md)。
+
 > ## ⚠️ 状态：本 Runbook 描述的原方案已被偏离，**不要照此执行**
 >
 > 本文档写于 2026-10-26，计划的是 **Testnet + docker z3 栈 + PCZT 四阶段**。
