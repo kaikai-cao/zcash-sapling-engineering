@@ -19,6 +19,7 @@ fit_sapling_e2e_model.py
 
 import argparse
 import csv
+import json
 import os
 import sys
 from glob import glob
@@ -40,17 +41,44 @@ def fnum(x):
         return None
 
 
+def usable_sample(rundir):
+    """该 run 能否作为正式样本（F7：中止的 run 不得作为样本）。
+
+    只认 meta.json 里**显式**的 `usable_as_sample`：
+      - 字段缺失 → 可用（兼容 F7 之前的 run，那些 run 都是正常跑完的）；
+      - 显式 False（异常中止）→ 排除；
+      - meta.json 存在但不可解析 → 保守排除并提示（宁可少一个样本，不可混入
+        记录不完整的 run）。
+    """
+    p = os.path.join(rundir, "meta.json")
+    if not os.path.isfile(p):
+        return True
+    try:
+        with open(p, encoding="utf-8") as f:
+            m = json.load(f)
+    except Exception as e:                              # noqa: BLE001
+        print("[load_all] meta.json 不可解析，保守排除 %s（%r）" % (rundir, e))
+        return False
+    return m.get("usable_as_sample", True) is not False
+
+
 def load_all(raw_dir, require_match=False):
     """收集所有批次的成功轮次。
 
     - 自动排除 `_feasibility_gate/` 子目录（确认性门禁数据，绝不与正式样本混合）。
+    - 自动排除**异常中止**的 run（F7，meta 中 `usable_as_sample=False`）。
     - require_match=True 时，仅保留 form_match 与 fee_match 均为真的轮次
       （用于确认性补测；对 pilot 旧数据无影响，因其无该列且默认关闭）。
     """
     rows = []
+    partial = []
     pat = os.path.join(raw_dir, "**", "rounds.csv")
     for path in sorted(glob(pat, recursive=True)):
         if "_feasibility_gate" in path:
+            continue
+        rundir = os.path.dirname(path)
+        if not usable_sample(rundir):
+            partial.append(os.path.basename(rundir))
             continue
         batch = os.path.basename(os.path.dirname(os.path.dirname(path)))
         with open(path, newline="", encoding="utf-8-sig") as f:
@@ -76,6 +104,9 @@ def load_all(raw_dir, require_match=False):
                          pipeline=t, size=fnum(r.get("tx_size")),
                          fee=fnum(r.get("fee_zat")))
                 )
+    if partial:
+        print("[load_all] 已排除异常中止的 run %d 个（记录不完整，不得作为样本）: %s"
+              % (len(partial), partial))
     return rows
 
 

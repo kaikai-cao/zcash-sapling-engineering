@@ -7,10 +7,11 @@ F5（失败分类 + 未截断证据）的离线自检 —— 不发交易、不�
   回放   R1–R4  历史 -8 原文回放 + 三条回归（同步超时 / opid 终态 / 轮询超时）
   不变量 I1–I8  params 与 timeout / 计时区间 / 成功口径 / COLUMNS / recipient_* /
                 dry-run 全等 / sidecar 行数 / attempt_id 双向
-  状态   S1–S8   传输异常=unknown / 被拒=not_submitted / sidecar 完整性 /
+  状态   S1–S11  传输异常=unknown / 被拒=not_submitted / sidecar 完整性 /
                 超长原文不截断 / 写入失败 fail-closed / replaces 留痕 /
                 main() 端到端（流程级，超出 §6 编号 1 条）/
-                提交状态不明单列（审阅补修，超出 §6 编号 1 条）
+                提交状态不明单列（审阅补修，超出 §6 编号 1 条）/
+                F7 中止落盘 3 条（S9/S10/S11，超出 §6 编号，用户授权实施）
 
 运行：python3 failure_class_selftest.py
 退出码非 0 表示存在失败。
@@ -41,6 +42,14 @@ try:
 except Exception as _e:                         # pragma: no cover
     RPS = None
     HAVE_RPS, RPS_ERR = False, "%s: %s" % (type(_e).__name__, _e)
+
+# S11 需要 fit_sapling_e2e_model（依赖 numpy）；缺 numpy 时 SKIP 而非 FAIL
+try:
+    import fit_sapling_e2e_model as FM          # noqa: E402
+    HAVE_FM, FM_ERR = True, ""
+except Exception as _e:                         # pragma: no cover
+    FM = None
+    HAVE_FM, FM_ERR = False, "%s: %s" % (type(_e).__name__, _e)
 
 UA = "uregtest1" + "q" * 100
 AMOUNTS = [{"address": "uregtest1abc", "amount": 1.0}]
@@ -619,6 +628,146 @@ def s8():
     assert "提交状态不明" not in n4, n4
 
 
+# ===========================================================================
+def _f7_case(first_fail_at, csv_broken=False):
+    """跑一次 stub main()：前 2 轮成功发交易，随后 z_sendmany 被拒。
+
+    `first_fail_at` = 第几次 sidecar 写入时注入 OSError（1 起）。
+    `csv_broken`   = 连 rounds.csv 补写也一并失败（测「落盘失败不掩盖原异常」）。
+    返回 (run_main 结果串, meta, rows, errors.jsonl 记录)——产物在临时目录内读回，
+    目录随后被清理，故不返回路径。
+    """
+    rps = RPS
+    tmp = tempfile.mkdtemp(prefix="f7_")
+    base = os.path.join(tmp, "out")
+    orig = (cb.preflight, cb.do_one_attempt, cb._sidecar_open_append, cb.write_rounds_csv)
+    rps.patch_common()
+
+    n = {"c": 0}
+
+    def fake(idx, S, O, policy, mine_blocks, dry_run, restore, ah, asm, ahm):
+        n["c"] += 1
+        if n["c"] <= 2:                     # 前两轮真实「发交易成功」
+            return (rps.mkrow(idx, S, O, False, txid="tx%d" % idx, fm=1, fem=1),
+                    {"submit": 10.0, "pipeline": 20.0, "mine": 1.0, "sync": 1.0,
+                     "total": 32.0})
+        raise cb.RpcCallError("stage=submit RPC 拒绝: code=-8 message=duplicate",
+                              stage="submit", raw_error={"code": -8, "message": "duplicate"},
+                              z_sendmany_invoked=True, submit_state="not_submitted")
+
+    w = {"c": 0}
+
+    def failing_open():
+        w["c"] += 1
+        if w["c"] >= first_fail_at:
+            raise OSError(28, "No space left on device")
+        return orig[2]()
+
+    def failing_write(rundir, rows):
+        raise OSError(28, "No space left on device")
+
+    cb._sidecar_open_append = failing_open
+    if csv_broken:
+        cb.write_rounds_csv = failing_write
+    try:
+        r = rps.run_main(["--mode", "gate", "--outdir-base", base], fake)
+        rd = rps.find_rundir(os.path.join(base, "_feasibility_gate"))
+        rows = []
+        p = os.path.join(rd, "rounds.csv")
+        if os.path.isfile(p):
+            with open(p, newline="", encoding="utf-8") as f:
+                d = csv.DictReader(f)
+                assert d.fieldnames == cb.COLUMNS, "列结构变化: %s" % d.fieldnames
+                rows = list(d)
+        sc = os.path.join(rd, "errors.jsonl")
+        recs = read_jsonl(sc) if os.path.isfile(sc) else []
+        # meta 必须在 finally 清理临时目录之前读回
+        meta = RPS.read_meta(rd)
+        return r, meta, rows, recs
+    finally:
+        cb._sidecar_open_append = orig[2]
+        cb.write_rounds_csv = orig[3]
+        cb.do_one_attempt, cb.preflight = orig[1], orig[0]
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def s9():
+    """F7 故障注入：sidecar 写入失败中止时，此前**已发送成功**的尝试不得丢记录。
+
+    两种时序都要成立：
+      (a) 首个 sidecar 写入即失败（2 条成功之后）→ CSV 必须保住 2 条 txid；
+      (b) 第 3 次 sidecar 写入失败（2 成功 + 2 失败之后）→ CSV 必须保住 2 条 txid
+          与 2 条失败行，且已写入的 sidecar 与已落盘的失败行仍然对得上。
+    """
+    # (a) 第一次写 sidecar 就失败
+    r, m, rows, recs = _f7_case(first_fail_at=1)
+    assert str(r).startswith("SystemExit"), "原始异常必须继续传播：%r" % (r,)
+    assert "sidecar 写入失败" in str(r), "原始异常信息被改写：%r" % (r,)
+    assert len(rows) == 2, "中止前的 2 条成功尝试必须留记录，实际 %d 条" % len(rows)
+    assert [x["txid"] for x in rows] == ["tx1", "tx2"], [x["txid"] for x in rows]
+    assert recs == [], "第 1 次写入即失败，不应有 sidecar 记录"
+    assert m["meta_stage"] == "run_aborted", m.get("meta_stage")
+    assert m["usable_as_sample"] is False and m["partial"] is True, m
+    assert m["records_complete"] is True, m
+    assert "sidecar 写入失败" in (m.get("abort_exception") or ""), m.get("abort_exception")
+
+    # (b) 第 3 次写 sidecar 时失败
+    r2, m2, rows2, recs2 = _f7_case(first_fail_at=3)
+    assert str(r2).startswith("SystemExit"), r2
+    assert len(rows2) == 4, "应保住 2 成功 + 2 失败共 4 行，实际 %d" % len(rows2)
+    assert [x["txid"] for x in rows2 if x["txid"]] == ["tx1", "tx2"], \
+        [x["txid"] for x in rows2]
+    assert sum(1 for x in rows2 if x["failure_class"]) == 2, rows2
+    assert len(recs2) == 2, "sidecar 应恰好有 2 条（第 3 条写入失败）：%d" % len(recs2)
+    assert m2["meta_stage"] == "run_aborted" and m2["usable_as_sample"] is False, m2
+    assert m2["abort_rows"] == 4 and m2["records_complete"] is True, m2
+    run_id = recs2[0]["run_id"]
+    assert {x["attempt_id"] for x in recs2} == {"%s:3" % run_id, "%s:4" % run_id}, recs2
+    # 已落盘的失败行与已写入的 sidecar 仍一一对应（局部自洽）
+    fails_csv = {"%s:%d" % (run_id, int(x["round"])) for x in rows2 if x["failure_class"]}
+    assert fails_csv == {x["attempt_id"] for x in recs2}, (fails_csv, recs2)
+
+
+def s10():
+    """F7：连 CSV 补写都失败时，**不得覆盖原始异常**，且须在 meta 留下落盘失败痕迹。"""
+    r, m, rows, _ = _f7_case(first_fail_at=1, csv_broken=True)
+    assert str(r).startswith("SystemExit"), r
+    assert "sidecar 写入失败" in str(r), "原始异常被落盘异常覆盖：%r" % (r,)
+    assert rows == [], "CSV 补写失败时不应有 rounds.csv"
+    assert m["usable_as_sample"] is False and m["partial"] is True, m
+    assert m["records_complete"] is False, m
+    assert "No space left" in (m.get("csv_flush_error") or ""), m.get("csv_flush_error")
+
+
+def s11():
+    """F7 下游：`usable_as_sample=False` 的 run 不进入拟合输入；无 meta 的旧 run 不受影响。"""
+    fm = FM
+
+    tmp = tempfile.mkdtemp(prefix="f7_s11_")
+    try:
+        def mk(d, meta):
+            os.makedirs(d)
+            if meta is not None:
+                with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
+                    json.dump(meta, f)
+            with open(os.path.join(d, "rounds.csv"), "w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=cb.COLUMNS, extrasaction="ignore")
+                w.writeheader()
+                w.writerow({"round": 1, "target_spend": 2, "target_output": 2,
+                            "sapling_spends": 2, "sapling_outputs": 2,
+                            "sapling_proofs": 4, "pipeline": 1234.0, "txid": "t",
+                            "form_match": 1, "fee_match": 1})
+        mk(os.path.join(tmp, "run_ok"), {"meta_stage": "run_end"})
+        mk(os.path.join(tmp, "run_aborted"),
+           {"meta_stage": "run_aborted", "partial": True, "usable_as_sample": False})
+        rows = fm.load_all(tmp)
+        assert len(rows) == 1, "中止的 run 必须被排除，实际读到 %d 行" % len(rows)
+        mk(os.path.join(tmp, "run_old"), None)          # 兼容性：无 meta.json 的旧 run
+        assert len(fm.load_all(tmp)) == 2, "无 meta 的旧 run 不应被排除"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     print("=== C 组：code / 措辞映射 ===")
     for n, f in [("C1 -4 资金不足（经提案）", c1), ("C2 -6 资金不足", c2),
@@ -652,6 +801,12 @@ def main():
     check("S5 写入失败 fail-closed", s5)
     check("S6 replaces 留痕 + 非法值拒绝", s6)
     check("S8 提交状态不明单列（超时不得写成未产生 txid）", s8)
+    check_opt("S9 F7 中止时已完成尝试仍落盘（含 txid）", s9, HAVE_RPS,
+              "缺少 reporting_patch_selftest.py（%s）" % RPS_ERR)
+    check_opt("S10 F7 落盘失败不覆盖原始异常", s10, HAVE_RPS,
+              "缺少 reporting_patch_selftest.py（%s）" % RPS_ERR)
+    check_opt("S11 F7 中止 run 被排除出拟合输入", s11, HAVE_FM,
+              "缺少 numpy / fit_sapling_e2e_model（%s）" % FM_ERR)
     check_opt("S7 main() 端到端：sidecar 与 CSV 自洽", s7, HAVE_RPS,
               "缺少 reporting_patch_selftest.py（%s）" % RPS_ERR)
 

@@ -1257,6 +1257,73 @@ def write_meta_json(rundir, meta):
     os.replace(tmp, path)
 
 
+def write_rounds_csv(rundir, rows):
+    """把本轮全部尝试写入 rounds.csv（COLUMNS 36 列，列序冻结）。
+
+    抽成独立函数只为让「正常结束」与「异常中止」两条路径复用**同一份写法**（F7）：
+    原先落盘写在主循环末尾，一旦中途 SystemExit，此前已真实发送的成功尝试在
+    run 目录内就没有任何记录。列名、列序、`extrasaction` 均未改变。
+    """
+    path = os.path.join(rundir, "rounds.csv")
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=COLUMNS, extrasaction="ignore")
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+    return path
+
+
+def mark_run_aborted(rundir, rows, exc, meta, records_flushed):
+    """异常中止时的**尽力落盘 + 标记不完整**（F7）；本函数绝不抛异常。
+
+    - `records_flushed=False`：CSV 此前从未写出，补写已有 `rows`——只写确实发生过的
+      尝试，不补造缺的轮次、不改写任何字段；
+    - `records_flushed=True`：CSV 已完整写出，只补标记，不重写数据。
+
+    两种情况都在 meta 打上 `meta_stage=run_aborted` / `partial=True` /
+    `usable_as_sample=False`：**中止的 run 不得作为正式实验样本**
+    （`fit_sapling_e2e_model.load_all` 据此跳过）。
+
+    落盘失败只记在 `csv_flush_error`，**绝不覆盖原始异常**——原始异常由调用方继续
+    向上传播，本函数只做旁观记录。
+    """
+    try:
+        info = {"meta_stage": "run_aborted",
+                "partial": True,
+                "usable_as_sample": False,
+                "abort_exception": ("%s: %s" % (type(exc).__name__, exc)) if exc else None,
+                "abort_rows": len(rows),
+                "records_complete": bool(records_flushed),
+                "abort_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+        csv_err = None
+        if not records_flushed:
+            try:
+                write_rounds_csv(rundir, rows)
+                info["records_complete"] = True
+            except Exception as e:                      # noqa: BLE001
+                csv_err = "%s: %s" % (type(e).__name__, e)
+                info["csv_flush_error"] = csv_err
+        if meta is not None:
+            try:
+                meta.update(info)
+                write_meta_json(rundir, meta)
+            except Exception as e:                      # noqa: BLE001
+                print("[abort] 中止标记写入 meta 失败（原始异常优先）: %r" % (e,))
+        print("[abort] 实验异常中止：已保留 %d 条尝试记录，CSV 完整=%s"
+              % (len(rows), info["records_complete"]))
+        if csv_err:
+            print("[abort] CSV 补写失败: %s" % csv_err)
+        print("[abort] meta_stage=run_aborted / usable_as_sample=False —— "
+              "中止的 run 不得作为正式实验样本")
+        return info
+    except BaseException as e:                          # noqa: BLE001
+        try:
+            print("[abort] 中止标记流程自身异常（已忽略，原始异常优先）: %r" % (e,))
+        except BaseException:                           # noqa: BLE001
+            pass
+        return None
+
+
 def verify_run_artifacts(rundir):
     """校验 sidecar 与主 CSV 的一致性（§4.9 条件 2/3），不满足即 SystemExit。
 
@@ -1424,6 +1491,8 @@ def main():
     attempts = {}
     successes = {}        # 有效成功（form_match & fee_match & txid）
     idx = 0
+    records_flushed = False   # F7：rounds.csv 是否已写出（区分「记录完整」与「中止」）
+    abort_exc = None
     try:
         if a.mode == "gate":
             # 门禁：每种形态 1 次探测；失败/不可行如实记录，不重试
@@ -1492,12 +1561,9 @@ def main():
                 if infeasible:
                     print("  [!] 形态 (S=%d,O=%d) 判定为不可行/状态异常" % (S, O))
 
-        # ---- 落盘 rounds.csv ----
-        with open(os.path.join(rundir, "rounds.csv"), "w", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=COLUMNS, extrasaction="ignore")
-            w.writeheader()
-            for r in rows:
-                w.writerow(r)
+        # ---- 落盘 rounds.csv（F7：抽成函数，异常路径复用同一写法）----
+        write_rounds_csv(rundir, rows)
+        records_flushed = True
 
         # ---- 形式聚合 ----
         groups = {}
@@ -1566,7 +1632,14 @@ def main():
             short = [k for k in form_order if successes.get(k, 0) < a.target_success]
             if short:
                 print("[!] 未达目标有效成功数的形态: %s（可能需在预注册 §4.2 记录为样本不足）" % short)
+    except BaseException as e:
+        # F7：异常（含 sidecar 写入失败触发的 SystemExit）一律不吞，只记下来交给
+        # finally 尽力落盘；原始异常继续向上传播，不被落盘失败覆盖。
+        abort_exc = e
+        raise
     finally:
+        if abort_exc is not None and meta.get("meta_stage") != "run_end":
+            mark_run_aborted(rundir, rows, abort_exc, meta, records_flushed)
         sampler.stop_evt.set()
         sampler.join(timeout=5)
 
