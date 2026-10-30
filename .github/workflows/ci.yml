@@ -25,7 +25,12 @@ name: ci
 
 on:
   push:
-    branches: [main, "experiment/**", "analysis/**", "profiling/**"]
+    # 2026-10-30: 补上 "experiments/**"。此前的模式是 "experiment/**"（单数），
+    # 而实际长期实验分支叫 experiments/e2e-testnet-tx-harness，**从未匹配上**——
+    # 结果就是该分支的每次 push 都不跑 CI，新增的 e2e-analysis job 形同虚设。
+    # 保留单数模式以兼容历史分支命名。
+    branches: [main, "experiment/**", "experiments/**",
+               "analysis/**", "profiling/**"]
   pull_request:
 
 env:
