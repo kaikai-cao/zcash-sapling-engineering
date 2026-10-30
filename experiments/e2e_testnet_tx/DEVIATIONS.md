@@ -125,7 +125,7 @@ PCZT 在 Sapling 上跑不通，于是 PCZT 的四阶段数据取自 Orchard/Iro
 | 3 | G4 裁决文件 fail-closed 加固（拒重复键/非法值） | JSON 末值覆盖会把 `accepted` 翻成 `unaccepted` 而误放行 | A1b 单元 + B11/B12 |
 | 4 | `init_sidecar` 前移，消除 foreign-key 诊断误报 | loader 早于 sidecar 初始化，诊断比对陈旧 run_id | stderr 诊断行复核 |
 | 5 | **修复 M7 证据校验缺陷** | 见 4.2 | B15/B16 + selftest I9 |
-| 6 | `MANIFEST.sha256` 重新生成 + 预注册独立校验锚点 | 旧清单滞后于代码（`fit_sapling_e2e_model.py` 失配），且未覆盖执行器与预注册 | `sha256sum -c` 129/129 通过 |
+| 6 | `MANIFEST.sha256` 重新生成 + 预注册独立校验锚点 | 旧清单滞后于代码（`fit_sapling_e2e_model.py` 失配），且未覆盖执行器与预注册 | `sha256sum -c` 全部通过（条数随后续提交增长，现行口径见 §7.1：130 条 git 跟踪 + 14 条本地排除） |
 
 ### 4.2 D6 · M7 结果不匹配标签与证据校验冲突（真实缺陷，会作废整 run）
 

@@ -84,7 +84,7 @@ D7 是本轮最重要的偏离：预注册 §6 要求「50 次测量逐次随机
 
 | 清单 | 覆盖 | 校验方式 |
 |---|---|---|
-| `raw/MANIFEST.sha256` | **129 条，只含 git 跟踪文件** | `cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`（干净克隆 100% 通过） |
+| `raw/MANIFEST.sha256` | **130 条，只含 git 跟踪文件** | `cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`（干净克隆 100% 通过） |
 | `raw/MANIFEST.local-excluded.sha256` | **14 条本地证据**（含 `wallet.db.sealed`、`run.log`、诊断 JSON），逐条写明排除理由 | 仅在本工作区有效，**不要求**克隆校验 |
 | `raw/MANIFEST.prereg.sha256` | 预注册双锚点：历史值 `0ced5b87…`（对照）+ 当前值（随 §14 更新） | `sha256sum -c` |
 | `raw/ENV_binaries_confirm_20261030.txt` | 二进制哈希 + **证据等级** | 见文件内复现命令 |
@@ -94,7 +94,7 @@ D7 是本轮最重要的偏离：预注册 §6 要求「50 次测量逐次随机
 恢复脚本 `2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11`；
 执行器 `41f3a75d10f3258b05f09d837ef218a6bc9ee2a6e1a39f332e4b89a797c36459`。
 
-**钱包数据库上传边界**：`wallet.db.sealed` 含支出密钥，**永不上传播仓库**；
+**钱包数据库上传边界**：`wallet.db.sealed` 含支出密钥，**永不上传到仓库**；
 宁可让清单分成两份，也不为「一条命令全过」而放宽这个边界。
 
 ---
@@ -144,7 +144,7 @@ pilot 采集逐位一致。
 ```bash
 # A. 代码 / 分析 / 已提交证据 —— 干净克隆即可（已实测通过）
 git clone --branch experiments/e2e-testnet-tx-harness <repo> && cd <repo>/experiments/e2e_testnet_tx
-sha256sum -c raw/MANIFEST.sha256                       # 129/129
+sha256sum -c raw/MANIFEST.sha256                       # 130/130
 python3 failure_class_selftest.py                      # 32/0/0（无 NumPy 时 31/0/1skip）
 python3 isolated_harness.py                            # 132/0
 python3 fit_sapling_e2e_model.py --raw-dir raw/confirmatory_20261030 --require-match --md /tmp/FIT.md
