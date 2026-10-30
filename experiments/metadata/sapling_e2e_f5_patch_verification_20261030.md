@@ -239,3 +239,92 @@ A5 原本 `assert os.path.isdir(root)`，干净检出时**硬失败**——把�
 ## A10. 仍未做
 
 真实 `--dry-run`（会恢复快照并启动服务）、新 gate、预注册修改、历史数据覆盖。这三项继续等你单独授权。
+
+---
+
+# 附二：F7 最小修复（用户授权后实施，2026-10-30 15:0x）
+
+> 授权范围（原话要点）：抽出落盘函数；正常路径行为与结果不变；异常退出用 try/finally
+> 尽可能落盘已完成尝试；不改交易逻辑/分类规则/sidecar 格式/36 列/计时区间/实验矩阵；
+> 落盘失败不得覆盖原始异常并须标记产物不完整；加故障注入测试；明确中止 run 不得作为
+> 正式样本。**本轮仍未发交易、未启动 gate、未改预注册、未碰历史 run 目录。**
+
+## B1. 缺陷与实测证据
+
+`rounds.csv` 原先只在主循环末尾一次性写出。sidecar 写入失败触发 `SystemExit` 时
+（磁盘满 / 权限异常），**此前已真实发送并拿到 txid 的成功尝试在 run 目录内没有任何记录**
+——与 G2「每次尝试可追溯」冲突。实测（stub 跑完整 `main()`，第 3 次 sidecar 写入注入
+`OSError(28)`）：目录只剩 `errors.jsonl` + `meta.json`，2 笔已发送交易的 txid 只存在于
+钱包与链上。
+
+## B2. 改动（四处：两处新增、一处 `main`、一处下游守卫）
+
+| 位置 | 改动 | 性质 |
+|---|---|---|
+| 新增 `write_rounds_csv(rundir, rows)` | 把原内联块原样抽出，字段/列序/`extrasaction` 不变 | 纯抽取 |
+| 新增 `mark_run_aborted(...)` | 尽力落盘 + 打标记；**内部全程吞异常**，绝不掩盖原始异常 | 新增（只在异常路径被调用） |
+| `main()` | `records_flushed` 标志；`except BaseException` 记录后原样 `raise`；`finally` 中若 `meta_stage != run_end` 则调 `mark_run_aborted` | 仅异常路径 |
+| `fit_sapling_e2e_model.load_all()` | 新增 `usable_sample()` 守卫 | 下游强制「中止 run 不作样本」 |
+
+`confirmatory_bench.py` 的 diff 共 **4 个 hunk**：1 个新增两个函数（`@@ -1257`）、
+3 个落在 `main()`（标志初始化、落盘替换、`except`+`finally`）。**没有第五处。**所有 `except` 分支（含 `except Exception`）都不吞 `SystemExit`
+（它是 `BaseException`），因此 sidecar 写入失败仍会立即中止实验。
+
+## B3. 正常路径等价性（这是本轮最关键的验证）
+
+- **落盘字节级等价**：同一份 rows 分别用 HEAD 的内联块与新函数写出，两文件**逐字节相同**
+  （803 字节全等，`EXTRA_KEY` 均被 `extrasaction="ignore"` 丢弃）。
+- **AST 逐函数比对**（对 `976d1e9`）：新增 2 个函数、删除 0 个、修改 1 个（`main`）。
+  禁改区全同：`send_frozen` **逐字节一致**（params 与计时五处语句命中数 1→1）、
+  `_classify`/`_map_code`/`_text_fallback`/`_emit_failure`/`fail_row`/`verify_run_artifacts`/
+  `do_one_attempt`/`restore_snapshot`/`prepare_recipients`/`_summary_note` 全部未变。
+- **常量**：`COLUMNS`（36 列）、`MATRIX`/形态表、`SNAPSHOT_SHA256`、
+  `RESTORE_SCRIPT_SHA256`、`SNAPSHOT_TARGET_HEIGHT` 全部相等。
+
+## B4. 中止时的行为（S9/S10 实测，非读代码）
+
+| 时序 | CSV | sidecar | meta |
+|---|---|---|---|
+| 2 成功 → 首次 sidecar 写入失败 | 2 行，`tx1`/`tx2` 均在 | 0 行 | `run_aborted` / `partial` / `usable_as_sample=False` / `records_complete=True` |
+| 2 成功 + 2 失败 → 第 3 次写入失败 | 4 行（2 成功 + 2 失败） | 2 行，`attempt_id` = `:<3>`、`:<4>` | 同上，`abort_rows=4` |
+| 2 成功 → 写入失败且 **CSV 补写也失败** | 不存在 | 0 行 | 追加 `csv_flush_error`，`records_complete=False`，**对外异常文本仍只含 sidecar 失败原因** |
+
+第三种情形专门验证「落盘失败不覆盖原始异常」：`run_main` 返回的仍是
+`SystemExit: [fatal] sidecar 写入失败…`，磁盘错误只出现在 `meta.csv_flush_error` 里。
+
+**异常路径不写 `gate_summary.csv`**：证据不全时产出汇总最容易被误读（与既有的
+「拒绝写出可被误读的汇总」一致），且该表可由 `rounds.csv` 重算。
+
+## B5. 「中止的 run 不得作为正式样本」已在代码里强制
+
+`load_all()` 逐个 run 目录读 `meta.json`：显式 `usable_as_sample=False` → 跳过并打印；
+无 `meta.json` 的旧 run → 视为可用（**向后兼容，历史 pilot 数据不受影响**）；
+`meta.json` 存在但不可解析 → 保守排除。S11 同时验证这三条。
+
+## B6. 自检与干净克隆
+
+| 套件 | 本地（有 numpy） | 干净克隆（有 numpy） | 无 numpy |
+|---|---|---|---|
+| `failure_class_selftest` | **31/31** | **31/31，0 跳过** | 30 通过 / 1 跳过（S11 需 numpy） |
+| `recipient_derivation_selftest` | 30/30 | 30/30 | 26 通过 / 4 跳过（A 组需 numpy） |
+| `reporting_patch_selftest` | 全通过 | 全通过 | 全通过 |
+
+干净克隆：`git clone --single-branch`（只含已跟踪文件，0 项未跟踪）后直接跑，无需任何
+本地残留。新增用例 S9（两种时序）/ S10（双重失败）/ S11（拟合侧排除），共 3 条，均在
+用户授权范围内。
+
+## B7. 已知限制（记录，不再扩展）
+
+1. **F7 只覆盖可捕获的异常路径**：断电、OOM killer、进程被 SIGKILL 时 `finally` 不执行，
+   仍可能丢记录。此类情形须靠链上钱包状态反查，不属本轮可解范围。
+2. **中止 run 的 `verify_run_artifacts` 会判不一致**（sidecar 多、CSV 少）——这是**正确**
+   的拒绝行为，识别中止 run 一律靠 `meta_stage` / `usable_as_sample`，不要用
+   `verify_run_artifacts` 去判「记录完整」。
+3. **中止 run 的 `gate_summary.csv` 缺失**，汇总须从 `rounds.csv` 重算。
+4. 本轮**未执行真实 `--dry-run`**（涉及快照恢复与服务重启），异常路径行为全部由 stub
+   注入验证——真实环境下的磁盘错误未被实际触发过。
+
+## B8. 提交
+
+`a0ecbda`：`confirmatory_bench.py`（+85/−8）、`failure_class_selftest.py`（+159）、
+`fit_sapling_e2e_model.py`（+31）。PR #24 保持 open，未合并，未进 `origin/main`。
