@@ -1,0 +1,16 @@
+# 门禁末态封存目录：只入库可公开的取证说明与地址清单。
+#
+# wallet.db.sealed 是 regtest 钱包库的字节副本，含支出密钥（即便测试网亦不得入库）；
+# filelist.tsv / sha256.txt 仅描述被排除的库文件与 .cookie 哈希，脱离库本体无独立价值，
+# 故一并排除。历史 gate 的 run 产物（meta/rounds/gate_summary/memory_timeseries）
+# 按 raw/pczt_cold_v1 的既有惯例入库，run.log 不入库。
+#
+# 注意：含 / 的模式相对本文件所在目录锚定，故必须用 **/ 前缀才能匹配嵌套子目录。
+**/laststate_seal_*/*
+!**/laststate_seal_*/README.md
+!**/laststate_seal_*/addresses_before.tsv
+**/run_*/run.log
+
+# _note_scan_diag 是 live-node 诊断（a_prime_selftest.py 依赖 z/height，需运行中的节点）
+# 的产物；产出脚本本身未入仓，孤立 JSON 不可复现，故暂不纳入版本库。
+_note_scan_diag/

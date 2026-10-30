@@ -1,0 +1,11 @@
+round,target_spend,target_output,actual_spend,actual_output,form_match,fee_match,policy,txid,opid,submit,pipeline,mine,sync,total,sapling_spends,sapling_outputs,sapling_proofs,tx_size,fee_zat,expected_fee_zat,planned_amount_zat,recipients,restored_height,restored_note_count,snapshot_sha256,restore_script_sha256,dry_run,failure_class,error
+1,1,2,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+2,2,2,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+3,4,2,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+4,7,2,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+5,10,2,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+6,17,2,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+7,1,9,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+8,3,2,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+9,3,3,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
+10,4,3,,,,,,,,,,,,,,,,,,,,,,,,,,state_verification_failed,无法读取可花费 Note 清单（RPC 失败），停止以免未知状态
