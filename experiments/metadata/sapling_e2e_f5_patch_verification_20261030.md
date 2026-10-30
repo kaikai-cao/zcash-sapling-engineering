@@ -139,3 +139,102 @@ note 对照（同一批行）：
 1. 新正式 gate：须先恢复冻结快照并重新核验六项（快照 SHA、脚本 SHA、addresses 38、notes 36、余额 11999980000、高度 32297），且新 run 独立目录、不覆盖 `run_20261030_110042/`。
 2. 决定是否为三个测试辅助文件单独开一个 docs/test 提交。
 3. T3（`failure_class` 中 `opid_timeout` 是否改名）仍未裁定；当前实现按 §6.4 R3 取 `opid_timeout`，若要保留旧名只需改 `CLS_OPID_TIMEOUT` 一处常量。
+
+---
+
+# 附：提交级审查与收尾（2026-10-30 15:0x，审阅后补）
+
+> 本节回应「T1 实现基本完成、进入验证收尾」这一判断。审查对象为 `97769be → 3eac226 → 9494bb5`
+> 及其后的收尾提交。**本轮仍未发交易、未启动 gate、未改预注册、未覆盖历史 run 目录。**
+
+## A1. 三个提交的实际边界（对照冻结稿，无越界）
+
+| 提交 | 内容 | 与冻结稿 §15 对照 |
+|---|---|---|
+| `97769be` | `confirmatory_bench.py` +452/−29；新增 `failure_class_selftest.py` | 全部落在 §15 清单内；禁止修改区（`pick_amount_zat`/`form_match`/`fee_match`/手续费公式/`note_inventory_detailed`/`restore_snapshot`/`prepare_recipients`/`account_unified_addresses`/`derive_sapling_recipient`）AST 逐函数比对全同 |
+| `3eac226` | 验证记录 138 行 | 纯文档 |
+| `9494bb5` | 跟踪测试 T9 加 `init_sidecar` + 3 条 sidecar 断言 | §15.2 未列此项，但属**必要连带**：T9 直接调 `run_one()`，F5 后失败路径必写 sidecar，不初始化则该测试在 HEAD 上直接崩 |
+
+`COLUMNS` 36 列全等、计时五处语句逐字节不变、`z_sendmany` params 未变——三项禁改均通过 AST 与子串双重比对。
+
+## A2. 干净检出：首检不通过，修复后全绿
+
+从本地仓库 `git clone --single-branch` 到临时目录（只含已跟踪文件）后复跑，**首检结果推翻了我上一轮「27/27」的可复现性**：
+
+| 套件 | 干净检出（修复前） | 干净检出（修复后） |
+|---|---|---|
+| `failure_class_selftest` | 23 通过 / 0 失败 / **4 跳过**（R1、I3、I6、S7） | **28/28，0 跳过** |
+| `recipient_derivation_selftest` | 29 通过 / **1 硬失败**（A5） | **30/30** |
+| `reporting_patch_selftest` | 文件不在仓内，无法运行 | 全部通过（有/无 numpy 皆可） |
+
+根因两条，均已修：
+
+1. **`reporting_patch_selftest.py` 从未入仓**。它的被测对象（F1 报告层）本身在 PR 里，测试却不在，导致 S7 永远走 SKIP、F1 的「dry-run 下地址失败不被掩盖」没有任何可执行载体。已入仓（`6cd58de`）。
+2. **历史 `raw/confirmatory_20261030/` 未入仓**，而 R1/I3/I6/A5 是**回放真实证据**的用例。已在 `e910789` 按 `raw/pczt_cold_v1` 的既有惯例入库。
+
+## A3. 数据入仓的边界：`wallet.db.sealed` 已排除
+
+| 文件 | 处置 | 理由 |
+|---|---|---|
+| `run_*/{meta.json,rounds.csv,gate_summary.csv,memory_timeseries.csv}` | 入库 | 与 `pczt_cold_v1` 同惯例；是 R1/I3/I6 的输入 |
+| `run_*/run.log` | 不入库 | 同惯例 |
+| `laststate_seal_*/README.md`、`addresses_before.tsv` | 入库 | 封存说明与 39 行地址清单，是 F4「派生游标不受快照约束」的取证依据 |
+| `laststate_seal_*/wallet.db.sealed` | **禁止入库** | regtest 钱包库字节副本，**含支出密钥** |
+| `laststate_seal_*/{filelist.tsv,sha256.txt}` | 不入库 | 仅描述被排除的库与 `.cookie` 哈希，脱离库本体无价值 |
+| `_note_scan_diag/*.json` | 不入库 | live-node 诊断产物，脚本未入仓、不可复现 |
+
+排除规则写在 `raw/confirmatory_20261030/.gitignore`。**踩坑记录**：首版写 `laststate_seal_*/*`、`run_*/run.log` 完全没生效——含 `/` 的模式相对 `.gitignore` 所在目录**锚定**，匹配不到 `_feasibility_gate/` 下的嵌套路径，必须加 `**/` 前缀。入库前已用 `git diff --cached --name-only` 逐项确认无 `wallet.db`。
+
+## A4. 两套缺失约定已统一（A5）
+
+A5 原本 `assert os.path.isdir(root)`，干净检出时**硬失败**——把「数据不在」误报成「实现有错」，与 R1/I3/I6 的 SKIP 约定不一致。已加 `check_hist(name, fn, need)`，缺失时 SKIP 并打印原因；尾部汇总改为逐条打印跳过原因（原先一律提示「需要 numpy」，而跳过可能因缺数据）。`6162d65`。
+
+## A5. T3 裁定：保留 `opid_timeout`，不改名
+
+按你给的判据（不影响分类正确性/统计口径/报告解释即可保留）：
+
+- **不影响分类正确性**：`stage=opid_timeout` 是第 1 层判别键，与名称字符串无关；
+- **不影响统计口径**：`tx_success`/`form_match`/`fee_match` 不读 `failure_class`；
+- **报告解释的风险已消除**：真正的误读不在词本身，而在汇总文案（见 A6）。`_summary_note` 现在把该类写成「提交状态不明…请求可能已被受理」，S8 守护；
+- **改名有代价无收益**：会让本常量与冻结稿 §4.4 / §6.4 R3 的表述脱节。
+
+语义已在 `CLS_OPID_TIMEOUT` 处固化：**「客户端轮询窗口耗尽，结果未知」，不是服务端超时，也不是发送失败**。
+
+## A6. 审查发现的同族缺陷（F6，已修 `391789a`）
+
+`opid_timeout` 与 `rpc_transport_error` 此前落在 `other` 桶，note 写成：
+
+> 交易构造/发送阶段失败 1 条（opid_timeout），未产生 txid
+
+两处均不成立：`opid_timeout` 已拿到 opid（`submit_state=submitted`）、submit 阶段的传输异常为 `unknown`，交易**可能已上链**。「未产生 txid」是无法由记录支撑的断言，且与 G4（提交状态不明不得重发）直接冲突——与 F1/F5 完全同源：默认标签替实验下了没有证据支撑的结论。
+
+修复：新增 `CLS_UNKNOWN_STATE = {opid_timeout, rpc_transport_error}`，note 单列「提交状态不明 N 条（…）」。判据用 `failure_class` 而非 `rows.submit_state`——36 列已冻结，sidecar 的 `submit_state` 不在主表内，汇总函数读不到。新增 **S8** 四条断言（纯超时/纯传输/混合分段/其它类别不被误并）。自检 28/28；历史 7 个成功形态 note 不变。
+
+## A7. fail-closed 的实测（不是读代码）
+
+用 stub 跑完整 `main()`（10 形态），第 3 次 sidecar 写入注入 `OSError(28, No space left on device)`：
+
+| 观测 | 结果 |
+|---|---|
+| 进程行为 | `SystemExit: [fatal] sidecar 写入失败，拒绝继续实验` —— 实验立即中止，无后续尝试 |
+| 已写入证据 | 前 2 条在 `errors.jsonl` 中，`flush`+`fsync` 已落盘 |
+| `meta_stage` | 仍为 `run_start`，与完成态（`run_end`）可区分 |
+| **`rounds.csv`** | **不存在——此前已发送成功的 2 笔交易的 txid 无任何本地记录** |
+
+结论：**fail-closed 成立**（写入失败确实终止、不留「CSV 有失败但证据丢失」）。但暴露 F7（下条）。
+
+## A8. F7（新发现，未修，待授权）
+
+`rounds.csv` 是**循环结束后整体落盘**（`1489` 行）。因此 sidecar 中途写入失败时，此前**已经真实发送**的成功尝试只存在于钱包/链上，run 目录内无 txid 记录。触发条件罕见（磁盘满、权限异常），但与 G2「每条尝试可追溯」不一致。
+
+建议的最小修法（**不改变正常路径任何行为**）：把落盘抽成函数，在主循环外包 `try/finally`，异常终止时用同一份 `rows` 落盘一次。代价：中止的 run 会留下**不完整 CSV**，需靠 `meta_stage != run_end` 与 `verify_run_artifacts` 识别——因此必须同时声明「中止的 run 不得作为样本」。
+
+另一种做法是逐行追加写 CSV（更贴合 §4.9「先写 sidecar 再落 CSV 行」的字面），但改动落在正常路径上，风险更大。
+
+## A9. 本轮提交链
+
+`9494bb5`（T1 收尾）→ `e910789`（数据）→ `6cd58de`（reporting 测试入仓）→ `6162d65`（A5 跳过语义）→ `391789a`（F6）。
+
+## A10. 仍未做
+
+真实 `--dry-run`（会恢复快照并启动服务）、新 gate、预注册修改、历史数据覆盖。这三项继续等你单独授权。

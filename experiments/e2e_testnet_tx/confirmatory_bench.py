@@ -946,7 +946,14 @@ def run_one(idx, S, O, policy, mine_blocks, dry_run, state, from_ua):
     return row, T
 
 
-# failure_class 取值（冻结稿 §4.5）。T3 若决定保留旧名 `timeout`，只需改此处一处。
+# failure_class 取值（冻结稿 §4.5）。
+#
+# T3 裁定（2026-10-30）：**保留 `opid_timeout`，不改名**。含义严格限定为
+# 「客户端轮询窗口耗尽，结果未知」——不是「操作在服务端超时」，更不是「发送失败」。
+# 该类记录必然已拿到 opid（submit_state=submitted），交易可能已上链。
+# 不改名的理由：名称不影响分类正确性、统计口径；真正的误读风险在汇总文案，
+# 已由 `_summary_note` 的「提交状态不明」段消除（S8 守护）；改名会让本常量与
+# 冻结稿 §4.4 / §6.4 R3 的表述脱节，收益为零。
 CLS_OPID_TIMEOUT = "opid_timeout"
 
 # 「提交状态不明」类失败的集合：这些记录**不能**被断言「未产生 txid」。
