@@ -67,8 +67,13 @@ def load_all(raw_dir, require_match=False):
 
     - 自动排除 `_feasibility_gate/` 子目录（确认性门禁数据，绝不与正式样本混合）。
     - 自动排除**异常中止**的 run（F7，meta 中 `usable_as_sample=False`）。
-    - require_match=True 时，仅保留 form_match 与 fee_match 均为真的轮次
-      （用于确认性补测；对 pilot 旧数据无影响，因其无该列且默认关闭）。
+    - require_match=True 时，仅保留满足确认性「有效样本」定义的轮次：
+      `txid` 非空 ∧ `form_match` ∧ `fee_match` 均为真。
+      （对 pilot 旧数据无影响，因其无该列且默认关闭。）
+
+    注：`txid` 检查是 2026-10-30 冻结审计补上的。此前只查两个 match 列，
+    而「有效样本」在执行器侧要求 `rows_with_txid` 计数，两者定义不一致；
+    本次 50 轮全部有 txid，补检查不改变任何结果。
     """
     rows = []
     partial = []
@@ -89,6 +94,8 @@ def load_all(raw_dir, require_match=False):
                     fm = (r.get("form_match") or "").strip().lower()
                     fem = (r.get("fee_match") or "").strip().lower()
                     if fm not in ("true", "1", "yes") or fem not in ("true", "1", "yes"):
+                        continue
+                    if not (r.get("txid") or "").strip():
                         continue
                 s = fnum(r.get("sapling_spends"))
                 o = fnum(r.get("sapling_outputs"))

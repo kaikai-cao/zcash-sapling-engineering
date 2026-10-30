@@ -1,0 +1,15 @@
+# 确认性实验的分析依赖（2026-10-30 冻结审计时固定）
+#
+# 实测环境：CPython 3.13.14 + NumPy 2.5.4（Windows 11 宿主，WSL2 内跑节点与执行器）
+# 这些脚本只用到 NumPy 的少数接口：np.linalg.lstsq / np.percentile /
+# np.random.default_rng / np.column_stack，没有其它第三方依赖。
+#
+# 为什么需要这个文件：`fit_sapling_e2e_model.py` 与 `h_ab_bootstrap.py` 依赖 NumPy，
+# 而仓库此前没有任何分析依赖锁定，导致「31 PASS / 1 SKIP」里的那个 SKIP
+# 完全是环境差异（pip 里没有 numpy），无法判断是"测试不适用"还是"环境不完整"。
+# 固定版本后，CI 与本地都能跑到 0 SKIP。
+#
+# 注意：`confirmatory_bench.py`（执行器）与 `failure_class_selftest.py`（隔离自检）
+# **只用标准库**，不依赖本文件。CI 里两者分开跑，避免把"环境缺失"和"代码问题"
+# 混为一谈。
+numpy==2.5.4

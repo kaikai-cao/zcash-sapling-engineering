@@ -1,20 +1,25 @@
 # 实验产物哈希清单
 
-> 生成时间：2026-10-30T12:46:49Z（UTC）  
-> 文件数：**139**　合计：**4,539,397 B**（4.33 MB）  
-> 校验：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
+> 生成时间：2026-10-30T13:13:37Z（UTC）  
+> **可校验（git 跟踪）文件数：129**　合计：**896,238 B**（0.85 MB）  
+> 本地排除（不可远端校验）文件数：**14**  
+> 校验（干净克隆即可 100% 通过）：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
 
-## 按类别
+> 拆分原因：钱包库副本、`run.log`、诊断 JSON 等被 `.gitignore` 有意排除，
+> 若写进正式清单，干净克隆会出现「文件不存在」而非「哈希不符」，容易被误读为数据损坏。
+> 两类文件的哈希都记录，但**只有前者**可对外声明为远端可复现证据。
+
+## 按类别（仅 git 跟踪文件）
 
 | 类别 | 文件数 | 字节数 |
 |---|---:|---:|
-| doc | 2 | 22,082 |
+| doc | 2 | 33,033 |
 | e2e_regtest | 9 | 3,419 |
-| external | 1 | 34,725 |
+| other | 1 | 936 |
 | pczt | 19 | 56,375 |
-| raw-other | 55 | 4,053,385 |
+| raw-other | 43 | 382,563 |
 | sapling | 37 | 53,866 |
-| script | 16 | 315,545 |
+| script | 18 | 366,046 |
 
 ## 运行目录完整性
 
@@ -35,11 +40,11 @@
 | `raw/sapling_smoke/run_20261029_151423` | 5 | summary_by_shape.csv |
 | `raw/sapling_smoke2/run_20261029_151658` | 6 | 无 |
 
-## 明细
+## 明细 · git 跟踪（129 条，可干净克隆校验）
 
 | 文件 | 字节 | mtime (UTC) | SHA256（前 16 位） |
 |---|---:|---|---|
-| `DEVIATIONS.md` | 12,464 | 2026-10-30T12:46:44Z | `b48bab668291164c` |
+| `DEVIATIONS.md` | 23,415 | 2026-10-30T13:13:08Z | `eaf4fabcab36a3c1` |
 | `README_runbook.md` | 9,618 | 2026-10-29T08:01:04Z | `ff8cd66933e1be0a` |
 | `a_note_scan_diag.py` | 11,969 | 2026-10-30T02:33:53Z | `bbba7ab2ec2afcd2` |
 | `a_prime_selftest.py` | 8,136 | 2026-10-30T02:40:28Z | `3833e64e4fb7b712` |
@@ -49,65 +54,55 @@
 | `e2e_tx_bench.py` | 20,117 | 2026-10-28T12:19:37Z | `251c421667634474` |
 | `e2e_tx_bench_v2.py` | 19,270 | 2026-10-29T06:37:13Z | `6ebafa52545ab088` |
 | `failure_class_selftest.py` | 38,793 | 2026-10-30T11:41:55Z | `7834ffd10766d6d7` |
-| `fit_sapling_e2e_model.py` | 16,678 | 2026-10-30T07:04:30Z | `c7dbbe0c739d1422` |
-| `h_ab_bootstrap.py` | 4,123 | 2026-10-30T12:45:50Z | `1e5e55c87cd2f782` |
-| `make_manifest.py` | 7,924 | 2026-10-29T08:02:07Z | `0f1a310db3ef1351` |
+| `fit_sapling_e2e_model.py` | 17,079 | 2026-10-30T13:10:15Z | `7e8d0ed19e88098d` |
+| `h_ab_bootstrap.py` | 4,855 | 2026-10-30T13:10:20Z | `592643087486f997` |
+| `isolated_harness.py` | 34,840 | 2026-10-30T13:12:43Z | `7bd7ecc14b852909` |
+| `make_manifest.py` | 15,234 | 2026-10-30T13:10:00Z | `066183e43c3b2492` |
 | `mem_sample.py` | 3,904 | 2026-10-27T10:10:05Z | `d0ad3c684c33fc8c` |
+| `order_sensitivity.py` | 7,218 | 2026-10-30T13:09:07Z | `fc68c41a9f9f5e88` |
 | `pczt_bench_pool.py` | 15,957 | 2026-10-29T07:03:43Z | `c2db6c650c536f9a` |
 | `raw/AUDIT_trail.md` | 13,842 | 2026-10-29T08:01:32Z | `13737e8390726730` |
 | `raw/ENV_binaries.txt` | 2,541 | 2026-10-29T07:44:42Z | `b8d0c672ae7bd0f7` |
+| `raw/ENV_binaries_confirm_20261030.txt` | 5,336 | 2026-10-30T13:10:47Z | `933a1014358b32a0` |
 | `raw/FAILURES.md` | 8,362 | 2026-10-29T08:00:44Z | `429ad5ccfac0ef91` |
-| `raw/MANIFEST.prereg.sha256` | 148 | 2026-10-30T11:45:10Z | `54d7e625590e4403` |
+| `raw/MANIFEST.prereg.sha256` | 1,088 | 2026-10-30T13:13:26Z | `5ce80442e8aa2e9c` |
 | `raw/confirmatory_20261030/.gitignore` | 923 | 2026-10-30T06:55:55Z | `b171a34f6d2248f0` |
 | `raw/confirmatory_20261030/FIT.md` | 5,939 | 2026-10-30T12:45:05Z | `d65a0df7bf57a2e9` |
-| `raw/confirmatory_20261030/RESULTS.md` | 7,650 | 2026-10-30T12:46:12Z | `0a53f1036604021a` |
+| `raw/confirmatory_20261030/ORDER_SENSITIVITY.txt` | 1,555 | 2026-10-30T13:09:10Z | `653068cd609b0aca` |
+| `raw/confirmatory_20261030/RESULTS.md` | 10,857 | 2026-10-30T13:11:08Z | `f099b05944aed39a` |
 | `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/README.md` | 2,414 | 2026-10-30T03:15:39Z | `e4bb0bd2bf270430` |
 | `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/addresses_before.tsv` | 5,393 | 2026-10-30T03:15:27Z | `ec19fc7c041ce676` |
-| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/filelist.tsv` | 112,447 | 2026-10-30T03:15:26Z | `6c465f72a412dcf3` |
-| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/sha256.txt` | 176,512 | 2026-10-30T03:15:27Z | `57e66098b7cd3446` |
-| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/wallet.db.sealed` | 3,198,976 | 2026-10-30T03:15:26Z | `1512cf95f3c5ff46` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/gate_summary.csv` | 869 | 2026-10-30T01:24:07Z | `40ca128b28e75bc2` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/memory_timeseries.csv` | 10,083 | 2026-10-30T01:24:07Z | `229ced0f6bd52935` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/meta.json` | 690 | 2026-10-30T01:24:07Z | `777082ceec576ce4` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/rounds.csv` | 1,695 | 2026-10-30T01:24:07Z | `a1b3de30b871f8d6` |
-| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/run.log` | 7,775 | 2026-10-30T01:24:07Z | `1accae9bbfd49271` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/gate_summary.csv` | 869 | 2026-10-30T01:53:47Z | `40ca128b28e75bc2` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/memory_timeseries.csv` | 10,105 | 2026-10-30T01:53:47Z | `ffe78d414114867f` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/meta.json` | 1,116 | 2026-10-30T01:53:47Z | `18ab7bad3dd1d184` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/rounds.csv` | 2,060 | 2026-10-30T01:53:47Z | `aedbf1c7de0b1fda` |
-| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/run.log` | 8,276 | 2026-10-30T01:53:47Z | `c68c4863a396df7a` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/gate_summary.csv` | 869 | 2026-10-30T02:46:57Z | `40ca128b28e75bc2` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/memory_timeseries.csv` | 10,193 | 2026-10-30T02:46:57Z | `ee99c4129c79ab5b` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/meta.json` | 1,116 | 2026-10-30T02:46:57Z | `a392866eb6d1cdeb` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/rounds.csv` | 2,200 | 2026-10-30T02:46:57Z | `5ad6c7842aa71887` |
-| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/run.log` | 10,204 | 2026-10-30T02:46:57Z | `16c169da688e61a1` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/gate_summary.csv` | 521 | 2026-10-30T03:05:34Z | `27e841ac37c3df7e` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/memory_timeseries.csv` | 25,131 | 2026-10-30T03:05:34Z | `3f547b497010bc5c` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/meta.json` | 1,615 | 2026-10-30T03:05:34Z | `09e3d8dae319ed1e` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/rounds.csv` | 4,125 | 2026-10-30T03:05:34Z | `7a2dbb6308dc8064` |
-| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/run.log` | 12,276 | 2026-10-30T03:05:34Z | `84a6b9770a1b858d` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/gate_summary.csv` | 1,199 | 2026-10-30T03:32:05Z | `eb53e72bb42df265` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/memory_timeseries.csv` | 10,394 | 2026-10-30T03:32:05Z | `bd316a8de63581e0` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/meta.json` | 1,528 | 2026-10-30T03:32:05Z | `e7561aa222e93d50` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/rounds.csv` | 3,157 | 2026-10-30T03:32:05Z | `a3a323b050af5147` |
-| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/run.log` | 13,551 | 2026-10-30T03:32:05Z | `c84e5062a50879c3` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/gate_summary.csv` | 1,559 | 2026-10-30T07:17:07Z | `6b0fc46a893567e2` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/memory_timeseries.csv` | 6,897 | 2026-10-30T07:17:07Z | `a7a4940f04df9f28` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/meta.json` | 1,634 | 2026-10-30T07:17:07Z | `3089c3163999aa95` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/rounds.csv` | 3,157 | 2026-10-30T07:17:07Z | `c16a961eefa7e2a1` |
-| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/run.log` | 13,703 | 2026-10-30T07:17:07Z | `15bca86bf5a8146b` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/gate_summary.csv` | 371 | 2026-10-30T07:29:01Z | `5bc066ecbe9f0899` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/memory_timeseries.csv` | 27,551 | 2026-10-30T07:29:00Z | `b0bfc742350720c7` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/meta.json` | 1,759 | 2026-10-30T07:29:01Z | `fec1c5703d88f9db` |
 | `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/rounds.csv` | 4,825 | 2026-10-30T07:29:01Z | `0a48ea443baf4266` |
-| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/run.log` | 13,280 | 2026-10-30T07:29:01Z | `a778e412c53c868e` |
-| `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104052.json` | 5,914 | 2026-10-30T02:40:52Z | `c5df66dd37996783` |
-| `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104149.json` | 5,914 | 2026-10-30T02:41:49Z | `b6c31348e53fd5f8` |
-| `raw/confirmatory_20261030/_note_scan_diag/scan_20261030_103423.json` | 41,210 | 2026-10-30T02:34:23Z | `12526ed6cfafce02` |
 | `raw/confirmatory_20261030/run_20261030_201124/memory_timeseries.csv` | 162,291 | 2026-10-30T12:41:47Z | `d0e5dc2c4aca30b5` |
 | `raw/confirmatory_20261030/run_20261030_201124/meta.json` | 1,980 | 2026-10-30T12:41:47Z | `52daa9109d6ad213` |
 | `raw/confirmatory_20261030/run_20261030_201124/rounds.csv` | 22,307 | 2026-10-30T12:41:47Z | `14906e941889c1bb` |
-| `raw/confirmatory_20261030/run_20261030_201124/run.log` | 61,822 | 2026-10-30T12:41:47Z | `35eac62233bf7d84` |
 | `raw/confirmatory_20261030/run_20261030_201124/summary_by_shape.csv` | 447 | 2026-10-30T12:41:47Z | `d6b7f12ed16a1cd4` |
 | `raw/e2e_regtest_v2/run_20261029_142533/memory_timeseries.csv` | 117 | 2026-10-29T06:25:33Z | `24880f834bf21c28` |
 | `raw/e2e_regtest_v2/run_20261029_143529/memory_timeseries.csv` | 199 | 2026-10-29T06:35:29Z | `9eec9a09dd58c2ae` |
@@ -163,28 +158,41 @@
 | `raw/sapling_e2e_v1/run_20261029_151727/stage_timings.csv` | 1,231 | 2026-10-29T07:18:16Z | `df74330a43cdb493` |
 | `raw/sapling_e2e_v1/run_20261029_151727/summary.csv` | 181 | 2026-10-29T07:18:16Z | `44cd272015a87a5d` |
 | `raw/sapling_e2e_v1/run_20261029_151727/summary_by_shape.csv` | 167 | 2026-10-29T07:18:16Z | `dfb279cef36027d4` |
+| `raw/sapling_smoke/run_20261029_151423/memory_timeseries.csv` | 433 | 2026-10-29T07:14:25Z | `7d731f4754ca3ce9` |
+| `raw/sapling_smoke/run_20261029_151423/meta.json` | 318 | 2026-10-29T07:14:26Z | `7d1c1eb27b8b9545` |
+| `raw/sapling_smoke/run_20261029_151423/rounds.csv` | 295 | 2026-10-29T07:14:26Z | `c33437af7bef3c56` |
+| `raw/sapling_smoke/run_20261029_151423/stage_timings.csv` | 95 | 2026-10-29T07:14:26Z | `a9a3e2b6c08cb848` |
+| `raw/sapling_smoke/run_20261029_151423/summary.csv` | 176 | 2026-10-29T07:14:26Z | `074afedb55274b81` |
 | `raw/sapling_smoke2/run_20261029_151658/memory_timeseries.csv` | 433 | 2026-10-29T07:17:00Z | `5a79a55e4ebdc9fd` |
 | `raw/sapling_smoke2/run_20261029_151658/meta.json` | 319 | 2026-10-29T07:17:00Z | `1a20a25fb45a5dc0` |
 | `raw/sapling_smoke2/run_20261029_151658/rounds.csv` | 358 | 2026-10-29T07:17:00Z | `39a69b9f103924aa` |
 | `raw/sapling_smoke2/run_20261029_151658/stage_timings.csv` | 95 | 2026-10-29T07:17:00Z | `8f75ef705e1c0e68` |
 | `raw/sapling_smoke2/run_20261029_151658/summary.csv` | 176 | 2026-10-29T07:17:00Z | `e3f11899206e175a` |
 | `raw/sapling_smoke2/run_20261029_151658/summary_by_shape.csv` | 132 | 2026-10-29T07:17:00Z | `a1799b3c288069c5` |
-| `raw/sapling_smoke/run_20261029_151423/memory_timeseries.csv` | 433 | 2026-10-29T07:14:25Z | `7d731f4754ca3ce9` |
-| `raw/sapling_smoke/run_20261029_151423/meta.json` | 318 | 2026-10-29T07:14:26Z | `7d1c1eb27b8b9545` |
-| `raw/sapling_smoke/run_20261029_151423/rounds.csv` | 295 | 2026-10-29T07:14:26Z | `c33437af7bef3c56` |
-| `raw/sapling_smoke/run_20261029_151423/stage_timings.csv` | 95 | 2026-10-29T07:14:26Z | `a9a3e2b6c08cb848` |
-| `raw/sapling_smoke/run_20261029_151423/summary.csv` | 176 | 2026-10-29T07:14:26Z | `074afedb55274b81` |
 | `recipient_derivation_selftest.py` | 26,269 | 2026-10-30T06:55:12Z | `13f9830138703963` |
 | `reporting_patch_selftest.py` | 12,215 | 2026-10-30T06:42:25Z | `ba6e9872b990ccea` |
+| `requirements-analysis.txt` | 936 | 2026-10-30T13:11:17Z | `a1bb3455689ae8c2` |
 | `sapling_e2e_bench.py` | 22,980 | 2026-10-29T07:39:54Z | `e9c29018549b0dae` |
 
-## 外部资产（不进 MANIFEST.sha256，需单独校验）
+## 本地排除明细（14 条，仅本地证据）
 
-| 绝对路径 | 字节 | SHA256 |
+| 文件 | 字节 | 排除理由 |
 |---|---:|---|
-| `../metadata/sapling_e2e_regtest_confirmatory_preregistration_20261030.md` | 34,725 | `0ced5b8710a8cee98181b105a99bc347a26eda1f3c7aa99116d81ae84ee99db6` |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/filelist.tsv` | 112,447 | 封存目录的取证明细，脱离库本体无独立价值，`.gitignore` 排除 |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/sha256.txt` | 176,512 | 封存目录的取证明细，脱离库本体无独立价值，`.gitignore` 排除 |
+| `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/wallet.db.sealed` | 3,198,976 | regtest 钱包库字节副本，含支出密钥，`.gitignore` 排除（安全边界） |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/run.log` | 7,775 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/run.log` | 8,276 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/run.log` | 10,204 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/run.log` | 12,276 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/run.log` | 13,551 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/run.log` | 13,703 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
+| `raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/run.log` | 13,280 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
+| `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104052.json` | 5,914 | live-node 诊断产物，产出脚本未入库，不可独立复现 |
+| `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104149.json` | 5,914 | live-node 诊断产物，产出脚本未入库，不可独立复现 |
+| `raw/confirmatory_20261030/_note_scan_diag/scan_20261030_103423.json` | 41,210 | live-node 诊断产物，产出脚本未入库，不可独立复现 |
+| `raw/confirmatory_20261030/run_20261030_201124/run.log` | 61,822 | 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放） |
 
-这些文件位于另一个仓库（`D:/Research/z3`）或 WSL 内，是复现实验的前置资产：
-链快照含 32297 高度之前的全部区块状态与钱包库，`snapshot_restore.sh --yes` 12 秒可回到该状态，
-省掉约 4 小时的重新挖块。**它丢了不会影响已测数据的解读，但会显著拖慢任何复现尝试。**
+完整哈希见 `raw/MANIFEST.local-excluded.sha256`。这些文件**不随仓库分发**，
+故读者无法验证其存在性；它们的作用仅是证明本工作区的产物与报告一致。
 

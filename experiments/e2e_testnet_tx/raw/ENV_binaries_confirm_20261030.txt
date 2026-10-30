@@ -1,0 +1,89 @@
+=== 确认性 run 的二进制锚定（补证） 2026-10-30T21:07:26+08:00 ===
+host=DESKTOP-GMELEIR  kernel=6.18.54.1-microsoft-standard-WSL2  arch=x86_64
+对象: raw/confirmatory_20261030/run_20261030_201124（50 轮 / 10 形态）
+
+--- 为什么需要这份文件 ---
+正式 run 的 meta.json 中 binary_sha256 = null：执行时两个二进制都不在 PATH 上，
+执行器的自动采集失败（与 2026-10-29 首轮采集失败同一原因）。RESULTS.md 早期版本把
+ENV_binaries.txt（2026-10-29 采集）的两个哈希写成「本轮实测补录」——那是不准确的：
+它证明的是「10-29 那天磁盘上的文件是这份」，并不直接证明「10-30 20:11 那次运行加载的
+正是这份」。本文件把证据等级如实拆开，并补做了一次可核对的进程级采集。
+
+--- 关键结构事实（决定了 pid 能不能用） ---
+snapshot_restore.sh 每轮都杀旧进程再拉起新进程：
+  L178-186  kill -TERM / -9 匹配 "zallet-zaino" 与 "$PREFIX/bin/zebrad"
+  L207-215  setsid nohup zebrad ... / setsid nohup zallet-zaino ...
+因此 meta.json 的 pids = {"zebrad": 5036, "zallet": 5341} 只代表**首轮**；
+末轮 pid 在运行时已被替换。这也是为什么"直接读 meta.pids 的 /proc"当初不可行。
+
+--- 采集时刻的存活进程 ---
+run 结束时刻（由 run 目录文件 mtime 判定）：2026-10-30 20:41:47
+  meta.json  20:41:47.385920100
+  rounds.csv 20:41:47.362614300
+  run.log    20:41:47.402317900
+
+存活进程（2026-10-30T21:07:26 采集，与 run 结束相隔约 26 分钟）：
+  zebrad        pid 29511  启动 Fri Oct 30 20:41:11 2026
+  zallet-zaino  pid 29815  启动 Fri Oct 30 20:41:18 2026
+→ 两者启动时刻落在 run 的**最后一轮窗口内**（run 于 20:41:47 写出终态文件），
+  且此后未再被替换（若被替换，启动时刻会晚于 20:41:47）。
+
+--- 一、磁盘文件（/home/dell/z3-regtest/bin） ---
+zebrad
+  sha256  baf0b2cd31110c7fe7c05809fd7323d07548489be78d31caeccc91e1469cc6a7
+  bytes   183943408
+  mtime   2026-10-29 09:32:14.809616882 +0800
+  version zebrad 6.2.3
+zallet（launcher，只做后端 dispatch）
+  sha256  523bf86a14cba2dfb1ea048c3a3d6ccc68bde0dbb92da60d44ce12568dea1c5a
+  bytes   4956560
+  mtime   2026-10-29 09:32:15.277616810 +0800
+zallet-zaino（后端实体，实际参与全部测量）
+  sha256  e602e4a3d4e919c155b8f05dae29f0b9311631f167eaf25455166edf268208a7
+  bytes   108392112
+  mtime   2026-10-29 09:32:15.237616816 +0800
+
+--- 二、/proc/PID/exe 实测（末轮存活进程的真实可执行文件） ---
+zebrad        pid 29511  sha256 baf0b2cd31110c7fe7c05809fd7323d07548489be78d31caeccc91e1469cc6a7
+              exe -> /home/dell/z3-regtest/bin/zebrad
+zallet-zaino  pid 29815  sha256 e602e4a3d4e919c155b8f05dae29f0b9311631f167eaf25455166edf268208a7
+              exe -> /home/dell/z3-regtest/bin/zallet-zaino
+
+--- 三、证据等级（不要高估） ---
+| 覆盖范围            | 等级              | 依据 |
+|--------------------|-------------------|------|
+| 第 50 轮（末轮）     | **进程级实测**（事后补采） | 存活进程 /proc/PID/exe 哈希，与磁盘文件、与 10-29 记录三者一致 |
+| 第 1–49 轮          | **同文件推定**      | 每轮重启都从同一路径加载同一文件；磁盘 mtime 停在 2026-10-29 09:32:14/15，早于 run 起始 2026-10-30 20:11:24 约 34.7 小时；期间无重新部署（哈希与 10-29 15:44 采集逐位一致） |
+| run 全程逐轮进程级采样 | **未做到**          | 执行器未在每轮采集 /proc/PID/exe；这是已知限制，不补做 |
+
+**不能声称的**：本 run 的每一轮都在运行时验证过二进制哈希。**可以声称的**：
+末轮运行时二进制 = 上述哈希（实测）；全部 50 轮加载的是同一路径下的同一份文件
+（mtime 与哈希均未变），因此全部 50 轮的二进制版本可确定为上述三份。
+
+--- 四、与 2026-10-29 记录的一致性 ---
+ENV_binaries.txt（2026-10-29T15:44:19，pilot 阶段采集，经 /proc/239435、/proc/239967）：
+  zebrad       baf0b2cd…9cc6a7   ✅ 与本文件一致
+  zallet       523bf86a…dea1c5a  ✅ 与本文件一致
+  zallet-zaino e602e4a3…68208a7  ✅ 与本文件一致
+→ 试点（10-29）与确认性（10-30）用的是同一批二进制，报告中的版本声明可共用。
+
+--- 五、复现命令 ---
+# 磁盘文件
+for f in zebrad zallet zallet-zaino; do
+  printf '%-14s ' "$f"; sha256sum /home/dell/z3-regtest/bin/"$f" | cut -d' ' -f1
+  stat -c '               bytes=%s mtime=%y' /home/dell/z3-regtest/bin/"$f"
+done
+
+# 存活进程的真实 exe
+for name in zebrad zallet-zaino; do
+  pid=$(pgrep -x "$name" | head -1)
+  printf '%-14s pid=%s exe=%s sha256=%s\n' "$name" "$pid" \
+    "$(readlink -f /proc/$pid/exe)" "$(sha256sum /proc/$pid/exe | cut -d' ' -f1)"
+done
+
+--- 六、已知限制（保持不变） ---
+* 执行器的 binary_sha256 采集依赖 PATH，本环境两个二进制均不在 PATH 上，故为空。
+* 采集时刻距离 run 结束 26 分钟；期间未重启节点（启动时刻仍为 20:41:11/18），
+  故 /proc/PID/exe 仍指向 run 末轮加载的那份文件。
+* zallet（launcher）只做 dispatch，实际参与测量的是 zallet-zaino；
+  版本声明必须绑定后者，见 ENV_binaries.txt「关键结构发现」。

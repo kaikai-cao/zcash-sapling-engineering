@@ -145,3 +145,52 @@ jobs:
           grep -q "correctness=cross_recoding c=13 ok" msm_gate.txt
           grep -q "MSM_WINDOW_BENCH=DONE" msm_gate.txt
           echo "MSM gate: cross-recoding equality verified (exit code asserts the rest)"
+
+  e2e-analysis:
+    name: end-to-end Sapling analysis (deterministic, no node)
+    runs-on: ubuntu-latest
+    # The confirmatory campaign itself cannot run in CI (needs a live WSL2 regtest
+    # node + Zallet backend + a 32297-height chain snapshot). What CAN be gated is
+    # everything downstream of the archived data: the failure-class self-test, and
+    # the claim that "the reported numbers follow from the committed rounds.csv".
+    # If someone edits the CSV or the statistics code, this job fails — which is
+    # exactly what a frozen result should do.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: install analysis deps (NumPy pinned)
+        run: python -m pip install --disable-pip-version-check -r experiments/e2e_testnet_tx/requirements-analysis.txt
+
+      - name: confirmed NumPy presence
+        # Guards against the earlier "31 PASS / 1 SKIP" ambiguity: S11 of the
+        # self-test needs NumPy, so a SKIP there meant "environment incomplete",
+        # not "test not applicable". Fail fast instead of skipping silently.
+        run: python -c "import numpy; print('numpy', numpy.__version__)"
+
+      - name: executor + failure-class self-test (stdlib only, isolated, no node)
+        run: python experiments/e2e_testnet_tx/failure_class_selftest.py
+
+      - name: isolated harness (fakes all external I/O, drives real main/run_one paths)
+        # 132 assertions over the paths that never execute in a green campaign:
+        # G4 verdicts (dup keys / illegal values / foreign keys / real JSON via CLI),
+        # D1a-unknown, D3 A/B/C, M7 tie-break, underpowered. Kept in-repo so the
+        # evidence is reproducible rather than living in an external audit bundle.
+        run: python experiments/e2e_testnet_tx/isolated_harness.py
+
+      - name: archived rounds.csv -> reported statistics (reproducibility gate)
+        working-directory: experiments/e2e_testnet_tx
+        run: |
+          set -euo pipefail
+          python fit_sapling_e2e_model.py \
+            --raw-dir raw/confirmatory_20261030 --require-match --md /tmp/FIT.ci.md
+          echo "--- H_A / H_B / H_C ---"
+          python h_ab_bootstrap.py | tee /tmp/hab.ci.txt
+          grep -q "513.11, 552.96" /tmp/hab.ci.txt      # H_A 95% CI, RESULTS.md §5
+          grep -q "483.10, 783.20" /tmp/hab.ci.txt      # H_B 95% CI, RESULTS.md §5
+          grep -q "接受 H_A" /tmp/hab.ci.txt
+          grep -q "接受 H_C" /tmp/hab.ci.txt
+          echo "--- order sensitivity (exploratory, DEVIATIONS §6) ---"
+          python order_sensitivity.py | tee /tmp/order.ci.txt

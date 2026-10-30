@@ -19,8 +19,9 @@
 | 字段 | 值 |
 |---|---|
 | 环境 | WSL2 离线 regtest（非 Testnet） |
-| 节点 | zebrad **6.2.3**，sha256 `baf0b2cd31110c7f…` |
-| 钱包 | zallet **Beta**（`zallet-zaino` 后端），sha256 `e602e4a3d4e919c1…` |
+| 节点 | zebrad **6.2.3**，sha256 `baf0b2cd31110c7fe7c05809fd7323d07548489be78d31caeccc91e1469cc6a7`（183,943,408 B） |
+| 钱包后端 | `zallet-zaino`（**测量实际执行者**），sha256 `e602e4a3d4e919c155b8f05dae29f0b9311631f167eaf25455166edf268208a7`（108,392,112 B） |
+| 钱包 launcher | `zallet`（只做 dispatch，不参与测量），sha256 `523bf86a14cba2dfb1ea048c3a3d6ccc68bde0dbb92da60d44ce12568dea1c5a` |
 | 快照 | `z3_regtest_h32297_20261029_145710.tar.gz` |
 | 快照 SHA-256 | `ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c` |
 | 恢复脚本 SHA-256 | `2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11` |
@@ -32,8 +33,20 @@
 | 策略 / 种子 | `FullPrivacy` / `20261030` |
 
 > 每轮测量**前**均从同一快照恢复（恢复动作在 `do_one_attempt` 循环内部，非人工操作），
-> 故 50 轮的链高、note 数、余额完全同源。`binary_sha256` 在 `meta.json` 中为 `None`
-> （PATH 可见性限制，见预注册 §3 记录限制）；上表两项二进制哈希为本轮实测补录。
+> 故 50 轮的链高、note 数、余额完全同源。
+
+**二进制哈希的证据等级**（详见 `raw/ENV_binaries_confirm_20261030.txt`）。
+`meta.json` 的 `binary_sha256` 为 `None`——执行时两个二进制都不在 PATH 上，自动采集失败。
+上表三个哈希**不是** run 时刻由执行器写入的，而是事后补证，覆盖范围要分清：
+
+| 覆盖 | 等级 | 依据 |
+|---|---|---|
+| 第 50 轮（末轮） | **进程级实测**（事后 26 分钟补采） | 恢复脚本每轮 kill 并重启节点，故末轮进程（zebrad pid 29511 / zallet-zaino pid 29815，20:41:11–18 启动）此后未被替换；其 `/proc/PID/exe` 哈希 = 磁盘哈希 |
+| 第 1–49 轮 | **同文件推定** | 每轮重启均从同一路径加载；磁盘 mtime 停在 2026-10-29 09:32（早于 run 起始 34.7 小时），哈希与 10-29 pilot 采集逐位一致 |
+| 全程逐轮进程级采样 | **未做到** | 执行器未逐轮采集 `/proc/PID/exe`，属已知限制 |
+
+> 因此**不得**表述为「50 轮的二进制哈希已逐轮实测验证」；可表述为「末轮运行时实测，
+> 全部 50 轮加载同一路径同一文件（mtime 与哈希未变），故版本可确定」。
 
 ## 3. 第一层：直接对照
 
@@ -119,6 +132,14 @@ output 948 B / 101.0 ms（0.106 ms/B）——output 体积是 spend 的 2.7 倍�
 - 每形态 n=5，形态级 bootstrap 区间较宽（output 系数形态级 CI 为 [32.1, 336.9]）；
   轮级 CI 更紧但依赖采样结构假设。
 - `mismatch` 类（`form_mismatch`/`fee_mismatch`）本轮**出现 0 次**，无可报告条目。
+- **样本顺序为「形态块随机化」，与预注册 §6 的「逐次随机」不完全一致**（`DEVIATIONS.md §6`）。
+  探索性敏感性诊断（`ORDER_SENSITIVITY.txt`，轮次级，非预注册分析）：
+  Δ = a_S − c_O 由 540.20 → **528.36 ms**（−2.2%，仍远大于 0）；`c_O` 由 101.52 →
+  **111.48 ms**（**+9.8%**），顺序项本身约 +17.8 ms/块。故「output 边际 101.0 ms」
+  应作**区间量**引用（±10% 量级的顺序敏感），不宜当精确点值；
+  H_A / H_B / H_C 三条判定不受影响。
+- `rounds.csv` **未记录逐轮墙钟时间戳**，只有 `round` 序号，故顺序效应只能用序号
+  作时间代理，无法做真实 drift 分析。
 
 ## 7. 交付物与复现
 
@@ -130,6 +151,15 @@ output 948 B / 101.0 ms（0.106 ms/B）——output 体积是 spend 的 2.7 倍�
 | `run_20261030_201124/memory_timeseries.csv` | 内存时间序列 |
 | `FIT.md` | 三模型拟合与三层分析报告（由 CSV 生成） |
 | `RESULTS.md` | 本文件：结果判定 |
+| `ORDER_SENSITIVITY.txt` | 顺序敏感性诊断输出（探索性，非预注册分析；脚本 `order_sensitivity.py`） |
+| `run_20261030_201124/run.log` | 执行日志（**本地排除**，`**/run_*/run.log`；不进 `MANIFEST.sha256`） |
+
+证据清单分两份（2026-10-30 审计后拆分）：
+
+| 清单 | 覆盖 | 校验方式 |
+|---|---|---|
+| `raw/MANIFEST.sha256` | **只含 git 跟踪文件**，干净克隆 100% 可校验 | `cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256` |
+| `raw/MANIFEST.local-excluded.sha256` | 本地存在但有意不入库的 14 个文件（钱包库副本、`run.log`、诊断 JSON），**本地证据** | `sha256sum -c raw/MANIFEST.local-excluded.sha256`（仅本工作区有效） |
 
 复现命令（在工作目录 `experiments/e2e_testnet_tx/` 下）：
 
@@ -140,9 +170,16 @@ python3 fit_sapling_e2e_model.py --raw-dir raw/confirmatory_20261030 --require-m
 # 2) 系数与比值 bootstrap（B=4000, seed=20261030）
 python3 bootstrap_sapling_ci.py --raw-dir raw/confirmatory_20261030 --B 4000 --seed 20261030
 
-# 3) H_A / H_B / H_C 判据
+# 3) H_A / H_B / H_C 判据（输入已固定到唯一正式 run，且要求 txid ∧ form_match ∧ fee_match）
 python3 h_ab_bootstrap.py
+
+# 4) 顺序敏感性诊断（探索性；写 ORDER_SENSITIVITY.txt）
+python3 order_sensitivity.py > raw/confirmatory_20261030/ORDER_SENSITIVITY.txt
 ```
+
+依赖：Python 3.13 + NumPy（分析与 bootstrap 脚本需要；钉版本见
+`experiments/e2e_testnet_tx/requirements-analysis.txt`）。`confirmatory_bench.py`
+与 `failure_class_selftest.py` 只用标准库，不依赖 NumPy。
 
 > 重跑实验本身：`python3 confirmatory_bench.py --mode confirm`
 > （每轮前自动从冻结快照恢复；需 WSL 内 zebrad/zallet-zaino 可用）。

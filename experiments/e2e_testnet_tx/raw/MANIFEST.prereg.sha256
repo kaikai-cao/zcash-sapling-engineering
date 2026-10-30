@@ -1,1 +1,14 @@
-0ced5b8710a8cee98181b105a99bc347a26eda1f3c7aa99116d81ae84ee99db6 *experiments/metadata/sapling_e2e_regtest_confirmatory_preregistration_20261030.md
+# 预注册文件的独立锚点（sha256sum -c 兼容格式）
+#
+# 用途：证明 experiments/metadata/sapling_e2e_regtest_confirmatory_preregistration_20261030.md
+# 的「冻结正文」（§1–§13：模型形式、矩阵、判据、失败规则、统计方法）未被事后改写。
+#
+# 历史锚点（冻结② 回填完成时的正文，对应提交 30e531b，仅 §1–§13）：
+#   0ced5b8710a8cee98181b105a99bc347a26eda1f3c7aa99116d81ae84ee99db6
+#   —— 不可用于校验当前文件（当前文件多出 §14），仅作对照值保留。
+#
+# 当前锚点（当前文件 = §1–§13 正文 + §14 执行后状态附录 + §12/§13 两处完成标注）。
+# 与 30e531b 的差异**只**包含：§12 阶段二/三行末追加"✅ 已完成"标注、
+# §13 末尾旧注记追加"后续见 §14"括号、文末追加 §14 整节。
+# 判据、模型形式、矩阵、失败规则、样本量、统计方法一律未动。
+823246599ba0e3d6da7e13808995d9d5d97788e07f305111a079c809d5636321 *experiments/metadata/sapling_e2e_regtest_confirmatory_preregistration_20261030.md

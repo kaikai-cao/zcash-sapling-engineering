@@ -1,0 +1,32 @@
+# 本地证据清单（不要求干净克隆验证）
+# 这些文件存在于工作区但被 .gitignore 有意排除；列出哈希是为了证明
+# 「本地产物与报告一致」，而**不是**「远端可复现」。校验方式：
+#   sha256sum -c raw/MANIFEST.local-excluded.sha256
+# 原因: 封存目录的取证明细，脱离库本体无独立价值，`.gitignore` 排除
+6c465f72a412dcf3cbd16940a46738ddb2ecaec8f9cb71e2fee64c4bbc88a63f  raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/filelist.tsv
+# 原因: 封存目录的取证明细，脱离库本体无独立价值，`.gitignore` 排除
+57e66098b7cd3446f4cffa8ff6b66c3c80e8e9032644f536aa38ddf72d324629  raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/sha256.txt
+# 原因: regtest 钱包库字节副本，含支出密钥，`.gitignore` 排除（安全边界）
+1512cf95f3c5ff46e7e54882357cebfc3135085c772dfb87338e7e844b0f3e02  raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/wallet.db.sealed
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+1accae9bbfd492718c4459bbb30adb447353e22f72d04cf8fc382057a247b515  raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/run.log
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+c68c4863a396df7a7b1625ee53b0b1ec15235ba6a1c0b1e94f662cd79a0adf16  raw/confirmatory_20261030/_feasibility_gate/run_20261030_095147/run.log
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+16c169da688e61a1f3b3f2a6cf84ef482e5e9042ea9efeb9999fc026380cc5bc  raw/confirmatory_20261030/_feasibility_gate/run_20261030_104456/run.log
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+84a6b9770a1b858df188f5110b53ca3679d3c7bd4fce57ae8ee503b389c817c9  raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/run.log
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+c84e5062a50879c31d6f140010dcbfbed606749990cfb822d561eefafbfd7275  raw/confirmatory_20261030/_feasibility_gate/run_20261030_113002/run.log
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+15bca86bf5a8146bdbf5dc5aa81632a4ef1ea84720ecd3597b908e8c01a7e8dc  raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/run.log
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+a778e412c53c868e28e04f4f8d8544f6ce79090cfd7842381a660a18286a8b8a  raw/confirmatory_20261030/_feasibility_gate/run_20261030_152341/run.log
+# 原因: live-node 诊断产物，产出脚本未入库，不可独立复现
+c5df66dd37996783f1022f2ac69d4983a4f61939a5a5b2a04b54ac59ff09c4a1  raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104052.json
+# 原因: live-node 诊断产物，产出脚本未入库，不可独立复现
+b6c31348e53fd5f8716568772cbacf7ca55be30ca2e6d9adb386a31bc999c768  raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104149.json
+# 原因: live-node 诊断产物，产出脚本未入库，不可独立复现
+12526ed6cfafce02e3873dd8fb2ea052aa305052766d25bf2e44803b342a32d8  raw/confirmatory_20261030/_note_scan_diag/scan_20261030_103423.json
+# 原因: 执行日志，`.gitignore` 的 `**/run_*/run.log` 排除（可由 run 产物与脚本重放）
+35eac62233bf7d84683c30907d84b2699e30d40a423752c7a47a6a88de90bc6c  raw/confirmatory_20261030/run_20261030_201124/run.log

@@ -19,11 +19,20 @@ import fit_sapling_e2e_model as F  # noqa: E402
 
 B = 4000
 SEED = 20261030
-RAW = os.path.join(os.path.dirname(os.path.abspath(__file__)), "raw", "confirmatory_20261030")
 
-rows = F.load_all(RAW)
+# 输入固定到**唯一**正式 run，且要求确认性「有效样本」定义（txid ∧ form_match ∧ fee_match）。
+# 2026-10-30 冻结审计修复：此前用 load_all(confirmatory_20261030/) 且未开 require_match，
+# 会把该目录下任何未来新增 run 或不符合定义的轮次一并计入；本次数据不受影响
+# （50 轮全部满足），但脚本必须自己守住口径，而不是依赖数据恰好干净。
+RAW = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                   "raw", "confirmatory_20261030", "run_20261030_201124")
+
+rows = F.load_all(RAW, require_match=True)
 if not rows:
-    raise SystemExit("无样本")
+    raise SystemExit("无样本（检查 %s 是否存在 rounds.csv）" % RAW)
+if len(rows) != 50:
+    raise SystemExit("预期 50 轮有效样本，实际 %d 轮——与预注册 §4.2 矩阵不符，"
+                     "不得继续出判据" % len(rows))
 
 # 按形态分组（保留原始轮次值）
 groups = {}
