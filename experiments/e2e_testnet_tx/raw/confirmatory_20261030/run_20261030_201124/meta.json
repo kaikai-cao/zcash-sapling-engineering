@@ -1,0 +1,114 @@
+{
+ "args": {
+  "matrix": null,
+  "mode": "confirm",
+  "policy": "FullPrivacy",
+  "max_attempts": 8,
+  "target_success": 5,
+  "mine_blocks": 2,
+  "outdir_base": "raw/confirmatory_20261030",
+  "seed": 20261030,
+  "dry_run": false,
+  "allow_hash_mismatch": false,
+  "allow_script_mismatch": false,
+  "allow_height_mismatch": false,
+  "no_restore": false,
+  "replaces": null,
+  "g4_verdicts": null
+ },
+ "matrix": [
+  [
+   1,
+   2
+  ],
+  [
+   2,
+   2
+  ],
+  [
+   4,
+   2
+  ],
+  [
+   7,
+   2
+  ],
+  [
+   10,
+   2
+  ],
+  [
+   17,
+   2
+  ],
+  [
+   1,
+   9
+  ],
+  [
+   3,
+   2
+  ],
+  [
+   3,
+   3
+  ],
+  [
+   4,
+   3
+  ]
+ ],
+ "mode": "confirm",
+ "dry_run": false,
+ "real_tx": true,
+ "restore_enabled": true,
+ "policy_frozen": "FullPrivacy",
+ "replaces": null,
+ "sidecar": "errors.jsonl",
+ "timestamp": "20261030_201124",
+ "snapshot_sha256": "ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c",
+ "snapshot_sha256_expected": "ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c",
+ "snapshot_sha256_match": true,
+ "snapshot_target_height": 32297,
+ "restore_script_sha256": "2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11",
+ "restore_script_sha256_expected": "2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11",
+ "restore_script_sha256_match": true,
+ "meta_stage": "run_end",
+ "executor_sha256": "41f3a75d10f3258b05f09d837ef218a6bc9ee2a6e1a39f332e4b89a797c36459",
+ "git_head": "30e531b02fcfd52b5899c768f8965364284fb564",
+ "binary_sha256": null,
+ "pids": {
+  "zebrad": 5036,
+  "zallet": 5341
+ },
+ "failure_rows": 0,
+ "sidecar_rows": 0,
+ "mismatch_rows": 0,
+ "attempts_per_form": {
+  "3,3": 5,
+  "1,9": 5,
+  "7,2": 5,
+  "2,2": 5,
+  "1,2": 5,
+  "17,2": 5,
+  "4,3": 5,
+  "4,2": 5,
+  "3,2": 5,
+  "10,2": 5
+ },
+ "valid_successes_per_form": {
+  "3,3": 5,
+  "1,9": 5,
+  "7,2": 5,
+  "2,2": 5,
+  "1,2": 5,
+  "17,2": 5,
+  "4,3": 5,
+  "4,2": 5,
+  "3,2": 5,
+  "10,2": 5
+ },
+ "rows_total": 50,
+ "rows_with_txid": 50,
+ "dry_run_consistent": true
+}

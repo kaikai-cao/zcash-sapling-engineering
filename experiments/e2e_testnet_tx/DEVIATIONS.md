@@ -161,3 +161,57 @@ tie-break：手续费优先」，并注明 `form_match` / `fee_match` 两列布�
 - 未扩展功能范围：G4 自动裁决仍**只**授权预注册第 10、30 两行，
   `status_poll` 各行恒为「否」。
 
+> 注：§4.3 中「未启动正式 confirmatory campaign」一句描述的是**该轮提交时的状态**；
+> 正式采集已于同日后续执行，见 §5。
+
+---
+
+## 5. 正式 confirmatory campaign 执行记录（2026-10-30）
+
+### 5.1 执行事实
+
+| 项 | 值 |
+|---|---|
+| 命令 | `python3 confirmatory_bench.py --mode confirm` |
+| run 目录 | `raw/confirmatory_20261030/run_20261030_201124` |
+| 起始 | 2026-10-30 20:11:24（本地） |
+| 样本 | **50 轮 / 10 形态，每形态 5 次全部成功** |
+| 失败 / 重试 | **0 / 0**（`failure_rows=0`, `sidecar_rows=0`, `mismatch_rows=0`） |
+| 样本资格 | `meta_stage=run_end`；无 run 被标 `run_aborted`；`usable_as_sample` 未置 False |
+| 形态一致性 | `form_match` 50/50、`fee_match` 50/50 |
+| 每轮链高 | 32297（50/50，与快照一致） |
+| 快照 / 脚本哈希 | 两者每轮均匹配冻结值（`snapshot_sha256_match=True`） |
+| 代码版本 | `git_head=30e531b02fcfd52b5899c768f8965364284fb564` |
+| 执行器哈希 | `41f3a75d10f3258b05f09d837ef218a6bc9ee2a6e1a39f332e4b89a797c36459` |
+
+未传入 `--g4-verdicts`：本轮**未出现** `opid_timeout` 等需要 G4 裁决的失败，
+故 G4 入口未被触发（缺省 `undecided`→停止的 fail-closed 路径保持有效但未激活）。
+
+### 5.2 假设判定（预注册 §9 判据）
+
+| 假设 | 判据 | 实测 | 结论 |
+|---|---|---|---|
+| **H_A**（Spend≠Output 单位成本） | Δ=a_S−c_O 的 95% CI 下界 > 0 | Δ=540.57 ms，CI [513.11, 552.96] | **接受** |
+| **H_B**（等证明数差异稳定） | 两形态中位数差 CI 不含 0 且同号、量级∈[300,800] ms | 差 632.90 ms，CI [483.10, 783.20] | **接受（稳定）** |
+| **H_C**（M3 优于 M1） | LOO 相对下降 ≥10% 且绝对差 ≥20 ms，且 M3<M2 | 1490.12→83.31 ms（−94.4%，−1406.8 ms），M3<M2(275.04) | **接受** |
+
+模型：M3 = 641.5 ms/spend + 101.0 ms/output + 650.5 ms（R²=0.9996, LOO-RMSE 83.31 ms）。
+手续费 `fee = 5000·max(S,O)` 吻合 50/50；`tx_size = 352·S + 948·O + 130` 残差 0 B。
+
+### 5.3 执行偏差说明
+
+- **无预注册偏离**：矩阵零修订、每格 n=5 达目标、无 underpowered、无选择性补测。
+- **环境**：WSL2 离线 regtest，zebrad 6.2.3 + zallet Beta（`zallet-zaino` 后端）。
+  `meta.json` 的 `binary_sha256` 为 `None`（PATH 可见性限制）；本轮实测补录
+  `zebrad=baf0b2cd…`、`zallet-zaino=e602e4a3…`、`zallet=523bf86a…`，记于 `RESULTS.md`。
+- **恢复备份累积**：恢复脚本每轮把 `data/` 改名为 `*.bak.<时间戳>` 且不删除，
+  本轮 50 轮累积约 100 个备份目录（约 7 GB）。属磁盘占用，不影响测量；未在实验中途清理。
+
+### 5.4 本轮明确**未**做的事
+
+- 未合并 PR #24（保持 open）。
+- 未修改预注册正文（§1–§12 冻结内容未动；仅新增 `FIT.md` / `RESULTS.md` 交付物）。
+- 未做第二轮采集、未补测、未剔除任何样本。
+- 未更新 PPT（预注册 §11 交付物 4，属独立事项）。
+
+

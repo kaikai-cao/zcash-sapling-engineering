@@ -1,25 +1,26 @@
 # 实验产物哈希清单
 
-> 生成时间：2026-10-30T11:45:10Z（UTC）  
-> 文件数：**131**　合计：**4,269,806 B**（4.07 MB）  
+> 生成时间：2026-10-30T12:46:49Z（UTC）  
+> 文件数：**139**　合计：**4,539,397 B**（4.33 MB）  
 > 校验：`cd experiments/e2e_testnet_tx && sha256sum -c raw/MANIFEST.sha256`
 
 ## 按类别
 
 | 类别 | 文件数 | 字节数 |
 |---|---:|---:|
-| doc | 2 | 19,050 |
+| doc | 2 | 22,082 |
 | e2e_regtest | 9 | 3,419 |
 | external | 1 | 34,725 |
 | pczt | 19 | 56,375 |
-| raw-other | 48 | 3,790,949 |
+| raw-other | 55 | 4,053,385 |
 | sapling | 37 | 53,866 |
-| script | 15 | 311,422 |
+| script | 16 | 315,545 |
 
 ## 运行目录完整性
 
 | run 目录 | 文件数 | 缺失 |
 |---|---:|---|
+| `raw/confirmatory_20261030/run_20261030_201124` | 5 | - |
 | `raw/e2e_regtest_v2/run_20261029_142533` | 1 | - |
 | `raw/e2e_regtest_v2/run_20261029_143529` | 4 | - |
 | `raw/e2e_regtest_v2/run_20261029_143934` | 4 | - |
@@ -38,7 +39,7 @@
 
 | 文件 | 字节 | mtime (UTC) | SHA256（前 16 位） |
 |---|---:|---|---|
-| `DEVIATIONS.md` | 9,432 | 2026-10-30T11:45:03Z | `b0051c4a25897d7b` |
+| `DEVIATIONS.md` | 12,464 | 2026-10-30T12:46:44Z | `b48bab668291164c` |
 | `README_runbook.md` | 9,618 | 2026-10-29T08:01:04Z | `ff8cd66933e1be0a` |
 | `a_note_scan_diag.py` | 11,969 | 2026-10-30T02:33:53Z | `bbba7ab2ec2afcd2` |
 | `a_prime_selftest.py` | 8,136 | 2026-10-30T02:40:28Z | `3833e64e4fb7b712` |
@@ -49,14 +50,17 @@
 | `e2e_tx_bench_v2.py` | 19,270 | 2026-10-29T06:37:13Z | `6ebafa52545ab088` |
 | `failure_class_selftest.py` | 38,793 | 2026-10-30T11:41:55Z | `7834ffd10766d6d7` |
 | `fit_sapling_e2e_model.py` | 16,678 | 2026-10-30T07:04:30Z | `c7dbbe0c739d1422` |
+| `h_ab_bootstrap.py` | 4,123 | 2026-10-30T12:45:50Z | `1e5e55c87cd2f782` |
 | `make_manifest.py` | 7,924 | 2026-10-29T08:02:07Z | `0f1a310db3ef1351` |
 | `mem_sample.py` | 3,904 | 2026-10-27T10:10:05Z | `d0ad3c684c33fc8c` |
 | `pczt_bench_pool.py` | 15,957 | 2026-10-29T07:03:43Z | `c2db6c650c536f9a` |
 | `raw/AUDIT_trail.md` | 13,842 | 2026-10-29T08:01:32Z | `13737e8390726730` |
 | `raw/ENV_binaries.txt` | 2,541 | 2026-10-29T07:44:42Z | `b8d0c672ae7bd0f7` |
 | `raw/FAILURES.md` | 8,362 | 2026-10-29T08:00:44Z | `429ad5ccfac0ef91` |
-| `raw/MANIFEST.prereg.sha256` | 148 | 2026-10-30T11:44:36Z | `54d7e625590e4403` |
+| `raw/MANIFEST.prereg.sha256` | 148 | 2026-10-30T11:45:10Z | `54d7e625590e4403` |
 | `raw/confirmatory_20261030/.gitignore` | 923 | 2026-10-30T06:55:55Z | `b171a34f6d2248f0` |
+| `raw/confirmatory_20261030/FIT.md` | 5,939 | 2026-10-30T12:45:05Z | `d65a0df7bf57a2e9` |
+| `raw/confirmatory_20261030/RESULTS.md` | 7,650 | 2026-10-30T12:46:12Z | `0a53f1036604021a` |
 | `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/README.md` | 2,414 | 2026-10-30T03:15:39Z | `e4bb0bd2bf270430` |
 | `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/addresses_before.tsv` | 5,393 | 2026-10-30T03:15:27Z | `ec19fc7c041ce676` |
 | `raw/confirmatory_20261030/_feasibility_gate/laststate_seal_20261030_1115/filelist.tsv` | 112,447 | 2026-10-30T03:15:26Z | `6c465f72a412dcf3` |
@@ -100,6 +104,11 @@
 | `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104052.json` | 5,914 | 2026-10-30T02:40:52Z | `c5df66dd37996783` |
 | `raw/confirmatory_20261030/_note_scan_diag/a_prime_selftest_20261030_104149.json` | 5,914 | 2026-10-30T02:41:49Z | `b6c31348e53fd5f8` |
 | `raw/confirmatory_20261030/_note_scan_diag/scan_20261030_103423.json` | 41,210 | 2026-10-30T02:34:23Z | `12526ed6cfafce02` |
+| `raw/confirmatory_20261030/run_20261030_201124/memory_timeseries.csv` | 162,291 | 2026-10-30T12:41:47Z | `d0e5dc2c4aca30b5` |
+| `raw/confirmatory_20261030/run_20261030_201124/meta.json` | 1,980 | 2026-10-30T12:41:47Z | `52daa9109d6ad213` |
+| `raw/confirmatory_20261030/run_20261030_201124/rounds.csv` | 22,307 | 2026-10-30T12:41:47Z | `14906e941889c1bb` |
+| `raw/confirmatory_20261030/run_20261030_201124/run.log` | 61,822 | 2026-10-30T12:41:47Z | `35eac62233bf7d84` |
+| `raw/confirmatory_20261030/run_20261030_201124/summary_by_shape.csv` | 447 | 2026-10-30T12:41:47Z | `d6b7f12ed16a1cd4` |
 | `raw/e2e_regtest_v2/run_20261029_142533/memory_timeseries.csv` | 117 | 2026-10-29T06:25:33Z | `24880f834bf21c28` |
 | `raw/e2e_regtest_v2/run_20261029_143529/memory_timeseries.csv` | 199 | 2026-10-29T06:35:29Z | `9eec9a09dd58c2ae` |
 | `raw/e2e_regtest_v2/run_20261029_143529/run_summary.json` | 1,390 | 2026-10-29T06:35:29Z | `dc1485c50c3f947e` |
