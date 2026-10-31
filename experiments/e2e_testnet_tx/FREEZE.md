@@ -1,7 +1,7 @@
 # Sapling 端到端成本测量 —— 最终冻结说明
 
 **冻结时间**：2026-10-30
-**冻结基线**：分支 `experiments/e2e-testnet-tx-harness`，远端 HEAD `5acfd50`
+**分支**：`experiments/e2e-testnet-tx-harness`（PR #24，open，未合并）
 **一句话结论**：50 轮确认性实验已完成并通过预注册判据；代码、数据、分析、偏离、环境证据
 已串成一条可核验的链，本线**就此冻结，不再新增实验、指标或脚本**。
 
@@ -10,30 +10,54 @@
 
 ---
 
-## 1. 冻结基线：提交与状态
+## 1. 冻结基线：三个**不同**的版本概念（不要混用）
+
+研究项目里「版本」至少有三个含义，混在一起就会写出自相矛盾的冻结文档。
+本项目分别记录如下：
+
+| 概念 | 值 | 含义与用途 |
+|---|---|---|
+| **正式测量代码基线** | `30e531b02fcfd52b5899c768f8965364284fb564` | **50 轮数据实际运行时**的 `git_head`（写在 `run_20261030_201124/meta.json` 里）。引用实验结果时用这个 |
+| **分析代码快照** | 执行器 `41f3a75d10f3258b05f09d837ef218a6bc9ee2a6e1a39f332e4b89a797c36459`；分析脚本见 `07a55ae` | 测量之后分析口径的修正（txid 过滤、固定 run），**不改变原始数据** |
+| **冻结定稿提交** | `a3cbaa7e490468d77f3e0d053a385ab2b3c6feed`（`a3cbaa7`） | 本文定稿处。**归档/移交时引用这个**；不要求与实际 HEAD 字符串相等（见下注） |
+
+> **关于「HEAD」的一条规则（避免冻结文档自我过期）：**
+> 冻结之后仍可能出现**纯文档修正**提交（例如审计要求统一口径、修正过期数字）。这类提交
+> **不改变测量基线与任何数据哈希**，因此不应被读成「冻结被推翻」。
+> 判定冻结是否有效的标准是：**① `MANIFEST.sha256` 全通过；② 测量基线仍是 `30e531b`；③ 50 轮数据哈希不变**
+> ——而不是 `git log -1` 的短 SHA 等于本文写的某个值。
+> 如需报告"当前仓库状态"，用 `git log --oneline -1` 现查；如需引用"冻结基线"，用上表的值。
+
+仓库状态：
 
 | 项 | 值 |
 |---|---|
-| 远端 HEAD | `5acfd509fd424373efca65269d36e57d8bc6bec0`（`5acfd50`） |
-| 本地 HEAD | 同上，与远端 `0 / 0`（无领先、无落后） |
-| 工作区 | 干净（`git status --porcelain` 为 0 项） |
 | 分支 | `experiments/e2e-testnet-tx-harness` |
+| 远端 HEAD | 以 `git log --oneline -1` 为准（冻结定稿时为 `a3cbaa7`；此后可能有一次纯文档修正提交） |
+| 本地 / 远端差异 | 冻结定稿时为 `0 / 0`（无领先、无落后） |
+| 工作区 | 干净（`git status --porcelain` 为 0 项） |
 | `main` | **未被触碰**，仍为 `1fb6cc1`（本地 `main` 停在 `9d7195a`，属本地未同步，不影响本分支） |
 | PR #24 | **open，未合并**；与 base 存在 `experiments/metadata/INDEX.md` 的合并冲突，按冻结要求**不做 rebase** |
 
-本轮提交链（时间顺序）：
+本轮提交链（时间顺序，`aeb7447` 之后）：
 
 | 提交 | 内容 |
 |---|---|
-| `30e531b` | 工程材料哈希冻结 + 执行器修正记录 |
-| `aeb7447` | 正式 confirmatory campaign 数据归档（50 轮）+ FIT/RESULTS |
 | `07a55ae` | 冻结前审计修复：登记 D7、拆分 MANIFEST、锚定分级、补 CI/harness |
 | `5acfd50` | 补 `experiments/**` 的 CI push 触发（此前该分支从未跑过 CI） |
+| `e2898be` | 新增本文（`FREEZE.md`） |
+| `d001746` | 备份目录改实测口径（274 个 / 9.42 GB） |
+| `a3cbaa7` | 本文内部数字对齐（清单 130 条） |
 
-**CI 对应的确切 SHA**：GitHub Actions run [`41061900242`](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/41061900242)
-的 `head_sha` 就是 `5acfd50`，7 个 job 全部 `success`，其中包含
+更早的两个提交：`45400c6`（执行器修正）、`30e531b`（材料冻结，**即上表的测量基线**）。
+
+**冻结定稿时的 CI**：GitHub Actions run [`41064469622`](https://github.com/kaikai-cao/zcash-sapling-engineering/actions/runs/41064469622)，
+`head_sha` = `a3cbaa7`，**7/7 job `success`**，含
 `end-to-end Sapling analysis (deterministic, no node)`（selftest 32/0/0 + harness 132/0 +
 用归档 CSV 重算三项假设并比对冻结数值）。
+（历史：`5acfd50` 对应 run `41061900242`，`d001746` 对应 run `41063835297`，均 7/7。）
+> CI run 与提交是**一一对应**的：引用某个 run 时必须同时给出它的 `head_sha`，
+> 不要把「某个 run 全绿」当成「任意提交都全绿」。后续文档修正提交各自的 run 在 Actions 页面现查。
 
 ---
 
