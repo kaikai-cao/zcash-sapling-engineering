@@ -78,7 +78,11 @@ fn build_scalars(n: usize, seed: u64) -> Vec<Scalar> {
         .collect()
 }
 
-fn run_jacobian(worker: &Worker, bases: &Arc<Vec<G1Affine>>, exps: &Arc<Vec<Exponent<Scalar>>>) -> G1Projective {
+fn run_jacobian(
+    worker: &Worker,
+    bases: &Arc<Vec<G1Affine>>,
+    exps: &Arc<Vec<Exponent<Scalar>>>,
+) -> G1Projective {
     multiexp(
         worker,
         (Arc::clone(bases), 0),
@@ -89,7 +93,11 @@ fn run_jacobian(worker: &Worker, bases: &Arc<Vec<G1Affine>>, exps: &Arc<Vec<Expo
     .expect("multiexp failed")
 }
 
-fn run_xyzz(worker: &Worker, bases: &Arc<Vec<G1Affine>>, exps: &Arc<Vec<Exponent<Scalar>>>) -> G1Projective {
+fn run_xyzz(
+    worker: &Worker,
+    bases: &Arc<Vec<G1Affine>>,
+    exps: &Arc<Vec<Exponent<Scalar>>>,
+) -> G1Projective {
     multiexp_g1_xyzz(worker, Arc::clone(bases), Arc::clone(exps))
         .wait()
         .expect("multiexp_g1_xyzz failed")
@@ -220,7 +228,10 @@ fn main() {
     let aa = median(&mut per_arm[1].clone());
     println!("\n=== summary (per-block medians, {blocks} blocks) ===");
     println!("jac_A  median_ms = {jac_all:.3}");
-    println!("jac_B  median_ms = {aa:.3}   (A/A drift vs jac_A: {:+.3}%)", (aa - jac_all) / jac_all * 100.0);
+    println!(
+        "jac_B  median_ms = {aa:.3}   (A/A drift vs jac_A: {:+.3}%)",
+        (aa - jac_all) / jac_all * 100.0
+    );
     println!("xyzz   median_ms = {xyzz_all:.3}");
     println!("S_MSM = jac / xyzz = {:.4}x", jac_all / xyzz_all);
 

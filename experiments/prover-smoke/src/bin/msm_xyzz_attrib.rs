@@ -84,7 +84,9 @@ fn time_xyzz_unchecked(pts: &[G1Affine], idx: &[usize]) -> f64 {
 
 fn main() {
     let mut seed = 0x1234_5678_9ABC_DEF1u64;
-    let pts: Vec<G1Affine> = (0..N).map(|_| G1Affine::from(rand_point(&mut seed))).collect();
+    let pts: Vec<G1Affine> = (0..N)
+        .map(|_| G1Affine::from(rand_point(&mut seed)))
+        .collect();
     let mut idx = Vec::with_capacity(N);
     let mut s = 0xA5A5_1234_5678_9ABCu64;
     for _ in 0..N {
@@ -121,7 +123,11 @@ fn main() {
     let per = |ns: f64| ns / N as f64;
 
     println!("n={N} buckets={BUCKETS} rounds={ROUNDS}");
-    println!("fill jacobian         {:9.3} ms  {:7.1} ns/add", j / 1e6, per(j));
+    println!(
+        "fill jacobian         {:9.3} ms  {:7.1} ns/add",
+        j / 1e6,
+        per(j)
+    );
     println!(
         "fill xyzz checked     {:9.3} ms  {:7.1} ns/add  {:+.2}% vs jac",
         c / 1e6,

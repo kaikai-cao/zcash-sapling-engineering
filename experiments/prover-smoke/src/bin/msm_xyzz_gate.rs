@@ -83,13 +83,26 @@ fn fixture(n: usize, seed: u64) -> (Arc<Vec<G1Affine>>, Arc<Vec<Exponent<Scalar>
     (Arc::new(bases), Arc::new(exps))
 }
 
-fn msm_jac(worker: &Worker, bases: &Arc<Vec<G1Affine>>, exps: &Arc<Vec<Exponent<Scalar>>>) -> G1Projective {
-    multiexp(worker, (Arc::clone(bases), 0), FullDensity, Arc::clone(exps))
-        .wait()
-        .expect("jacobian multiexp failed")
+fn msm_jac(
+    worker: &Worker,
+    bases: &Arc<Vec<G1Affine>>,
+    exps: &Arc<Vec<Exponent<Scalar>>>,
+) -> G1Projective {
+    multiexp(
+        worker,
+        (Arc::clone(bases), 0),
+        FullDensity,
+        Arc::clone(exps),
+    )
+    .wait()
+    .expect("jacobian multiexp failed")
 }
 
-fn msm_xyzz(worker: &Worker, bases: &Arc<Vec<G1Affine>>, exps: &Arc<Vec<Exponent<Scalar>>>) -> G1Projective {
+fn msm_xyzz(
+    worker: &Worker,
+    bases: &Arc<Vec<G1Affine>>,
+    exps: &Arc<Vec<Exponent<Scalar>>>,
+) -> G1Projective {
     multiexp_g1_xyzz(worker, Arc::clone(bases), Arc::clone(exps))
         .wait()
         .expect("xyzz multiexp failed")
@@ -145,7 +158,9 @@ fn main() {
     // ---------------- C7: 1024 sequential mixed add/sub ----------------
     let mut acc_j = G1Projective::identity();
     let mut acc_x = G1BucketXyzz::identity();
-    let pts: Vec<G1Affine> = (0..1024).map(|_| G1Affine::from(rand_point(&mut seed))).collect();
+    let pts: Vec<G1Affine> = (0..1024)
+        .map(|_| G1Affine::from(rand_point(&mut seed)))
+        .collect();
     for (i, a) in pts.iter().enumerate() {
         if i % 3 == 0 {
             acc_j -= a;
@@ -155,7 +170,10 @@ fn main() {
             acc_x.add_mixed_assign(a, false);
         }
     }
-    g.check("C7 1024 mixed add/sub", same(&acc_x.into_projective(), &acc_j));
+    g.check(
+        "C7 1024 mixed add/sub",
+        same(&acc_x.into_projective(), &acc_j),
+    );
 
     // ---------------- C7b: bucket reduction with degenerates ----------------
     let buck_j: Vec<G1Projective> = vec![G1Projective::identity(); 512];
