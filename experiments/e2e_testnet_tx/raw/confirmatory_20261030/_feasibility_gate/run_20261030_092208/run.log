@@ -1,0 +1,72 @@
+[log] raw/confirmatory_20261030/_feasibility_gate/run_20261030_092208/run.log
+[argv] confirmatory_bench.py --mode gate --dry-run
+[mode] gate policy= FullPrivacy dry_run= True restore= True
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（10.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv][warn] z_listunspent 失败: z_listunspent -> {"code": -20, "message": "WalletDb::get_memo failed", "data": "Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 
+Traceback (most recent call last):
+  File "/mnt/d/Research/zcash-sapling-engineering/experiments/e2e_testnet_tx/confirmatory_bench.py", line 633, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/mnt/d/Research/zcash-sapling-engineering/experiments/e2e_testnet_tx/confirmatory_bench.py", line 609, in main
+    json.dump(meta, open(os.path.join(rundir, "meta.json"), "w"), indent=1, default=str)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/__init__.py", line 181, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "/usr/lib/python3.14/json/encoder.py", line 444, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/usr/lib/python3.14/json/encoder.py", line 413, in _iterencode_dict
+    yield from chunks
+  File "/usr/lib/python3.14/json/encoder.py", line 381, in _iterencode_dict
+    raise TypeError(f'keys must be str, int, float, bool or None, '
+                    f'not {key.__class__.__name__}')
+TypeError: keys must be str, int, float, bool or None, not tuple
+when serializing dict item 'attempts_per_form'

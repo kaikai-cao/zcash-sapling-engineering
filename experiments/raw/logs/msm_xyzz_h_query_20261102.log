@@ -1,0 +1,48 @@
+bench=msm_xyzz_ab n=131071 blocks=12 runs=3 seed=0x5a17e5b3a5e2d10c rayon_threads=1 xyzz_switch=0
+note: the SAPLING_MSM_XYZZ env switch only gates the Groth16 call site; this bench calls both arms directly
+correctness h_query jac_vs_xyzz_bytes=1
+correctness h_query jac_A_vs_B_bytes=1
+block=0 arm=xyzz median_ms=1421.809
+block=0 arm=jac_A median_ms=1305.505
+block=0 arm=jac_B median_ms=1313.145
+block=1 arm=jac_B median_ms=1332.323
+block=1 arm=xyzz median_ms=1423.349
+block=1 arm=jac_A median_ms=1344.847
+block=2 arm=jac_A median_ms=1334.236
+block=2 arm=jac_B median_ms=1331.473
+block=2 arm=xyzz median_ms=1422.364
+block=3 arm=jac_A median_ms=1331.120
+block=3 arm=jac_B median_ms=1335.311
+block=3 arm=xyzz median_ms=1426.252
+block=4 arm=jac_A median_ms=1338.755
+block=4 arm=jac_B median_ms=1342.131
+block=4 arm=xyzz median_ms=1428.341
+block=5 arm=jac_B median_ms=1341.122
+block=5 arm=jac_A median_ms=1335.991
+block=5 arm=xyzz median_ms=1426.387
+block=6 arm=jac_A median_ms=1334.529
+block=6 arm=jac_B median_ms=1339.889
+block=6 arm=xyzz median_ms=1423.590
+block=7 arm=jac_B median_ms=1335.939
+block=7 arm=jac_A median_ms=1336.663
+block=7 arm=xyzz median_ms=1427.929
+block=8 arm=jac_B median_ms=1338.341
+block=8 arm=xyzz median_ms=1427.185
+block=8 arm=jac_A median_ms=1333.828
+block=9 arm=jac_B median_ms=1332.319
+block=9 arm=jac_A median_ms=1336.461
+block=9 arm=xyzz median_ms=1427.355
+block=10 arm=jac_B median_ms=1337.328
+block=10 arm=jac_A median_ms=1336.790
+block=10 arm=xyzz median_ms=1421.794
+block=11 arm=xyzz median_ms=1427.838
+block=11 arm=jac_A median_ms=1340.517
+block=11 arm=jac_B median_ms=1340.846
+
+=== summary (per-block medians, 12 blocks) ===
+jac_A  median_ms = 1336.461
+jac_B  median_ms = 1337.328   (A/A drift vs jac_A: +0.065%)
+xyzz   median_ms = 1426.387
+S_MSM = jac / xyzz = 0.9370x
+per-block ratio min=0.9182 p25=0.9361 median=0.9373 p75=0.9388 max=0.9448
+[runner] exit=0

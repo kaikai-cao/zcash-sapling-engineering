@@ -1,0 +1,5 @@
+n=131071 buckets=4096 rounds=9
+fill jacobian           119.584 ms    912.4 ns/add
+fill xyzz checked       122.821 ms    937.1 ns/add  +2.71% vs jac
+fill xyzz unchecked     118.972 ms    907.7 ns/add  -0.51% vs jac
+degenerate checks cost     29.4 ns/add  (+3.22% of jacobian)

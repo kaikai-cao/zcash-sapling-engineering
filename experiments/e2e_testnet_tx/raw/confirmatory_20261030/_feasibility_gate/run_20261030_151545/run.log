@@ -1,0 +1,151 @@
+[log] raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/run.log
+[argv] confirmatory_bench.py --mode gate --dry-run
+[mode] gate policy= FullPrivacy dry_run= True restore= True
+[sidecar] raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545/errors.jsonl replaces=-
+[meta] 运行开始基线已写入 meta.json: dry_run=True mode=gate real_tx=False snap=ca35201887b8… script=2df7cd8bd489…
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（8.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (0, 249980000]
+
+----- round 1 | 目标 (S=1,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=2.498700 ZEC 手续费预留=10000 zat
+  收款地址 index=4610670495 派生尝试=3 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（1 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（8.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (249980000, 549980000]
+
+----- round 2 | 目标 (S=2,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=5.498700 ZEC 手续费预留=10000 zat
+  收款地址 index=4610670500 派生尝试=1 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（1 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（8.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (849980000, 1149980000]
+
+----- round 3 | 目标 (S=4,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=11.498600 ZEC 手续费预留=20000 zat
+  收款地址 index=4610670510 派生尝试=1 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（1 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（8.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (1749980000, 2062480000]
+
+----- round 4 | 目标 (S=7,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=20.623450 ZEC 手续费预留=35000 zat
+  收款地址 index=4610670516 派生尝试=2 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（1 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（8.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (2687480000, 2999980000]
+
+----- round 5 | 目标 (S=10,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=29.998300 ZEC 手续费预留=50000 zat
+  收款地址 index=4610670531 派生尝试=3 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（1 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（7.9s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (4874980000, 5187480000]
+
+----- round 6 | 目标 (S=17,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=51.872950 ZEC 手续费预留=85000 zat
+  收款地址 index=4610670532 派生尝试=1 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（1 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（8.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (0, 249980000]
+
+----- round 7 | 目标 (S=1,O=9) policy=FullPrivacy -----
+  收款地址数=8（含 1 找零→实际 O 输出）目标总额=2.498350 ZEC 手续费预留=45000 zat
+  收款地址 index=4610670541;4610670548;4610670549;4610670554;4610670557;4610670558;4610670559;4610670561 派生尝试=22 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（8 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（7.9s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (549980000, 849980000]
+
+----- round 8 | 目标 (S=3,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=8.498650 ZEC 手续费预留=15000 zat
+  收款地址 index=4610670549 派生尝试=1 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（1 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（7.9s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (549980000, 849980000]
+
+----- round 9 | 目标 (S=3,O=3) policy=FullPrivacy -----
+  收款地址数=2（含 1 找零→实际 O 输出）目标总额=8.498650 ZEC 手续费预留=15000 zat
+  收款地址 index=4610670558;4610670559 派生尝试=2 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（2 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（8.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (849980000, 1149980000]
+
+----- round 10 | 目标 (S=4,O=3) policy=FullPrivacy -----
+  收款地址数=2（含 1 找零→实际 O 输出）目标总额=11.498600 ZEC 手续费预留=20000 zat
+  收款地址 index=4610670567;4610670568 派生尝试=3 校验=L1+L1.5+L2
+  [dry-run] 不实际发交易（已恢复+核验+选定金额）
+  [dry-run] 已覆盖：L1 去重 / L1.5 账户地址集合一致性 / L2 Sapling-only（2 个收款地址）
+  [dry-run] 未覆盖：L3（z_sendmany 是否接受该多地址组合）——本次运行不构成形态可行性证据
+[verify] 失败轮=0 sidecar 行=0（attempt_id 双向一致）
+
+=== gate 汇总（n=10）===
+  (S=1,O=2) 尝试=1 有效成功=0 实际形态=[]
+  (S=1,O=9) 尝试=1 有效成功=0 实际形态=[]
+  (S=2,O=2) 尝试=1 有效成功=0 实际形态=[]
+  (S=3,O=2) 尝试=1 有效成功=0 实际形态=[]
+  (S=3,O=3) 尝试=1 有效成功=0 实际形态=[]
+  (S=4,O=2) 尝试=1 有效成功=0 实际形态=[]
+  (S=4,O=3) 尝试=1 有效成功=0 实际形态=[]
+  (S=7,O=2) 尝试=1 有效成功=0 实际形态=[]
+  (S=10,O=2) 尝试=1 有效成功=0 实际形态=[]
+  (S=17,O=2) 尝试=1 有效成功=0 实际形态=[]
+  [dry-run] 本轮未发交易，有效成功必然为 0；判定请看 rounds.csv 的 planned_amount_zat / expected_fee_zat / restored_note_count。
+
+输出: raw/confirmatory_20261030/_feasibility_gate/run_20261030_151545

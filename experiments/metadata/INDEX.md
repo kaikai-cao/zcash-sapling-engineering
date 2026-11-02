@@ -30,6 +30,14 @@
 > internal xyzz path ≈ 253 ns/digit), not to field arithmetic or the reduce stage.
 > Next: Phase D candidate pre-registration (xyzz bucket fill kernel, default-off).
 >
+> **Phase D complete (2026-11-02): NO_GO.** The xyzz bucket path was implemented
+> and verified (16/16 correctness gates, full-MSM byte equality at n = 8/1024/131071),
+> then measured as a paired A/B: **S_MSM = 0.9368** (CI95 [0.9353, 0.9384], A/A
+> drift +0.030%) — xyzz is 6.7% **slower** than the shipped Jacobian path. Attribution:/r/n> the formula alone is at parity (−0.5%..+0.7% unchecked) and the degenerate-case
+> checks cost +3..+6%; the 1.9x gap to blst therefore lives in the Fp multiplier
+> kernel, not in the bucket coordinates. Feature `msm-xyzz-g1` stays off; defaults
+> unchanged; no Spend Prove A/B was run (pre-registered stop condition).
+>
 > **File classes in this repository** — do not merge these roles:
 >
 > | Class | Location | Rule |
@@ -51,6 +59,7 @@ Protocol: [`sapling_optimization_validation_protocol_20261017.md`](sapling_optim
 | g — combination + default flip | `sapling_combo_default_preregistration_20261018.md` | `sapling_combo_default_results_20261018.md` | `experiments/raw/csv/sapling_*_combo_default_*`, `results/tables/sapling_combo_default_{memory,abba}_20261018.csv` | **certified; defaults flipped to `1`** (`SAPLING_MSM_LAZY_RECODING`, `SAPLING_FFT_SERIAL_SINGLE_THREAD`); shipped-default peak 103.06 → 86.18 MB (−16.38%) |
 | closure — memory floor | (reconnaissance, no threshold) | `sapling_default_stage_decomposition_20261018.md` | `experiments/raw/csv/sapling_prove_memory_ledger_{default_phase_probe,synth_capacity}_20261018.csv` | structural floor: peak owned by `circuit_synthesis`; convertible maximum 3,314,512 B unreachable |
 | closure — time floor | (reconnaissance, no threshold) | `sapling_default_time_profile_20261018.md` | `experiments/raw/logs/sapling_spend_msm_{stage,branch}_recon_20261018.log` | arithmetic floor: MSM ≈85% of prove; fill 462 ns/nonzero digit; window c=13 optimal |
+| Phase D — xyzz bucket coordinates (2026-11-02) | `sapling_msm_phase_d_xyzz_preregistration_20261102.md` | `sapling_msm_phase_d_xyzz_results_20261102.md`; `docs/msm_xyzz_kernel_closeout_20261102.md` | `experiments/raw/csv/msm_xyzz_h_query_20261102.csv` (+ `_analysis.md`), `experiments/raw/logs/msm_xyzz_h_query_20261102.log`, `experiments/raw/logs/msm_xyzz_attribution_20261102.log` | **NO_GO** (S_MSM 0.9368, CI95 [0.9353, 0.9384], A/A +0.030%): formula at parity, degenerate checks +3–6%, full MSM +6.75% slower; gap to blst is in the Fp multiplier, not the coordinates. **No default change**; feature `msm-xyzz-g1` off |
 
 ## Measurement programme threads
 

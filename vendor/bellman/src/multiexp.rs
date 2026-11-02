@@ -1845,3 +1845,201 @@ fn test_with_bls12() {
     set_msm_adaptive_window(false);
     assert_eq!(naive, adaptive);
 }
+
+/// Phase D experiment (2026-11-02): XYZZ bucket coordinates for the G1 MSM.
+///
+/// This module is a **parallel implementation** of `multiexp_inner` for the
+/// narrower G1 case, sharing the production window/signed-digit/lazy-recoding
+/// logic by calling the same helpers. `multiexp_inner` itself is untouched, so
+/// the default path cannot regress.
+///
+/// Scope: dense sources only (`FullDensity`), which is what the Groth16
+/// H-query is. The single-task-per-window dispatch matches the shipped
+/// `MSM_WINDOW_SPLIT_DEFAULT = 1`; splits are ignored because they only change
+/// task partitioning, never the result.
+#[cfg(feature = "msm-xyzz-g1")]
+pub mod xyzz_g1 {
+    use super::*;
+    use crate::multicore::{Waiter, Worker};
+    use bls12_381::{G1Affine, G1BucketXyzz, G1Projective, Scalar};
+
+    /// Runtime switch, read once. `SAPLING_MSM_XYZZ=1` enables the XYZZ path.
+    pub fn xyzz_enabled() -> bool {
+        use std::sync::atomic::{AtomicI32, Ordering};
+        static XYZZ_ON: AtomicI32 = AtomicI32::new(i32::MIN);
+        let parsed = match XYZZ_ON.load(Ordering::Relaxed) {
+            value if value != i32::MIN => value,
+            _ => {
+                let value = match std::env::var("SAPLING_MSM_XYZZ") {
+                    Ok(raw) => match raw.trim().to_ascii_lowercase().as_str() {
+                        "1" | "true" | "on" | "yes" => 1,
+                        _ => 0,
+                    },
+                    Err(_) => 0,
+                };
+                XYZZ_ON.store(value, Ordering::Relaxed);
+                value
+            }
+        };
+        parsed == 1
+    }
+
+    /// Number of balanced-signed windows for the G1 scalar field.
+    fn window_count_for(signed: bool, c: u32) -> usize {
+        if signed {
+            signed_window_count(<Scalar as PrimeField>::NUM_BITS as usize, c)
+        } else {
+            (<Scalar as PrimeField>::NUM_BITS as usize + c as usize - 1) / c as usize
+        }
+    }
+
+    /// Chooses the window width exactly as `multiexp` does for G1.
+    fn window_for(exponent_count: usize, signed: bool) -> u32 {
+        msm_window_c_override()
+            .filter(|_| exponent_count >= msm_window_min_n())
+            .unwrap_or_else(|| {
+                if signed {
+                    if msm_adaptive_window_enabled() && exponent_count >= ADAPTIVE_MIN_EXPONENTS {
+                        adaptive_signed_window(
+                            <Scalar as PrimeField>::NUM_BITS as usize,
+                            exponent_count,
+                            msm_worker_count(),
+                            std::mem::size_of::<G1Projective>(),
+                        )
+                    } else {
+                        best_signed_window(
+                            <Scalar as PrimeField>::NUM_BITS as usize,
+                            exponent_count,
+                        )
+                    }
+                } else if exponent_count < 32 {
+                    3
+                } else {
+                    (f64::from(exponent_count as u32)).ln().ceil() as u32
+                }
+            })
+    }
+
+    /// XYZZ equivalent of `multiexp(&worker, bases, FullDensity, exponents)`.
+    pub fn multiexp_g1_xyzz(
+        pool: &Worker,
+        bases: Arc<Vec<G1Affine>>,
+        exponents: Arc<Vec<Exponent<Scalar>>>,
+    ) -> Waiter<Result<G1Projective, SynthesisError>> {
+        pool.compute(move || multiexp_g1_xyzz_inner(bases, exponents))
+    }
+
+    fn multiexp_g1_xyzz_inner(
+        bases: Arc<Vec<G1Affine>>,
+        exponents: Arc<Vec<Exponent<Scalar>>>,
+    ) -> Result<G1Projective, SynthesisError> {
+        let exponent_count = exponents.len();
+        let signed = msm_signed_digits_enabled();
+        let c = window_for(exponent_count, signed);
+        let bucket_count = if signed {
+            1usize << (c - 1)
+        } else {
+            (1usize << c) - 1
+        };
+        let zero_digit_slot = if signed { 1u64 << (c - 1) } else { 0 };
+        let window_count = window_count_for(signed, c);
+        let half: u64 = 1u64 << (c - 1);
+        let modulus: u64 = 1u64 << c;
+
+        let lazy_recoding = msm_lazy_recoding_enabled() && signed && c <= 63;
+        let carry_bits = if lazy_recoding {
+            Some(Arc::new(build_carry_bits(
+                &exponents,
+                c as usize,
+                window_count,
+            )))
+        } else {
+            None
+        };
+        let chunked_exponents = if lazy_recoding {
+            Arc::new(Vec::new())
+        } else {
+            Arc::new(
+                exponents
+                    .iter()
+                    .map(|exp| {
+                        if signed {
+                            exp.chunks_signed(c as usize)
+                        } else {
+                            exp.chunks(c as usize)
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+            )
+        };
+        let recoding = match carry_bits.as_ref() {
+            Some(bits) => Recoding::CarryBits(Arc::clone(bits)),
+            None => Recoding::Materialized(Arc::clone(&chunked_exponents)),
+        };
+
+        let parts: Vec<(usize, G1BucketXyzz)> = (0..window_count)
+            .into_par_iter()
+            .map(|chunk| {
+                let mut buckets = vec![G1BucketXyzz::identity(); bucket_count];
+                let mut acc = G1BucketXyzz::identity();
+                let handle_trivial = chunk == 0;
+
+                for index in 0..exponent_count {
+                    let (is_zero, is_one, digit) = resolve_slot(
+                        &recoding,
+                        &exponents,
+                        index,
+                        chunk,
+                        c as usize,
+                        exponent_count,
+                        half,
+                        modulus,
+                    );
+                    if is_zero {
+                        continue;
+                    }
+                    if is_one {
+                        // A dense source consumes one base per slot, so the base
+                        // index is the exponent index; no cursor is needed.
+                        if handle_trivial {
+                            acc.add_mixed_assign(&bases[index], false);
+                        }
+                        continue;
+                    }
+                    if digit == zero_digit_slot {
+                        continue;
+                    }
+                    if !signed {
+                        buckets[(digit - 1) as usize].add_mixed_assign(&bases[index], false);
+                    } else if digit > zero_digit_slot {
+                        buckets[(digit - zero_digit_slot - 1) as usize]
+                            .add_mixed_assign(&bases[index], false);
+                    } else {
+                        buckets[(zero_digit_slot - digit - 1) as usize]
+                            .add_mixed_assign(&bases[index], true);
+                    }
+                }
+
+                // Summation by parts, entirely in XYZZ: one conversion per chunk.
+                let mut running_sum = G1BucketXyzz::identity();
+                for bucket in buckets.iter().rev() {
+                    running_sum.add_xyzz_assign(bucket);
+                    acc.add_xyzz_assign(&running_sum);
+                }
+                (chunk, acc)
+            })
+            .collect();
+
+        let mut window_results = vec![G1Projective::identity(); window_count];
+        for (chunk, acc) in parts {
+            window_results[chunk] += acc.into_projective();
+        }
+
+        Ok(window_results
+            .into_iter()
+            .rev()
+            .fold(G1Projective::identity(), |acc, part| {
+                (0..c).fold(acc, |acc, _| acc.double()) + part
+            }))
+    }
+}
