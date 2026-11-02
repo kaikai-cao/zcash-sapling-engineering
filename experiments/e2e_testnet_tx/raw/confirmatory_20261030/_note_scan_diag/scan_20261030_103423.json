@@ -1,0 +1,1670 @@
+{
+ "timestamp": "2026-10-30 10:34:23",
+ "height": null,
+ "account_uuid_is_account0": true,
+ "baseline_counts_raw": {
+  "sprout": 0,
+  "sapling": 36,
+  "orchard": 0,
+  "ironwood": 1
+ },
+ "baseline_balance_raw": {
+  "pools": {
+   "sapling": {
+    "valueZat": 11999980000
+   },
+   "ironwood": {
+    "valueZat": 1124820000
+   }
+  },
+  "minimum_confirmations": 1
+ },
+ "baseline_sapling_count": 36,
+ "baseline_sapling_zat": 11999980000,
+ "z_getnotescount_range_probe": {
+  "1-999999": {
+   "sprout": 0,
+   "sapling": 36,
+   "orchard": 0,
+   "ironwood": 1
+  }
+ },
+ "probes": [
+  {
+   "range": [
+    1,
+    999999
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    1,
+    500000
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    1,
+    250000
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    1,
+    125000
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    1,
+    62500
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    1,
+    31250
+   ],
+   "status": "ok",
+   "n": 8,
+   "err": null
+  },
+  {
+   "range": [
+    31251,
+    62500
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31251,
+    46875
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31251,
+    39063
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31251,
+    35157
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31251,
+    33204
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31251,
+    32227
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31251,
+    31739
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31740,
+    32227
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31740,
+    31983
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31740,
+    31861
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31862,
+    31983
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31862,
+    31922
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31923,
+    31983
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31923,
+    31953
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31923,
+    31938
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31939,
+    31953
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31939,
+    31946
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31947,
+    31953
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31947,
+    31950
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31947,
+    31948
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31947,
+    31947
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31948,
+    31948
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31949,
+    31950
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31949,
+    31949
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 8\"}"
+  },
+  {
+   "range": [
+    31950,
+    31950
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31951,
+    31953
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31951,
+    31952
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31951,
+    31951
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 4\"}"
+  },
+  {
+   "range": [
+    31952,
+    31952
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31953,
+    31953
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31954,
+    31983
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31954,
+    31968
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31954,
+    31961
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31954,
+    31957
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31954,
+    31955
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 7\"}"
+  },
+  {
+   "range": [
+    31954,
+    31954
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31955,
+    31955
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 7\"}"
+  },
+  {
+   "range": [
+    31956,
+    31957
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31956,
+    31956
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31957,
+    31957
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31958,
+    31961
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31958,
+    31959
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31958,
+    31958
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31959,
+    31959
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31960,
+    31961
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31960,
+    31960
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31961,
+    31961
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31962,
+    31968
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31962,
+    31965
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31962,
+    31963
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31962,
+    31962
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31963,
+    31963
+   ],
+   "status": "ok",
+   "n": 1,
+   "err": null
+  },
+  {
+   "range": [
+    31964,
+    31965
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31964,
+    31964
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31965,
+    31965
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31966,
+    31968
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31966,
+    31967
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31966,
+    31966
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31967,
+    31967
+   ],
+   "status": "ok",
+   "n": 1,
+   "err": null
+  },
+  {
+   "range": [
+    31968,
+    31968
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31969,
+    31983
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31969,
+    31976
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31969,
+    31972
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31969,
+    31970
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 3\"}"
+  },
+  {
+   "range": [
+    31969,
+    31969
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31970,
+    31970
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 3\"}"
+  },
+  {
+   "range": [
+    31971,
+    31972
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31971,
+    31971
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "range": [
+    31972,
+    31972
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31973,
+    31976
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31973,
+    31974
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31973,
+    31973
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31974,
+    31974
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "range": [
+    31975,
+    31976
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31975,
+    31975
+   ],
+   "status": "poison",
+   "n": null,
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "range": [
+    31976,
+    31976
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31977,
+    31983
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    31984,
+    32227
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    32228,
+    33204
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    33205,
+    35157
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    35158,
+    39063
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    39064,
+    46875
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    46876,
+    62500
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    62501,
+    125000
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    125001,
+    250000
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    250001,
+    500000
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  },
+  {
+   "range": [
+    500001,
+    999999
+   ],
+   "status": "ok",
+   "n": 0,
+   "err": null
+  }
+ ],
+ "probe_count": 93,
+ "enum_seconds": 3.2,
+ "poison_confs": [
+  31948,
+  31949,
+  31950,
+  31951,
+  31952,
+  31953,
+  31954,
+  31955,
+  31956,
+  31957,
+  31958,
+  31959,
+  31960,
+  31961,
+  31962,
+  31964,
+  31965,
+  31966,
+  31968,
+  31969,
+  31970,
+  31971,
+  31972,
+  31973,
+  31974,
+  31975
+ ],
+ "poison_extra_attempts": [
+  {
+   "args": [
+    31948,
+    31948
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31948,
+    31948,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31948,
+    31948,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31949,
+    31949
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 8\"}"
+  },
+  {
+   "args": [
+    31949,
+    31949,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 8\"}"
+  },
+  {
+   "args": [
+    31949,
+    31949,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 8\"}"
+  },
+  {
+   "args": [
+    31950,
+    31950
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31950,
+    31950,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31950,
+    31950,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31951,
+    31951
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 4\"}"
+  },
+  {
+   "args": [
+    31951,
+    31951,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 4\"}"
+  },
+  {
+   "args": [
+    31951,
+    31951,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 4\"}"
+  },
+  {
+   "args": [
+    31952,
+    31952
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31952,
+    31952,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31952,
+    31952,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31953,
+    31953
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31953,
+    31953,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31953,
+    31953,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31954,
+    31954
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31954,
+    31954,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31954,
+    31954,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31955,
+    31955
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 7\"}"
+  },
+  {
+   "args": [
+    31955,
+    31955,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 7\"}"
+  },
+  {
+   "args": [
+    31955,
+    31955,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 7\"}"
+  },
+  {
+   "args": [
+    31956,
+    31956
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31956,
+    31956,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31956,
+    31956,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31957,
+    31957
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31957,
+    31957,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31957,
+    31957,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31958,
+    31958
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31958,
+    31958,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31958,
+    31958,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31959,
+    31959
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31959,
+    31959,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31959,
+    31959,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31960,
+    31960
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31960,
+    31960,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31960,
+    31960,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31961,
+    31961
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31961,
+    31961,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31961,
+    31961,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31962,
+    31962
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31962,
+    31962,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31962,
+    31962,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31964,
+    31964
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31964,
+    31964,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31964,
+    31964,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31965,
+    31965
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31965,
+    31965,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31965,
+    31965,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31966,
+    31966
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31966,
+    31966,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31966,
+    31966,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31968,
+    31968
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31968,
+    31968,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31968,
+    31968,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31969,
+    31969
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31969,
+    31969,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31969,
+    31969,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31970,
+    31970
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 3\"}"
+  },
+  {
+   "args": [
+    31970,
+    31970,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 3\"}"
+  },
+  {
+   "args": [
+    31970,
+    31970,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 3\"}"
+  },
+  {
+   "args": [
+    31971,
+    31971
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31971,
+    31971,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31971,
+    31971,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 2\"}"
+  },
+  {
+   "args": [
+    31972,
+    31972
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31972,
+    31972,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31972,
+    31972,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31973,
+    31973
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31973,
+    31973,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31973,
+    31973,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31974,
+    31974
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31974,
+    31974,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31974,
+    31974,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 0\"}"
+  },
+  {
+   "args": [
+    31975,
+    31975
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31975,
+    31975,
+    true
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  },
+  {
+   "args": [
+    31975,
+    31975,
+    false,
+    []
+   ],
+   "status": "err",
+   "err": "z_listunspent -> {\"code\": -20, \"message\": \"WalletDb::get_memo failed\", \"data\": \"Invalid UTF-8: invalid utf-8 sequence of 1 bytes from index 1\"}"
+  }
+ ],
+ "enumerated_count": 10,
+ "enumerated_zat": 3874980000,
+ "enumerated_values": [
+  249980000,
+  300000000,
+  300000000,
+  300000000,
+  300000000,
+  300000000,
+  312500000,
+  312500000,
+  500000000,
+  1000000000
+ ],
+ "enumerated_confs": [
+  2,
+  4,
+  6,
+  8,
+  10,
+  18,
+  27,
+  31963,
+  31967
+ ],
+ "remaining_count_at_poison": 26,
+ "remaining_zat_at_poison": 8125000000,
+ "complete_strict": false,
+ "poison_value_attribution": null,
+ "final_inventory": [
+  249980000,
+  300000000,
+  300000000,
+  300000000,
+  300000000,
+  300000000,
+  312500000,
+  312500000,
+  500000000,
+  1000000000
+ ],
+ "final_inventory_count": 10,
+ "a5_pick": {
+  "10,2": {
+   "amount_zat": 3874830000,
+   "fee_zat": 50000,
+   "unit_zat": 3874830000,
+   "n_recip": 1
+  },
+  "17,2": null,
+  "1,2": {
+   "amount_zat": 249870000,
+   "fee_zat": 10000,
+   "unit_zat": 249870000,
+   "n_recip": 1
+  },
+  "7,2": {
+   "amount_zat": 2062345000,
+   "fee_zat": 35000,
+   "unit_zat": 2062345000,
+   "n_recip": 1
+  }
+ },
+ "rpc_call_count": 176,
+ "elapsed_seconds": 5.8
+}

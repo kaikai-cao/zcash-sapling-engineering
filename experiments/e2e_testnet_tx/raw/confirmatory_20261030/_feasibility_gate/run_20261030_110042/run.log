@@ -1,0 +1,146 @@
+[log] raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042/run.log
+[argv] confirmatory_bench.py --mode gate
+[mode] gate policy= FullPrivacy dry_run= False restore= True
+[meta] 运行开始基线已写入 meta.json: dry_run=False mode=gate real_tx=True snap=ca35201887b8… script=2df7cd8bd489…
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（10.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (0, 249980000]
+
+----- round 1 | 目标 (S=1,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=2.498700 ZEC 手续费预留=10000 zat
+  submit       18.5 ms  pipeline   1528.0 ms  txid=891b5ffa58c48f23
+  mine        568.5 ms  +2 块 -> 32299
+  后置同步 wallet=32299 目标=32299（20.7s）
+  实际形态 spends=1 outputs=2 (目标 1,2) form_match=True fee_match=True
+  本轮墙钟  22876.5 ms
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (249980000, 549980000]
+
+----- round 2 | 目标 (S=2,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=5.498700 ZEC 手续费预留=10000 zat
+  submit       20.1 ms  pipeline   2116.5 ms  txid=1a51cb4fbd43ddf7
+  mine        550.4 ms  +2 块 -> 32299
+  后置同步 wallet=32299 目标=32299（20.1s）
+  实际形态 spends=2 outputs=2 (目标 2,2) form_match=True fee_match=True
+  本轮墙钟  22831.0 ms
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (849980000, 1149980000]
+
+----- round 3 | 目标 (S=4,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=11.498600 ZEC 手续费预留=20000 zat
+  submit       21.2 ms  pipeline   3393.2 ms  txid=0678e3b3329d1876
+  mine        576.0 ms  +2 块 -> 32299
+  后置同步 wallet=32299 目标=32299（20.1s）
+  实际形态 spends=4 outputs=2 (目标 4,2) form_match=True fee_match=True
+  本轮墙钟  24158.9 ms
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (1749980000, 2062480000]
+
+----- round 4 | 目标 (S=7,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=20.623450 ZEC 手续费预留=35000 zat
+  submit       24.4 ms  pipeline   5282.9 ms  txid=bfb77822623a6f25
+  mine        603.1 ms  +2 块 -> 32299
+  后置同步 wallet=32299 目标=32299（19.1s）
+  实际形态 spends=7 outputs=2 (目标 7,2) form_match=True fee_match=True
+  本轮墙钟  25055.1 ms
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (2687480000, 2999980000]
+
+----- round 5 | 目标 (S=10,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=29.998300 ZEC 手续费预留=50000 zat
+  submit       26.1 ms  pipeline   7149.6 ms  txid=62edefd688fa8355
+  mine        599.2 ms  +2 块 -> 32299
+  后置同步 wallet=32299 目标=32299（18.1s）
+  实际形态 spends=10 outputs=2 (目标 10,2) form_match=True fee_match=True
+  本轮墙钟  25896.8 ms
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (4874980000, 5187480000]
+
+----- round 6 | 目标 (S=17,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=51.872950 ZEC 手续费预留=85000 zat
+  submit       31.4 ms  pipeline  11407.2 ms  txid=3418d3a63ebd7744
+  mine        569.2 ms  +2 块 -> 32299
+  后置同步 wallet=32299 目标=32299（15.0s）
+  实际形态 spends=17 outputs=2 (目标 17,2) form_match=True fee_match=True
+  本轮墙钟  27003.1 ms
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (0, 249980000]
+
+----- round 7 | 目标 (S=1,O=9) policy=FullPrivacy -----
+  收款地址数=8（含 1 找零→实际 O 输出）目标总额=2.498350 ZEC 手续费预留=45000 zat
+  [fail] policy=FullPrivacy 被拒: z_sendmany -> {"code": -8, "message": "Invalid parameter, duplicated recipient address: uregtest18w74lh5uyurp33xrqrz8j30f6ny56z6jh5sqg3ullraz84au3ux3jr56xcsamzwxnewyaqa7fhpfk82e346ev3kkvzqly9gkeg9cyh4
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (549980000, 849980000]
+
+----- round 8 | 目标 (S=3,O=2) policy=FullPrivacy -----
+  收款地址数=1（含 1 找零→实际 O 输出）目标总额=8.498650 ZEC 手续费预留=15000 zat
+  submit       20.1 ms  pipeline   2768.5 ms  txid=9b2b8e47e377703a
+  mine        579.6 ms  +2 块 -> 32299
+  后置同步 wallet=32299 目标=32299（20.1s）
+  实际形态 spends=3 outputs=2 (目标 3,2) form_match=True fee_match=True
+  本轮墙钟  23508.6 ms
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.0s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (549980000, 849980000]
+
+----- round 9 | 目标 (S=3,O=3) policy=FullPrivacy -----
+  收款地址数=2（含 1 找零→实际 O 输出）目标总额=8.498650 ZEC 手续费预留=15000 zat
+  [fail] policy=FullPrivacy 被拒: z_sendmany -> {"code": -8, "message": "Invalid parameter, duplicated recipient address: uregtest1z548jw29869nxu6s0u5tdauj0458qxzanz7g8dfpttd5p6hdd82xg5mspryjz4ejpghvuf4hjtjmye0wfl5z725jk8yzmtds5gh57p5
+[snap] 快照 SHA256 匹配: ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c
+[snap] 恢复脚本 SHA256 匹配: 2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[snap] 恢复中（停服→解包→重启→等追平，可能 1~5 分钟）…
+[snap] 恢复完成（12.1s），快照 SHA256=ca35201887b8041b44c483ad258a718f4a74787c02c4ff9dbbb202857b09510c 脚本 SHA256=2df7cd8bd4890963d925711912aa280f944156319d2b6aa5fa2b53c35a720e11
+[inv] DB 只读清单 OK: 36 notes / 11999980000 zat | RPC count=36 balance=11999980000 全部一致 | 高度 323..32296
+[verify] 链高=32297(预期32297) notes=36 sapling余额=11999980000 zat | 金额边界 A+F in (849980000, 1149980000]
+
+----- round 10 | 目标 (S=4,O=3) policy=FullPrivacy -----
+  收款地址数=2（含 1 找零→实际 O 输出）目标总额=11.498600 ZEC 手续费预留=20000 zat
+  [fail] policy=FullPrivacy 被拒: z_sendmany -> {"code": -8, "message": "Invalid parameter, duplicated recipient address: uregtest1tqpu0p9gq29n04z2ys6sumu02n3n702euv5ztlm9pwx80zhr65fxpx267nvne8xndrwz7th267ew4u5z5fan46w94xd3e35zhg2hv5q
+
+=== gate 汇总（n=10）===
+  (S=1,O=2) 尝试=1 有效成功=1 实际形态=[(1, 2)]
+  (S=1,O=9) 尝试=1 有效成功=0 实际形态=[]
+  (S=2,O=2) 尝试=1 有效成功=1 实际形态=[(2, 2)]
+  (S=3,O=2) 尝试=1 有效成功=1 实际形态=[(3, 2)]
+  (S=3,O=3) 尝试=1 有效成功=0 实际形态=[]
+  (S=4,O=2) 尝试=1 有效成功=1 实际形态=[(4, 2)]
+  (S=4,O=3) 尝试=1 有效成功=0 实际形态=[]
+  (S=7,O=2) 尝试=1 有效成功=1 实际形态=[(7, 2)]
+  (S=10,O=2) 尝试=1 有效成功=1 实际形态=[(10, 2)]
+  (S=17,O=2) 尝试=1 有效成功=1 实际形态=[(17, 2)]
+
+输出: raw/confirmatory_20261030/_feasibility_gate/run_20261030_110042
