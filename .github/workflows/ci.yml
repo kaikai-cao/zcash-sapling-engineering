@@ -33,6 +33,14 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  path-guard:
+    name: sensitive path guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: no wallet / local-excluded evidence may be tracked
+        run: bash scripts/check_no_sensitive_files.sh
+
   lint:
     name: fmt + clippy (study crate)
     runs-on: ubuntu-latest
