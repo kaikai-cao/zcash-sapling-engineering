@@ -35,6 +35,9 @@ status = "actively-developed"
 
 [features]
 default = ["multicore"]
+# Phase D experiment (2026-11-02): enables the G1 XYZZ bucket path.
+# Off by default; the production path is unaffected when this is disabled.
+msm-xyzz-g1 = ["dep:bls12_381"]
 multicore = [
     "crossbeam-channel",
     "log",
@@ -50,6 +53,10 @@ path = "src/lib.rs"
 name = "slow"
 path = "benches/slow.rs"
 harness = false
+
+[dependencies.bls12_381]
+version = "0.9"
+optional = true
 
 [dependencies.bitvec]
 version = "1"
