@@ -26,3 +26,18 @@ rustc-ice-*.txt
 # Python cache
 __pycache__/
 *.py[cod]
+
+# Sensitive / local-only experimental evidence (security boundary).
+# wallet.db.sealed is a byte-for-byte copy of the regtest wallet DB and
+# contains spending keys; see experiments/e2e_testnet_tx/FREEZE.md.
+# Never commit these, even on testnet/regtest. Enforced again in CI by
+# scripts/check_no_sensitive_files.sh.
+**/wallet.db
+**/wallet.db.sealed
+**/*.sealed
+**/.cookie
+**/MANIFEST.local-excluded.sha256
+**/run_*/run.log
+**/_note_scan_diag/
+**/laststate_seal_*/filelist.tsv
+**/laststate_seal_*/sha256.txt

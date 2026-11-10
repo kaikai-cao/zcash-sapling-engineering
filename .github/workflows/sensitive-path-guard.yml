@@ -1,0 +1,20 @@
+name: sensitive path guard
+
+# Kept as a standalone workflow on purpose: PR #24 (the frozen e2e campaign)
+# modifies .github/workflows/ci.yml, and that branch must not pick up an extra
+# merge conflict because of a security guard. This file is new in every branch,
+# so it has no merge surface with the frozen branch.
+#
+# `on: [push, pull_request]` with no branch filter covers every ref, including
+# the "experiments/**" namespace that ci.yml's push filter historically missed.
+
+on: [push, pull_request]
+
+jobs:
+  path-guard:
+    name: no wallet / local-excluded evidence may be tracked
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: check tracked paths against the FREEZE.md upload boundary
+        run: bash scripts/check_no_sensitive_files.sh
